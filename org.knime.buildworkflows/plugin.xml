@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment>
+	<extension point="org.knime.workbench.repository.categories">
+		<category
+			description="Nodes for programatically building workflows"
+			icon="icons/capture.png" level-id="captureworkflows"
+			name="Build Workflows" path="/labs">
+		</category>
+	</extension>
+	<extension point="org.knime.workbench.repository.nodes">
+		<node category-path="/labs/captureworkflows"
+			factory-class="org.knime.buildworkflows.capture.start.CaptureWorkflowStartNodeFactory">
+		</node>
+		<node
+			after="org.knime.buildworkflows.capture.start.CaptureWorkflowStartNodeFactory"
+			category-path="/labs/captureworkflows"
+			factory-class="org.knime.buildworklfows.capture.end.CaptureWorkflowEndNodeFactory">
+		</node>
+		<node
+			after="org.knime.buildworkflows.capture.end.CaptureWorkflowEndNodeFactory"
+			category-path="/labs/captureworkflows"
+			factory-class="org.knime.buildworkflows.combiner.WorkflowCombinerNodeFactory">
+		</node>
+		<node
+			after="org.knime.buildworkflows.combiner.WorkflowCombinerNodeFactory/labs/captureworkflows"
+			category-path="/labs/captureworkflows"
+			factory-class="org.knime.buildworkflows.writer.WorkflowWriterNodeFactory">
+		</node>
+	</extension>
+</fragment>

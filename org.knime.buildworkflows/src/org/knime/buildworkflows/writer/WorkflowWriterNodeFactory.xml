@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<knimeNode icon="./workflow_writer.png" type="Sink"
+	xmlns="http://knime.org/node/v4.1"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://knime.org/node/v4.1 http://knime.org/node/v4.1.xsd">
+	<name>Workflow Writer</name>
+	<shortDescription>
+		Writes a workflow from a port object into a directory or an exported KNIME workflow (.knwf) archive.
+	</shortDescription>
+	<fullDescription>
+		<intro>
+			Writes a workflow from a port object into a directory or an
+			exported KNIME workflow (.knwf) archive.
+		</intro>
+		<tab name="Options">
+			<option name="Write to">
+				Select a file system to write to.
+				There are four default file system
+				options to choose from:
+				<br />
+				<ul>
+					<li>Local File System:
+						Allows you to select a directory from your
+						local system.
+					</li>
+					<li>Relative to:
+						Allows you to choose whether to resolve the path
+						relative to the
+						workflow, mountpoint or node.
+					</li>
+					<li>Mountpoint:
+						Allows you to choose a mountpoint.
+						Whenever this is
+						selected, a new drop-down menu appears to choose from
+						available
+						mountpoints.
+					</li>
+					<li>Custom URL:
+						Uses the standard URL handler providing the ability
+						to read a file
+						from
+						URLs (e.g. file, http or KNIME protocol).
+						Browsing and reading folders as well as several of the options
+						below are
+						disabled when writing to a Custom URL.
+					</li>
+				</ul>
+				It is possible to use other file systems with this node.
+				To this end,
+				you have to enable the file system connection input port of this
+				node
+				by clicking the
+				<b>...</b>
+				in the bottom left corner of the node's icon and choose
+				<i>Add File System Connection port</i>
+				.
+				Afterwards, you can simply connect the desired connector node to
+				the
+				Workflow Writer node.
+				The file system connection will then be
+				shown in
+				the drop down menu.
+			</option>
+			<option name="File / URL">
+				Enter a valid destination.
+				Depending on the selected file system this
+				is either a path or a URL pointing to a directory.
+				<br />
+				You can also choose a previously selected file/folder from the
+				drop-down list, or select a destination from the
+				&quot;Browse...&quot; dialog.
+			</option>
+			<option name="Timeout (ms)">
+				When writing to a custom URL, this value
+				determines the maximum amount of time in milliseconds to establish a
+				connection.
+			</option>
+			<option name="Overwrite folder content if exists">
+				This checkbox determines whether to overwrite
+				existing files in the selected destination folder.
+			</option>
+			<option name="Create parent directories if required">
+				If checked, any parents of the destination folder
+				that do not exist
+				yet
+				are created.
+			</option>
+			<option name="Export workflow as knwf archive">
+				If the workflow should be written as .knwf
+				archive
+				instead of a directory.
+			</option>
+			<option name="Open after write">
+				Determines whether the workflow should be opened
+				in KNIME Analytics Platform
+				after it has been written to a local
+				workspace.
+			</option>
+			<option name="Use custom workflow name">
+				If checked, a custom workflow name is used as
+				specified below.
+				Otherwise the original workflow name, as shown
+				above, is used.
+			</option>
+			<option name="Custom workflow name">
+				A customizable name for the to-be-written
+				workflow.
+			</option>
+		</tab>
+		<tab name="Inputs &amp; Outputs">
+			<option name="Add Input Node">Allows one to add input nodes connected to
+				selected
+				input ports
+				prior writing. Depending on the selected node
+				there is a limited
+				set
+				of options available to pre-configure the node
+				to be added.
+				Furthermore,
+				if
+				tabular input data (for 'free' input
+				ports) is stored
+				with the
+				workflow port, it is used as examples input
+				data for added
+				input
+				nodes.
+			</option>
+			<option name="Add Output Node">Allows one to add output nodes connected to
+				selected output ports prior writing. Depending on the selected node
+				there is a limited set of optionals available to pre-configure the
+				node to be added.
+			</option>
+		</tab>
+	</fullDescription>
+	<ports>
+		<inPort index="0" name="Workflow">
+			The workflow to be written.
+		</inPort>
+		<dynInPort insert-before="0" name="File system connection"
+			group-identifier="File System Connection">
+			The file system connection.
+		</dynInPort>
+	</ports>
+</knimeNode>
