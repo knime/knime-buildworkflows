@@ -46,7 +46,7 @@
  * History
  *   Feb 14, 2020 (hornm): created
  */
-package org.knime.buildworklfows.capture.end;
+package org.knime.buildworkflows.capture.end;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;

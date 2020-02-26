@@ -46,7 +46,7 @@
  * History
  *   Dec 9, 2019 (Adrian Nembach, KNIME GmbH, Konstanz, Germany): created
  */
-package org.knime.buildworklfows.capture.end;
+package org.knime.buildworkflows.capture.end;
 
 import java.util.Optional;
 

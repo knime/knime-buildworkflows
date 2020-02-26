@@ -46,10 +46,10 @@
  * History
  *   Feb 11, 2020 (hornm): created
  */
-package org.knime.buildworklfows.capture.end;
+package org.knime.buildworkflows.capture.end;
 
-import static org.knime.buildworklfows.capture.end.CaptureWorkflowEndNodeModel.loadAndFillPortNames;
-import static org.knime.buildworklfows.capture.end.CaptureWorkflowEndNodeModel.savePortNames;
+import static org.knime.buildworkflows.capture.end.CaptureWorkflowEndNodeModel.loadAndFillPortNames;
+import static org.knime.buildworkflows.capture.end.CaptureWorkflowEndNodeModel.savePortNames;
 
 import java.awt.BorderLayout;
 import java.util.HashMap;
