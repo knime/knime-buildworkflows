@@ -51,15 +51,16 @@ package org.knime.buildworkflows.writer;
 import java.awt.GridLayout;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import javax.swing.JLabel;
 
+import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.defaultnodesettings.DialogComponent;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Port;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
+import org.knime.core.node.workflow.capture.WorkflowFragment.IOInfo;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 
 /**
@@ -140,22 +141,27 @@ class DialogComponentIONodes extends DialogComponent {
             return;
         }
 
-        List<Port> inPorts = workflowPortObjectSpec.getWorkflowFragment().getInputPorts();
-        List<Port> outPorts = workflowPortObjectSpec.getWorkflowFragment().getOutputPorts();
+        List<String> inputs = workflowPortObjectSpec.getInputs().entrySet().stream().filter(e -> isValid(e.getValue()))
+            .map(Entry::getKey).collect(Collectors.toList());
+        List<String> outputs = workflowPortObjectSpec.getOutputs().entrySet().stream()
+            .filter(e -> isValid(e.getValue())).map(Entry::getKey).collect(Collectors.toList());
 
         SettingsModelIONodes model = (SettingsModelIONodes)getModel();
-        m_inputs.updatePanel(inPorts, workflowPortObjectSpec.getInputPortNamesMap(),
-            p -> model.getInputNodeConfig(p).orElse(null));
-        m_outputs.updatePanel(outPorts, workflowPortObjectSpec.getOutputPortNamesMap(),
-            p -> model.getOutputNodeConfig(p).orElse(null));
+
+        m_inputs.updatePanel(inputs, p -> model.getInputNodeConfig(p).orElse(null));
+        m_outputs.updatePanel(outputs, p -> model.getOutputNodeConfig(p).orElse(null));
+    }
+
+    private static boolean isValid(final IOInfo i) {
+        return i.getType().isPresent() && i.getType().get().equals(BufferedDataTable.TYPE);
     }
 
     private void updateModel() {
         SettingsModelIONodes model = (SettingsModelIONodes)getModel();
-        for (Entry<PortID, InputNodeConfig> e : m_inputs.getSelectedConfigs().entrySet()) {
+        for (Entry<String, InputNodeConfig> e : m_inputs.getSelectedConfigs().entrySet()) {
             model.setInputNodeConfig(e.getKey(), e.getValue());
         }
-        for (Entry<PortID, OutputNodeConfig> e : m_outputs.getSelectedConfigs().entrySet()) {
+        for (Entry<String, OutputNodeConfig> e : m_outputs.getSelectedConfigs().entrySet()) {
             model.setOutputNodeConfig(e.getKey(), e.getValue());
         }
     }

@@ -109,26 +109,15 @@
 		</tab>
 		<tab name="Inputs &amp; Outputs">
 			<option name="Add Input Node">Allows one to add input nodes connected to
-				selected
-				input ports
-				prior writing. Depending on the selected node
-				there is a limited
-				set
-				of options available to pre-configure the node
-				to be added.
-				Furthermore,
-				if
-				tabular input data (for 'free' input
-				ports) is stored
-				with the
-				workflow port, it is used as examples input
-				data for added
-				input
-				nodes.
+				selected inputs prior writing. Depending on the selected node
+				here is
+				a limited set of options available to pre-configure the node to be
+				added. Furthermore, if tabular input data is stored with the input,
+				it is used as examples input data for added input nodes.
 			</option>
 			<option name="Add Output Node">Allows one to add output nodes connected to
-				selected output ports prior writing. Depending on the selected node
-				there is a limited set of optionals available to pre-configure the
+				selected inputs prior writing. Depending on the selected node
+				there is a limited set of options available to pre-configure the
 				node to be added.
 			</option>
 		</tab>

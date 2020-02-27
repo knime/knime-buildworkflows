@@ -52,8 +52,10 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.GridLayout;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -64,62 +66,66 @@ import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.border.BevelBorder;
 
-import org.knime.core.node.workflow.capture.WorkflowFragment.Port;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
 import org.knime.core.util.Pair;
 
 /**
- * UI to choose/'draw' connections between the output and input ports of a workflow.
+ * UI to choose/'draw' connections between the output and input of a workflow fragment.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 @SuppressWarnings("serial")
 class WorkflowConnectPanel extends JPanel {
 
+    private static final String NONE_SELECTION = "<NONE>";
 
-    private final List<JComboBox<PortIDWithName>> m_selectedOutPorts;
+    private final List<JComboBox<String>> m_selectedOutputs;
 
-    private final List<PortID> m_inPortsWF2;
+    private final List<String> m_inputsWF2;
+
 
     /**
      * Creates a new connection panel.
      *
-     * @param outPortsWF1 the out ports of the first workflow (to be connected to the inports of the second workflow)
-     * @param inPortsWF2 the in ports of the second workflow
+     * @param outputsWF1 the outputs of the first workflow fragment (to be connected to the inports of the second workflow)
+     * @param inputsWF2 the inputs of the second workflow fragment
      * @param connectionMap the original connection map to initialize the selected connections
      * @param title a custom title for the panel (titled border)
      * @param extraLabel a extra label appearing at the top - e.g. the names of the workflows to be connected
      * @param outPortNames optional custom names for the output ports
      * @param inPortNames optional custom names for the input ports
      */
-    WorkflowConnectPanel(final List<Port> outPortsWF1, final List<Port> inPortsWF2, final ConnectionMap connectionMap,
-        final String title, final String extraLabel, final Map<PortID, String> outPortNames,
-        final Map<PortID, String> inPortNames) {
-        m_inPortsWF2 = inPortsWF2.stream().map(Port::getID).collect(Collectors.toList());
+    WorkflowConnectPanel(final Map<String, Output> outputsWF1, final Map<String, Input> inputsWF2,
+        final ConnectionMap connectionMap, final String title, final String extraLabel) {
+        m_inputsWF2 = inputsWF2.entrySet().stream().map(Entry::getKey)
+            .collect(Collectors.toList());
         setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), title));
         setLayout(new BorderLayout());
-        JPanel selection = new JPanel(new GridLayout(inPortsWF2.size(), 1));
-        m_selectedOutPorts = new ArrayList<>(inPortsWF2.size());
-        for (int i = 0; i < inPortsWF2.size(); i++) {
+        JPanel selection = new JPanel(new GridLayout(inputsWF2.size(), 1));
+        m_selectedOutputs = new ArrayList<>(inputsWF2.size());
+
+        Iterator<Entry<String, Input>> inputsIt = inputsWF2.entrySet().iterator();
+        while(inputsIt.hasNext()) {
+            Entry<String, Input> input = inputsIt.next();
+            List<String> compatibleOutputs = outputsWF1.entrySet().stream()
+                .filter(o -> o.getValue().getType().equals(input.getValue().getType())).map(Entry::getKey)
+                .collect(Collectors.toList());
             JPanel panel = new JPanel();
-            panel.add(new JLabel("Connect ports: "));
-            final int j = i;
-            List<PortID> compatibleOutPorts =
-                outPortsWF1.stream().filter(p -> p.getType().get().equals(inPortsWF2.get(j).getType().get()))
-                    .map(Port::getID).collect(Collectors.toList());
-            JComboBox<PortIDWithName> cbox = new JComboBox<>();
-            cbox.addItem(PortIDWithName.NONE_SELECTION);
-            compatibleOutPorts.forEach(p -> cbox.addItem(new PortIDWithName(p, outPortNames)));
+            panel.add(new JLabel("Connect "));
+            JComboBox<String> cbox = new JComboBox<>();
+            cbox.addItem(NONE_SELECTION);
+            compatibleOutputs.forEach(cbox::addItem);
             //set selected item
-            Optional<PortID> selectedOutPort = connectionMap.getOutPortForInPort(inPortsWF2.get(i).getID(), compatibleOutPorts, m_inPortsWF2);
-            if (selectedOutPort.isPresent()) {
-                cbox.setSelectedItem(new PortIDWithName(selectedOutPort.get(), outPortNames));
+            Optional<String> selectedOutput = connectionMap.getOutPortForInPort(input.getKey(), outputsWF1, inputsWF2);
+            if (selectedOutput.isPresent()) {
+                cbox.setSelectedItem(selectedOutput.get());
             } else {
-                cbox.setSelectedItem(PortIDWithName.NONE_SELECTION);
+                cbox.setSelectedItem(NONE_SELECTION);
             }
-            m_selectedOutPorts.add(cbox);
+            m_selectedOutputs.add(cbox);
             panel.add(cbox);
-            panel.add(new JLabel(" to " + new PortIDWithName(inPortsWF2.get(i).getID(), inPortNames)));
+            panel.add(new JLabel(" to " + input.getKey()));
             selection.add(panel);
         }
         add(selection, BorderLayout.CENTER);
@@ -129,17 +135,20 @@ class WorkflowConnectPanel extends JPanel {
         extraLabelPanel.add(extraJLabel, BorderLayout.CENTER);
         extraJLabel.setForeground(Color.GRAY);
         add(extraLabelPanel, BorderLayout.NORTH);
+
+        if (connectionMap == ConnectionMaps.SIMPLE_PAIR_WISE_CONNECTED_MAP) {
+            add(new JLabel("Note: outputs automatically selected per default configuration"), BorderLayout.SOUTH);
+        }
     }
 
     /**
      * @return creates a {@link ConnectionMap} from the user choice
      */
     ConnectionMap createConnectionMap() {
-        List<Pair<PortID, PortID>> l = new ArrayList<>();
-        for (int i = 0; i < m_inPortsWF2.size(); i++) {
-            if (m_selectedOutPorts.get(i).getSelectedItem() != PortIDWithName.NONE_SELECTION) {
-                l.add(Pair.create(((PortIDWithName)m_selectedOutPorts.get(i).getSelectedItem()).getID(),
-                    m_inPortsWF2.get(i)));
+        List<Pair<String, String>> l = new ArrayList<>();
+        for (int i = 0; i < m_inputsWF2.size(); i++) {
+            if (m_selectedOutputs.get(i).getSelectedItem() != NONE_SELECTION) {
+                l.add(Pair.create((String)m_selectedOutputs.get(i).getSelectedItem(), m_inputsWF2.get(i)));
             }
         }
         return new ConnectionMap(l);

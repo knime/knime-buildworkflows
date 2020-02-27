@@ -54,11 +54,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.knime.core.data.DataTable;
 import org.knime.core.node.CanceledExecutionException;
@@ -79,7 +82,8 @@ import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.node.workflow.WorkflowLock;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowFragment;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Port;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
 import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
@@ -110,10 +114,8 @@ final class WorkflowCombinerNodeModel extends NodeModel {
 
     @Override
     protected PortObjectSpec[] configure(final PortObjectSpec[] inSpecs) throws InvalidSettingsException {
-        final WorkflowFragment[] inWorkflowFragments = Arrays.stream(inSpecs)
-            .map(s -> ((WorkflowPortObjectSpec)s).getWorkflowFragment()).toArray(WorkflowFragment[]::new);
         for (int i = 1; i < inSpecs.length; i++) {
-            canConnect(inWorkflowFragments[i - 1], inWorkflowFragments[i], i - 1);
+            canConnect((WorkflowPortObjectSpec)inSpecs[i - 1], (WorkflowPortObjectSpec)inSpecs[i], i - 1);
         }
         return null;
     }
@@ -126,9 +128,9 @@ final class WorkflowCombinerNodeModel extends NodeModel {
      * @param connectionIdx the index of the workflow fragment connection
      * @throws InvalidSettingsException if the workflow fragments couldn't be connected completely
      */
-    private void canConnect(final WorkflowFragment pred, final WorkflowFragment succ, final int connectionIdx)
-        throws InvalidSettingsException {
-        m_connectionMaps.getConnectionMap(connectionIdx).getConnectionsFor(pred.getOutputPorts(), succ.getInputPorts());
+    private void canConnect(final WorkflowPortObjectSpec pred, final WorkflowPortObjectSpec succ,
+        final int connectionIdx) throws InvalidSettingsException {
+        m_connectionMaps.getConnectionMap(connectionIdx).getConnectionsFor(pred.getOutputs(), succ.getInputs());
     }
 
     @Override
@@ -151,33 +153,37 @@ final class WorkflowCombinerNodeModel extends NodeModel {
         try {
             // copy and paste all fragments to the new wfm
             final WorkflowFragmentMeta[] inWorkflowFragments = Arrays.stream(inWorkflowSpecs)
-                .map(s -> copy(wfm, s.getWorkflowFragment())).toArray(WorkflowFragmentMeta[]::new);
+                .map(s -> copy(wfm, s)).toArray(WorkflowFragmentMeta[]::new);
 
             final Set<NodeIDSuffix> objectReferenceReaderNodes =
                 new HashSet<>(inWorkflowFragments[0].m_objectReferenceReaderNodes);
 
             for (int i = 1; i < inWorkflowFragments.length; i++) {
-                connect(wfm, m_connectionMaps.getConnectionMap(i - 1), inWorkflowFragments[i - 1].m_outputPorts,
-                    inWorkflowFragments[i - 1].m_outIdMapping, inWorkflowFragments[i].m_inputPorts,
+                connect(wfm, m_connectionMaps.getConnectionMap(i - 1), inWorkflowFragments[i - 1].m_outputs,
+                    inWorkflowFragments[i - 1].m_outIdMapping, inWorkflowFragments[i].m_inputs,
                     inWorkflowFragments[i].m_inIdMapping);
                 objectReferenceReaderNodes.addAll(inWorkflowFragments[i].m_objectReferenceReaderNodes);
             }
 
             WorkflowPortObject firstWorkflowPortObject = (WorkflowPortObject)input[0];
-            Map<PortID, DataTable> inputData = inWorkflowFragments[0].m_inputPorts.stream()
-                .filter(p -> firstWorkflowPortObject.getInputDataFor(p.getID()).isPresent()).collect(
-                    Collectors.toMap(Port::getID, p -> firstWorkflowPortObject.getInputDataFor(p.getID()).get()));
+            Map<String, DataTable> inputData = inWorkflowFragments[0].m_inputs.entrySet().stream()
+                .filter(e -> firstWorkflowPortObject.getInputDataFor(e.getKey()).isPresent()).collect(
+                    Collectors.toMap(Entry::getKey, e -> firstWorkflowPortObject.getInputDataFor(e.getKey()).get()));
 
             String workflowName = inWorkflowSpecs[0].getWorkflowName(); //TODO make configurable
-            List<Port> newInputPorts = collectAndMapAllRemainingInputPorts(inWorkflowFragments);
-            List<Port> newOutputPorts = collectAndMapAllRemainingOutputPorts(inWorkflowFragments);
-            Map<PortID, String> newInputPortNamesMap =
-                collectAndMapAllRemainingInputPortNames(inWorkflowSpecs, inWorkflowFragments);
-            Map<PortID, String> newOutputPortNamesMap =
-                collectAndMapAllRemainingOutputPortNames(inWorkflowSpecs, inWorkflowFragments);
+            Pair<List<String>, List<Input>> newInputs = collectAndMapAllRemainingInputPorts(inWorkflowFragments);
+            Pair<List<String>, List<Output>> newOutputs = collectAndMapAllRemainingOutputPorts(inWorkflowFragments);
+            Optional<List<String>> newInputIDs = WorkflowPortObjectSpec.ensureUniqueness(newInputs.getFirst());
+            boolean collidingInputIDs = newInputIDs.isPresent();
+            Optional<List<String>> newOutputIDs = WorkflowPortObjectSpec.ensureUniqueness(newOutputs.getFirst());
+            boolean collidingOutputIDs = newOutputIDs.isPresent();
+            if (collidingInputIDs || collidingOutputIDs) {
+                setWarningMessage("Some input/output ids in the combined worklfows have been modified to be unique");
+            }
             return new PortObject[]{new WorkflowPortObject(new WorkflowPortObjectSpec(
-                new WorkflowFragment(wfm, newInputPorts, newOutputPorts, objectReferenceReaderNodes), workflowName,
-                newInputPortNamesMap, newOutputPortNamesMap), inputData)};
+                new WorkflowFragment(wfm, newInputs.getSecond(), newOutputs.getSecond(), objectReferenceReaderNodes),
+                workflowName, newInputIDs.orElse(newInputs.getFirst()), newOutputIDs.orElse(newOutputs.getFirst())),
+                inputData)};
         } catch (final Exception e) {
             // in case something goes wrong ensure that newly created metanode/component is removed
             clear();
@@ -190,14 +196,15 @@ final class WorkflowCombinerNodeModel extends NodeModel {
             "workflow_combiner");
     }
 
-    private static WorkflowFragmentMeta copy(final WorkflowManager wfm, final WorkflowFragment toCopy) {
+    private static WorkflowFragmentMeta copy(final WorkflowManager wfm, final WorkflowPortObjectSpec toCopy) {
         // copy and paste the workflow fragment into the new wfm
         // calculate the mapping between the toCopy node ids and the new node ids
         final HashMap<NodeIDSuffix, NodeIDSuffix> inIdMapping = new HashMap<>();
         final HashMap<NodeIDSuffix, NodeIDSuffix> outIdMapping = new HashMap<>();
         final HashSet<NodeIDSuffix> objectReferenceReaderNodes = new HashSet<>();
 
-        final WorkflowManager toCopyWFM = toCopy.loadWorkflow();
+        WorkflowFragment wfToCopy = toCopy.getWorkflowFragment();
+        final WorkflowManager toCopyWFM = wfToCopy.loadWorkflow();
         try (WorkflowLock lock = wfm.lock()) {
             int[] wfmBoundingBox = NodeUIInformation.getBoundingBoxOf(wfm.getNodeContainers());
             final int yOffset = wfmBoundingBox[1]; // top
@@ -213,31 +220,32 @@ final class WorkflowCombinerNodeModel extends NodeModel {
             final NodeID[] newIds = pastedContent.getNodeIDs();
             for (int i = 0; i < ids.length; i++) {
                 final NodeIDSuffix toCopyID = NodeIDSuffix.create(toCopyWFM.getID(), ids[i]);
-                final List<Port> ports = toCopy.getInputPorts();
-                Optional<Port> inPort =
-                    ports.stream().filter(p -> p.getID().getNodeIDSuffix().equals(toCopyID)).findAny();
-                if (toCopy.getPortObjectReferenceReaderNodes().contains(toCopyID)) {
+                if (wfToCopy.getPortObjectReferenceReaderNodes().contains(toCopyID)) {
                     objectReferenceReaderNodes.add(NodeIDSuffix.create(wfm.getID(), newIds[i]));
                 }
 
+                final List<Input> inputs = wfToCopy.getConnectedInputs();
+                Optional<PortID> inPort = inputs.stream().flatMap(in -> in.getConnectedPorts().stream())
+                    .filter(p -> p.getNodeIDSuffix().equals(toCopyID)).findAny();
                 if (inPort.isPresent()) {
                     inIdMapping.put(toCopyID, NodeIDSuffix.create(wfm.getID(), newIds[i]));
                 }
-                Optional<Port> outPort = toCopy.getOutputPorts().stream()
-                    .filter(p -> p.getID().getNodeIDSuffix().equals(toCopyID)).findAny();
+                Optional<PortID> outPort = wfToCopy.getConnectedOutputs().stream().map(Output::getConnectedPort)
+                    .flatMap(o -> o.isPresent() ? Stream.of(o.get()) : Stream.empty())
+                    .filter(p -> p.getNodeIDSuffix().equals(toCopyID)).findAny();
                 if (outPort.isPresent()) {
                     outIdMapping.put(toCopyID, NodeIDSuffix.create(wfm.getID(), newIds[i]));
                 }
             }
         } finally {
-            toCopy.disposeWorkflow();
+            wfToCopy.disposeWorkflow();
         }
 
         // return the new fragment metadata
         WorkflowFragmentMeta res = new WorkflowFragmentMeta();
-        res.m_inputPorts = new ArrayList<>(toCopy.getInputPorts());
+        res.m_inputs = new LinkedHashMap<>(toCopy.getInputs());
         res.m_inIdMapping = inIdMapping;
-        res.m_outputPorts = new ArrayList<>(toCopy.getOutputPorts());
+        res.m_outputs = new LinkedHashMap<>(toCopy.getOutputs());
         res.m_outIdMapping = outIdMapping;
         res.m_objectReferenceReaderNodes = objectReferenceReaderNodes;
         return res;
@@ -246,88 +254,83 @@ final class WorkflowCombinerNodeModel extends NodeModel {
     /**
      * Adds the configured connections (represented by a {@link ConnectionMap}) to a workflow manager.
      *
-     * The output and input ports that have been connected are removed from the supplied output and input port lists!
+     * The output and input that have been connected are removed from the supplied outputs and inputs lists!
      *
      * @param wfm the workflow manager to add the connections to
      * @param connectionMap the chosen connections
-     * @param outPorts will be modified - connected outports are removed!
+     * @param outputs will be modified - connected outports are removed!
      * @param outIdMapping the mapping to the actual (new) node id
-     * @param inPorts will be modified - connected inputs are removed!
+     * @param inputs will be modified - connected inputs are removed!
      * @param inIdMapping the mapping to the actual (new) node id
      * @throws InvalidSettingsException
      */
-    private static void connect(final WorkflowManager wfm, final ConnectionMap connectionMap, final List<Port> outPorts,
-        final Map<NodeIDSuffix, NodeIDSuffix> outIdMapping, final List<Port> inPorts,
-        final Map<NodeIDSuffix, NodeIDSuffix> inIdMapping) throws InvalidSettingsException {
-        List<Pair<PortID, PortID>> connectionsToAdd = connectionMap.getConnectionsFor(outPorts, inPorts);
-        for (Pair<PortID, PortID> connection : connectionsToAdd) {
-            final PortID outPort = connection.getFirst();
-            final PortID inPort = connection.getSecond();
-            NodeIDSuffix outNodeId = outIdMapping.get(outPort.getNodeIDSuffix());
-            NodeIDSuffix inNodeId = inIdMapping.get(inPort.getNodeIDSuffix());
-            wfm.addConnection(outNodeId.prependParent(wfm.getID()), outPort.getIndex(),
-                inNodeId.prependParent(wfm.getID()), inPort.getIndex());
-            outPorts.removeIf(p -> p.getID().equals(outPort));
-            inPorts.removeIf(p -> p.getID().equals(inPort));
-        }
-    }
+    private static void connect(final WorkflowManager wfm, final ConnectionMap connectionMap,
+        final Map<String, Output> outputs, final Map<NodeIDSuffix, NodeIDSuffix> outIdMapping,
+        final Map<String, Input> inputs, final Map<NodeIDSuffix, NodeIDSuffix> inIdMapping)
+        throws InvalidSettingsException {
+        List<Pair<String, String>> connectionsToAdd = connectionMap.getConnectionsFor(outputs, inputs);
+        for (Pair<String, String> connection : connectionsToAdd) {
+            Output output = outputs.get(connection.getFirst());
+            Input input = inputs.get(connection.getSecond());
 
-    private static List<Port> collectAndMapAllRemainingInputPorts(final WorkflowFragmentMeta[] fragments) {
-        List<Port> inputPorts = new ArrayList<>();
-        for (WorkflowFragmentMeta f : fragments) {
-            for (Port p : f.m_inputPorts) {
-                inputPorts.add(getMappedPort(p, f.m_inIdMapping));
-            }
-        }
-        return inputPorts;
-    }
+            final Optional<PortID> outPort = output.getConnectedPort();
+            final Set<PortID> inPorts = input.getConnectedPorts();
 
-    private static List<Port> collectAndMapAllRemainingOutputPorts(final WorkflowFragmentMeta[] fragments) {
-        List<Port> outputPorts = new ArrayList<>();
-        for (WorkflowFragmentMeta f : fragments) {
-            for (Port p : f.m_outputPorts) {
-                outputPorts.add(getMappedPort(p, f.m_outIdMapping));
-            }
-        }
-        return outputPorts;
-    }
-
-    private static Map<PortID, String> collectAndMapAllRemainingInputPortNames(
-        final WorkflowPortObjectSpec[] workflowSpecs, final WorkflowFragmentMeta[] fragments) {
-        Map<PortID, String> allInputNamesMap = new HashMap<>();
-        for (int i = 0; i < fragments.length; i++) {
-            Map<PortID, String> inputPortNamesMap = workflowSpecs[i].getInputPortNamesMap();
-            for (Port p : fragments[i].m_inputPorts) {
-                if (inputPortNamesMap.containsKey(p.getID())) {
-                    allInputNamesMap.put(getMappedPortID(p, fragments[i].m_inIdMapping),
-                        inputPortNamesMap.get(p.getID()));
+            if (outPort.isPresent() && !inPorts.isEmpty()) {
+                for (PortID inPort : inPorts) {
+                    NodeIDSuffix outNodeId = outIdMapping.get(outPort.get().getNodeIDSuffix());
+                    NodeIDSuffix inNodeId = inIdMapping.get(inPort.getNodeIDSuffix());
+                    wfm.addConnection(outNodeId.prependParent(wfm.getID()), outPort.get().getIndex(),
+                        inNodeId.prependParent(wfm.getID()), inPort.getIndex());
                 }
             }
         }
-        return allInputNamesMap;
+        connectionsToAdd.forEach(c -> {
+            outputs.remove(c.getFirst());
+            inputs.remove(c.getSecond());
+        });
+
     }
 
-    private static Map<PortID, String> collectAndMapAllRemainingOutputPortNames(
-        final WorkflowPortObjectSpec[] workflowSpecs, final WorkflowFragmentMeta[] fragments) {
-        Map<PortID, String> allOutputNamesMap = new HashMap<>();
-        for (int i = 0; i < fragments.length; i++) {
-            Map<PortID, String> outputPortNamesMap = workflowSpecs[i].getOutputPortNamesMap();
-            for (Port p : fragments[i].m_outputPorts) {
-                if (outputPortNamesMap.containsKey(p.getID())) {
-                    allOutputNamesMap.put(getMappedPortID(p, fragments[i].m_outIdMapping),
-                        outputPortNamesMap.get(p.getID()));
-                }
+    private static Pair<List<String>, List<Input>>
+        collectAndMapAllRemainingInputPorts(final WorkflowFragmentMeta[] fragments) {
+        List<Input> inputs = new ArrayList<>();
+        List<String> inputIDs = new ArrayList<>();
+        for (WorkflowFragmentMeta f : fragments) {
+            for (Entry<String, Input> input : f.m_inputs.entrySet()) {
+                inputIDs.add(input.getKey());
+                inputs.add(getMappedInput(input.getValue(), f.m_inIdMapping));
             }
         }
-        return allOutputNamesMap;
+        return Pair.create(inputIDs, inputs);
     }
 
-    private static Port getMappedPort(final Port p, final Map<NodeIDSuffix, NodeIDSuffix> inIdMapping) {
-        return new Port(getMappedPortID(p, inIdMapping), p.getType().orElse(null), p.getSpec().orElse(null));
+    private static Pair<List<String>, List<Output>>
+        collectAndMapAllRemainingOutputPorts(final WorkflowFragmentMeta[] fragments) {
+        List<Output> outputs = new ArrayList<>();
+        List<String> outputIDs = new ArrayList<>();
+        for (int i = fragments.length - 1; i >= 0; i--) {
+            for (Entry<String, Output> output : fragments[i].m_outputs.entrySet()) {
+                outputIDs.add(output.getKey());
+                outputs.add(getMappedOutput(output.getValue(), fragments[i].m_outIdMapping));
+            }
+        }
+        return Pair.create(outputIDs, outputs);
     }
 
-    private static PortID getMappedPortID(final Port p, final Map<NodeIDSuffix, NodeIDSuffix> inIdMapping) {
-        return new PortID(inIdMapping.get(p.getID().getNodeIDSuffix()), p.getID().getIndex());
+    private static Input getMappedInput(final Input input, final Map<NodeIDSuffix, NodeIDSuffix> inIdMapping) {
+        Set<PortID> connectedPorts =
+            input.getConnectedPorts().stream().map(p -> getMappedPortID(p, inIdMapping)).collect(Collectors.toSet());
+        return new Input(input.getType().orElse(null), input.getSpec().orElse(null), connectedPorts);
+    }
+
+    private static Output getMappedOutput(final Output output, final Map<NodeIDSuffix, NodeIDSuffix> outIdMapping) {
+        PortID connectedPort = output.getConnectedPort().map(p -> getMappedPortID(p, outIdMapping)).orElse(null);
+        return new Output(output.getType().orElse(null), output.getSpec().orElse(null), connectedPort);
+    }
+
+    private static PortID getMappedPortID(final PortID p, final Map<NodeIDSuffix, NodeIDSuffix> nodeIdMapping) {
+        return new PortID(nodeIdMapping.get(p.getNodeIDSuffix()), p.getIndex());
     }
 
     @Override
@@ -388,11 +391,11 @@ final class WorkflowCombinerNodeModel extends NodeModel {
      */
     private static class WorkflowFragmentMeta {
 
-        List<Port> m_inputPorts;
+        Map<String, Input> m_inputs;
 
         Map<NodeIDSuffix, NodeIDSuffix> m_inIdMapping;
 
-        List<Port> m_outputPorts;
+        Map<String, Output> m_outputs;
 
         Map<NodeIDSuffix, NodeIDSuffix> m_outIdMapping;
 

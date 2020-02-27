@@ -35,14 +35,12 @@
 			</option>
 		</tab>
 		<tab name="Input &amp;
-		 Output Port Names">
-			<option name="Input port names">Optional names for the input ports. If left
-				empty, the default name (consisting of the node id and port index)
-				will be used.
+		 Output IDs">
+			<option name="Input IDs">Customization of the unique identifiers for each
+				input.
 			</option>
-			<option name="Output port names">Optional names for the output ports. If left
-				empty, the default name (consisting of the node id and port index)
-				will be used.
+			<option name="Output IDs">Customization of the unique identifiers for each
+				output.
 			</option>
 		</tab>
 

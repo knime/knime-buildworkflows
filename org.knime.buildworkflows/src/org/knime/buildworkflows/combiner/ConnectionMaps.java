@@ -68,7 +68,7 @@ class ConnectionMaps {
 
     private static final String CFG_CONNECTION_MAP = "connection_map_";
 
-    private static final ConnectionMap SIMPLE_PAIR_WISE_CONNECTED_MAP = new ConnectionMap();
+    static final ConnectionMap SIMPLE_PAIR_WISE_CONNECTED_MAP = new ConnectionMap();
 
     private ConnectionMap[] m_maps;
 

@@ -48,12 +48,17 @@
  */
 package org.knime.buildworkflows.capture.end;
 
-import static org.knime.buildworkflows.capture.end.CaptureWorkflowEndNodeModel.loadAndFillPortNames;
-import static org.knime.buildworkflows.capture.end.CaptureWorkflowEndNodeModel.savePortNames;
+import static org.knime.buildworkflows.capture.end.CaptureWorkflowEndNodeModel.loadAndFillInputOutputIDs;
+import static org.knime.buildworkflows.capture.end.CaptureWorkflowEndNodeModel.saveInputOutputIDs;
+import static org.knime.core.node.workflow.capture.WorkflowPortObjectSpec.ensureInputIDsCount;
+import static org.knime.core.node.workflow.capture.WorkflowPortObjectSpec.ensureOutputIDsCount;
 
 import java.awt.BorderLayout;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.swing.JPanel;
 
@@ -72,7 +77,8 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowCaptureOperation;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
 
 /**
  *
@@ -85,9 +91,9 @@ class CaptureWorkflowEndNodeDialog extends DefaultNodeSettingsPane {
 
     private final SettingsModelBoolean m_addInputDataModel;
 
-    private final JPanel m_portNames;
+    private final JPanel m_ioIds;
 
-    private PortNamesPanel m_portNamesPanel;
+    private InputOutputIDsPanel m_idsPanel;
 
     CaptureWorkflowEndNodeDialog() {
 
@@ -106,8 +112,8 @@ class CaptureWorkflowEndNodeDialog extends DefaultNodeSettingsPane {
         addDialogComponent(new DialogComponentNumber(m_maxNumOfRowsModel, "Maximum numbers of rows to store", 1));
         closeCurrentGroup();
 
-        m_portNames = new JPanel(new BorderLayout());
-        addTab("Input & Output Port Names", m_portNames);
+        m_ioIds = new JPanel(new BorderLayout());
+        addTab("Input & Output IDs", m_ioIds);
     }
 
     /**
@@ -116,27 +122,35 @@ class CaptureWorkflowEndNodeDialog extends DefaultNodeSettingsPane {
     @Override
     public void loadAdditionalSettingsFrom(final NodeSettingsRO settings, final PortObjectSpec[] specs)
         throws NotConfigurableException {
-        m_maxNumOfRowsModel.setEnabled(m_addInputDataModel.getBooleanValue());
-
-        Map<PortID, String> inPortNames = new HashMap<>();
-        Map<PortID, String> outPortNames = new HashMap<>();
-        try {
-            loadAndFillPortNames(settings, inPortNames, outPortNames);
-        } catch (InvalidSettingsException e) {
-            LOGGER.warn("Settings couldn't be load for dialog. Ignored.", e);
-        }
-
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         if (nc == null) {
             throw new NotConfigurableException("No node context available.");
         }
+
+        m_maxNumOfRowsModel.setEnabled(m_addInputDataModel.getBooleanValue());
+
+        List<String> customInputIDs = new ArrayList<>();
+        List<String> customOutputIDs = new ArrayList<>();
+        try {
+            loadAndFillInputOutputIDs(settings, customInputIDs, customOutputIDs);
+        } catch (InvalidSettingsException e) {
+            LOGGER.warn("Settings couldn't be load for dialog. Ignored.", e);
+        }
+
         WorkflowCaptureOperation captureOp;
         try {
             captureOp = nc.getParent().createCaptureOperationFor(nc.getID());
-            m_portNames.removeAll();
-            m_portNamesPanel =
-                new PortNamesPanel(captureOp.getInputPorts(), captureOp.getOutputPorts(), inPortNames, outPortNames);
-            m_portNames.add(m_portNamesPanel, BorderLayout.CENTER);
+            m_ioIds.removeAll();
+
+            //get 'connected' inputs and outputs only
+            List<Input> inputs = captureOp.getInputs().stream().filter(Input::isConnected).collect(Collectors.toList());
+            List<Output> outputs =
+                captureOp.getOutputs().stream().filter(Output::isConnected).collect(Collectors.toList());
+
+            customInputIDs = ensureInputIDsCount(customInputIDs, inputs.size());
+            customOutputIDs = ensureOutputIDsCount(customOutputIDs, outputs.size());
+            m_idsPanel = new InputOutputIDsPanel(customInputIDs, customOutputIDs);
+            m_ioIds.add(m_idsPanel, BorderLayout.CENTER);
         } catch (Exception e) {
             throw new NotConfigurableException(e.getMessage(), e);
         }
@@ -147,8 +161,19 @@ class CaptureWorkflowEndNodeDialog extends DefaultNodeSettingsPane {
      */
     @Override
     public void saveAdditionalSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
-        Map<PortID, String> inPortNames = m_portNamesPanel.getInPortNames();
-        Map<PortID, String> outPortNames = m_portNamesPanel.getOutPortNames();
-        savePortNames(settings, inPortNames, outPortNames);
+        List<String> inputIDs = m_idsPanel.getInputIDs();
+        List<String> outputIDs = m_idsPanel.getOutputIDs();
+        boolean inDup = hasDuplicates(inputIDs);
+        boolean outDup = hasDuplicates(outputIDs);
+        m_idsPanel.setInputsOutputsInvalid(inDup, outDup);
+        if (inDup || outDup) {
+            throw new InvalidSettingsException("Duplicate input or output IDs");
+        }
+        saveInputOutputIDs(settings, inputIDs, outputIDs);
+    }
+
+    private static boolean hasDuplicates(final List<String> ids) {
+        Set<String> set = new HashSet<>(ids);
+        return set.size() != ids.size();
     }
 }

@@ -55,20 +55,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.knime.buildworkflows.combiner.PortIDWithName;
-import org.knime.core.node.BufferedDataTable;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Port;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.util.Pair;
 
 /**
@@ -79,13 +73,13 @@ import org.knime.core.util.Pair;
 @SuppressWarnings("serial")
 class PortAndNodeConfigPanel<C extends IONodeConfig> extends JPanel {
 
-    private JComboBox<PortIDWithName> m_portSelection;
+    private JComboBox<String> m_portSelection;
 
     private JComboBox<String> m_nodeSelection;
 
-    private Map<PortID, C> m_selectedConfigs;
+    private Map<String, C> m_selectedConfigs;
 
-    private Map<Pair<PortID, String>, C> m_configCache;
+    private Map<Pair<String, String>, C> m_configCache;
 
     private String m_warningMessage;
 
@@ -113,41 +107,30 @@ class PortAndNodeConfigPanel<C extends IONodeConfig> extends JPanel {
         m_instantiateConfig = instantiateConfig;
     }
 
-    Map<PortID, C> getSelectedConfigs() {
+    Map<String, C> getSelectedConfigs() {
         return m_selectedConfigs;
     }
 
-    void updatePanel(final List<Port> ports, final Map<PortID, String> optionalPortNames,
-        final Function<PortID, C> getConfig) {
-        List<PortIDWithName> filteredPorts;
-        if (ports.stream().anyMatch(p -> !isValidPort(p))) {
-            m_warningMessage = "At least one port is not a table. Port(s) ignored.";
-            filteredPorts = ports.stream().filter(PortAndNodeConfigPanel::isValidPort)
-                .map(p -> new PortIDWithName(p.getID(), optionalPortNames)).collect(Collectors.toList());
-        } else {
-            m_warningMessage = null;
-            filteredPorts =
-                ports.stream().map(p -> new PortIDWithName(p.getID(), optionalPortNames)).collect(Collectors.toList());
-        }
-
-        if (filteredPorts.isEmpty()) {
+    void updatePanel(final List<String> ports,
+        final Function<String, C> getConfig) {
+        if (ports.isEmpty()) {
             removeAll();
             add(new JLabel("No ports"));
             revalidate();
             repaint();
         } else {
-            m_portSelection
-                .setModel(new DefaultComboBoxModel<>(filteredPorts.toArray(new PortIDWithName[filteredPorts.size()])));
-            m_portSelection.setEnabled(filteredPorts.size() > 1);
-            for (PortIDWithName port : filteredPorts) {
-                C config = getConfig.apply(port.getID());
-                m_selectedConfigs.put(port.getID(), config);
+            m_portSelection.removeAllItems();
+            ports.forEach(m_portSelection::addItem);
+            m_portSelection.setEnabled(ports.size() > 1);
+            for (String port : ports) {
+                C config = getConfig.apply(port);
+                m_selectedConfigs.put(port, config);
                 if (config != null) {
-                    m_configCache.put(Pair.create(port.getID(), config.getNodeName()), config);
+                    m_configCache.put(Pair.create(port, config.getNodeName()), config);
                 }
             }
-            PortIDWithName firstPort = filteredPorts.get(0);
-            C firstPortConfig = getConfig.apply(firstPort.getID());
+            String firstPort = ports.get(0);
+            C firstPortConfig = getConfig.apply(firstPort);
             if (firstPortConfig != null) {
                 m_nodeSelection.setSelectedItem(firstPortConfig.getNodeName());
                 m_portSelection.setSelectedItem(firstPort);
@@ -166,13 +149,13 @@ class PortAndNodeConfigPanel<C extends IONodeConfig> extends JPanel {
         add(tmp, BorderLayout.NORTH);
 
         String nodeName = (String)m_nodeSelection.getSelectedItem();
-        PortIDWithName port = (PortIDWithName)m_portSelection.getSelectedItem();
+        String port = (String)m_portSelection.getSelectedItem();
         if (!nodeName.equals(m_noneChoice)) {
-            Pair<PortID, String> key = Pair.create(port.getID(), nodeName);
+            Pair<String, String> key = Pair.create(port, nodeName);
             C nodeConfig = m_configCache.computeIfAbsent(key, k -> {
                 return m_instantiateConfig.apply(nodeName);
             });
-            m_selectedConfigs.put(port.getID(), nodeConfig);
+            m_selectedConfigs.put(port, nodeConfig);
 
             JPanel configPanel = nodeConfig.getOrCreateJPanel();
             JPanel border = new JPanel(new BorderLayout());
@@ -180,7 +163,7 @@ class PortAndNodeConfigPanel<C extends IONodeConfig> extends JPanel {
             border.setBorder(createBorder("Configuration"));
             add(border, BorderLayout.CENTER);
         } else {
-            m_selectedConfigs.put(port.getID(), null);
+            m_selectedConfigs.put(port, null);
         }
         if (m_warningMessage != null) {
             JLabel msg = new JLabel(m_warningMessage);
@@ -193,8 +176,8 @@ class PortAndNodeConfigPanel<C extends IONodeConfig> extends JPanel {
     }
 
     private void portSelectionChanged() {
-        PortIDWithName port = (PortIDWithName)m_portSelection.getSelectedItem();
-        C nodeConfig = m_selectedConfigs.get(port.getID());
+        String port = (String)m_portSelection.getSelectedItem();
+        C nodeConfig = m_selectedConfigs.get(port);
         if (nodeConfig == null) {
             m_nodeSelection.setSelectedItem(m_noneChoice);
         } else {
@@ -205,9 +188,4 @@ class PortAndNodeConfigPanel<C extends IONodeConfig> extends JPanel {
     private static Border createBorder(final String title) {
         return BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), title);
     }
-
-    private static boolean isValidPort(final Port p) {
-        return p.getType().get().equals(BufferedDataTable.TYPE);
-    }
-
 }

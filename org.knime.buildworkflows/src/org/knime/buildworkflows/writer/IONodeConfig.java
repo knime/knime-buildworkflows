@@ -48,9 +48,9 @@
  */
 package org.knime.buildworkflows.writer;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -95,44 +95,30 @@ abstract class IONodeConfig {
      * Helper to add, connect and configure input or output nodes.
      *
      * @param wfm the workflow to add the nodes to
-     * @param ports in the workflow to connect to
-     * @param portToConfigMap gives the node-config for a 'configured' port
+     * @param inputs the inputs to connect
+     * @param outputs the outputs to connect
+     * @param idToConfigMap gives the node-config for a 'configured' input/output
      * @param in whether input or output nodes are to be added
      * @param wfBounds the workflow's bounding box
      * @throws InvalidSettingsException if the configuration failed
-     * @return the ports that have actually been connected
      */
-    static List<PortID> addConnectAndConfigureIONodes(final WorkflowManager wfm, final List<PortID> ports,
-        final Function<PortID, ? extends IONodeConfig> portToConfigMap,
-        final Function<PortID, DataTable> portToInputDataMap, final boolean in, final int[] wfBounds)
+    static void addConnectAndConfigureIONodes(final WorkflowManager wfm, final Collection<String> inputOrOutputIDs,
+        final Function<String, Stream<PortID>> idToPortsMap,
+        final Function<String, ? extends IONodeConfig> idToConfigMap,
+        final Function<String, DataTable> idToInputDataMap, final boolean in, final int[] wfBounds)
         throws InvalidSettingsException {
-        //sort ports in the order of their node's y-coordinates and index
-        List<PortID> portsToConnectTo = new ArrayList<>(ports);
-        portsToConnectTo.sort((p1, p2) -> {
-            int y1 = wfm.getNodeContainer(p1.getNodeIDSuffix().prependParent(wfm.getID())).getUIInformation()
-                .getBounds()[1];
-            int y2 = wfm.getNodeContainer(p2.getNodeIDSuffix().prependParent(wfm.getID())).getUIInformation()
-                .getBounds()[1];
-            if (y1 == y2) {
-                return p1.getIndex() - p2.getIndex();
-            } else {
-                return y1 - y2;
-            }
-        });
 
-        int numNodes = portsToConnectTo.size();
-
+        int numNodes = inputOrOutputIDs.size();
         int y_bb_center = (int)Math.round((wfBounds[3] - wfBounds[1]) / 2.0 + wfBounds[1]);
         int y_offset = (int)Math.floor(y_bb_center - ((numNodes - 1) * NODE_DIST) / 2.0 - NODE_HEIGHT / 2.0);
         int x_pos = (int)Math.round((in ? wfBounds[0] - NODE_DIST : wfBounds[2] + NODE_DIST) - NODE_WIDTH / 2.0);
         int i = 0;
-        for (PortID p : portsToConnectTo) {
-            //add and configure
-            portToConfigMap.apply(p).addConnectAndConfigureNode(wfm, p, x_pos,
-                (int)Math.floor(y_offset + i * NODE_DIST), portToInputDataMap.apply(p));
+        for (String id : inputOrOutputIDs) {
+            idToConfigMap.apply(id).addConnectAndConfigureNode(wfm, idToPortsMap.apply(id), x_pos,
+                //add and configure
+                (int)Math.floor(y_offset + i * NODE_DIST), idToInputDataMap.apply(id));
             i++;
         }
-        return portsToConnectTo;
     }
 
     private String m_paramName;
@@ -168,14 +154,14 @@ abstract class IONodeConfig {
      * Adds the respective node to the given workflow at the given position, connects and configures it.
      *
      * @param wfm the workflow to add to
-     * @param p the port to connect to
+     * @param ports the ports to connect to
      * @param x the x coordinate
      * @param y the y coordinate
      * @param inputData optional input data used to configure a node
      * @return the id of the new node
      * @throws InvalidSettingsException if the configuration failed
      */
-    protected NodeID addConnectAndConfigureNode(final WorkflowManager wfm, final PortID p, final int x, final int y,
+    protected NodeID addConnectAndConfigureNode(final WorkflowManager wfm, final Stream<PortID> ports, final int x, final int y,
         final DataTable inputData) throws InvalidSettingsException {
         //add
         NodeID nodeID = wfm.createAndAddNode(createNodeFactory());
@@ -183,7 +169,7 @@ abstract class IONodeConfig {
         nc.setUIInformation(NodeUIInformation.builder().setNodeLocation(x, y, -1, -1).build());
 
         //connect
-        addConnection(wfm, p, nodeID);
+        ports.forEach(p -> addConnection(wfm, p, nodeID));
 
         //config
         NodeSettings settings = new NodeSettings("root");

@@ -60,9 +60,11 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorDescriptor;
@@ -95,6 +97,8 @@ import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.node.workflow.capture.WorkflowFragment;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
 import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.util.FileUtil;
@@ -190,7 +194,7 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
         wfm.setName(workflowName);
         try {
             addReferenceReaderNodes(fragment, wfm, tmpDataDir, exec);
-            addIONodes(fragment, wfm, config, workflowPortObject, exec);
+            addIONodes(wfm, config, workflowPortObject, exec);
 
             exec.setProgress(.2, () -> "Saving workflow to disk.");
             // write workflow to temporary directory
@@ -324,24 +328,31 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
         }
     }
 
-    private void addIONodes(final WorkflowFragment fragment, final WorkflowManager wfm,
-        final WorkflowWriterNodeConfig config, final WorkflowPortObject workflowPortObject, final ExecutionContext exec)
-        throws InvalidSettingsException {
+    private void addIONodes(final WorkflowManager wfm, final WorkflowWriterNodeConfig config,
+        final WorkflowPortObject workflowPortObject, final ExecutionContext exec) throws InvalidSettingsException {
         exec.setMessage(() -> "Adding input and output nodes");
         //add, connect and configure input and output nodes
         int[] wfmb = NodeUIInformation.getBoundingBoxOf(wfm.getNodeContainers());
-        List<PortID> configuredInPorts = config.getIONodes().getConfiguredInPorts(fragment.getInputPorts());
-        addConnectAndConfigureIONodes(wfm, configuredInPorts, p -> config.getIONodes().getInputNodeConfig(p).get(),
-            p -> workflowPortObject.getInputDataFor(p).orElse(null), true, wfmb);
-        List<PortID> configuredOutPorts = config.getIONodes().getConfiguredOutPorts(fragment.getOutputPorts());
-        addConnectAndConfigureIONodes(wfm, configuredOutPorts, p -> config.getIONodes().getOutputNodeConfig(p).get(),
-            p -> workflowPortObject.getInputDataFor(p).orElse(null), false, wfmb);
-        boolean unconnectedInputPorts = fragment.getInputPorts().size() > configuredInPorts.size();
-        boolean unconnectedOutputPorts = fragment.getOutputPorts().size() > configuredOutPorts.size();
-        if (unconnectedInputPorts || unconnectedOutputPorts) {
-            setWarningMessage("Some " + (unconnectedInputPorts ? "input" : "")
-                + (unconnectedInputPorts && unconnectedOutputPorts ? " and " : "")
-                + (unconnectedOutputPorts ? "output" : "") + " ports are not connected.");
+        List<String> configuredInputs =
+            config.getIONodes().getConfiguredInputs(workflowPortObject.getSpec().getInputIDs());
+        Map<String, Input> inputs = workflowPortObject.getSpec().getInputs();
+        addConnectAndConfigureIONodes(wfm, configuredInputs, id -> inputs.get(id).getConnectedPorts().stream(),
+            id -> config.getIONodes().getInputNodeConfig(id).get(),
+            id -> workflowPortObject.getInputDataFor(id).orElse(null), true, wfmb);
+        List<String> configuredOutputs =
+            config.getIONodes().getConfiguredOutputs(workflowPortObject.getSpec().getOutputIDs());
+        Map<String, Output> outputs = workflowPortObject.getSpec().getOutputs();
+        addConnectAndConfigureIONodes(wfm, configuredOutputs, id -> {
+            Optional<PortID> connectedPort = outputs.get(id).getConnectedPort();
+            return connectedPort.isPresent() ? Stream.of(connectedPort.get()) : Stream.empty();
+        }, id -> config.getIONodes().getOutputNodeConfig(id).get(),
+            id -> workflowPortObject.getInputDataFor(id).orElse(null), false, wfmb);
+        boolean unconnectedInputs = inputs.size() > configuredInputs.size();
+        boolean unconnectedOutputs = outputs.size() > configuredOutputs.size();
+        if (unconnectedInputs || unconnectedOutputs) {
+            setWarningMessage(
+                "Some " + (unconnectedInputs ? "input" : "") + (unconnectedInputs && unconnectedOutputs ? " and " : "")
+                    + (unconnectedOutputs ? "output" : "") + " ports are not connected.");
         }
     }
 

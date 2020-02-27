@@ -65,10 +65,6 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.defaultnodesettings.SettingsModel;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
-import org.knime.core.node.workflow.capture.WorkflowFragment;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Port;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 
 /**
@@ -84,9 +80,9 @@ class SettingsModelIONodes extends SettingsModel {
 
     private static final String CFG_KEY_NODE_CONFIG_CLASS = "node_config_class";
 
-    private static final String CFG_KEY_NODE_ID_SUFFIX = "node_id_suffix";
+    private static final String CFG_KEY_INPUT_ID = "input_id";
 
-    private static final String CFG_KEY_PORT_IDX = "port_idx";
+    private static final String CFG_KEY_OUTPUT_ID = "output_id";
 
     private static final String CFG_KEY_NODE_CONFIG = "node_config";
 
@@ -98,9 +94,9 @@ class SettingsModelIONodes extends SettingsModel {
 
     private int m_workflowInputPortIndex = -1;
 
-    private Map<PortID, InputNodeConfig> m_inputNodeConfigs;
+    private Map<String, InputNodeConfig> m_inputNodeConfigs;
 
-    private Map<PortID, OutputNodeConfig> m_outputNodeConfigs;
+    private Map<String, OutputNodeConfig> m_outputNodeConfigs;
 
     public SettingsModelIONodes(final String configName) {
         m_configName = configName;
@@ -109,34 +105,34 @@ class SettingsModelIONodes extends SettingsModel {
     }
 
     private SettingsModelIONodes(final String configName, final int workflowInputPortIndex,
-        final Map<PortID, InputNodeConfig> inputNodeConfigs, final Map<PortID, OutputNodeConfig> outputNodeConfigs) {
+        final Map<String, InputNodeConfig> inputNodeConfigs, final Map<String, OutputNodeConfig> outputNodeConfigs) {
         m_inputNodeConfigs = inputNodeConfigs;
         m_outputNodeConfigs = outputNodeConfigs;
         m_configName = configName;
         m_workflowInputPortIndex = workflowInputPortIndex;
     }
 
-    Optional<InputNodeConfig> getInputNodeConfig(final PortID p) {
+    Optional<InputNodeConfig> getInputNodeConfig(final String p) {
         return Optional.ofNullable(m_inputNodeConfigs.get(p));
     }
 
-    List<PortID> getConfiguredInPorts(final List<Port> availablePorts) {
-        return getIntersection(availablePorts, m_inputNodeConfigs.keySet());
+    List<String> getConfiguredInputs(final List<String> availableInputs) {
+        return getIntersection(availableInputs, m_inputNodeConfigs.keySet());
     }
 
-    void setInputNodeConfig(final PortID p, final InputNodeConfig config) {
+    void setInputNodeConfig(final String p, final InputNodeConfig config) {
         m_inputNodeConfigs.put(p, config);
     }
 
-    Optional<OutputNodeConfig> getOutputNodeConfig(final PortID p) {
+    Optional<OutputNodeConfig> getOutputNodeConfig(final String p) {
         return Optional.ofNullable(m_outputNodeConfigs.get(p));
     }
 
-    List<PortID> getConfiguredOutPorts(final List<Port> availablePorts) {
-        return getIntersection(availablePorts, m_outputNodeConfigs.keySet());
+    List<String> getConfiguredOutputs(final List<String> availableOutputs) {
+        return getIntersection(availableOutputs, m_outputNodeConfigs.keySet());
     }
 
-    void setOutputNodeConfig(final PortID p, final OutputNodeConfig config) {
+    void setOutputNodeConfig(final String p, final OutputNodeConfig config) {
         m_outputNodeConfigs.put(p, config);
     }
 
@@ -144,11 +140,11 @@ class SettingsModelIONodes extends SettingsModel {
         m_workflowInputPortIndex = idx;
     }
 
-    private static List<PortID> getIntersection(final Collection<Port> c1, final Collection<PortID> c2) {
-        List<PortID> intersect = new ArrayList<>();
-        for (Port p : c1) {
-            if (c2.contains(p.getID())) {
-                intersect.add(p.getID());
+    private static List<String> getIntersection(final Collection<String> c1, final Collection<String> c2) {
+        List<String> intersect = new ArrayList<>();
+        for (String p : c1) {
+            if (c2.contains(p)) {
+                intersect.add(p);
             }
         }
         return intersect;
@@ -211,9 +207,9 @@ class SettingsModelIONodes extends SettingsModel {
             throw new NotConfigurableException(msg);
         }
 
-        WorkflowFragment wf = ((WorkflowPortObjectSpec)specs[m_workflowInputPortIndex]).getWorkflowFragment();
+        WorkflowPortObjectSpec spec = (WorkflowPortObjectSpec)specs[m_workflowInputPortIndex];
         try {
-            loadSettingsInternal(settings, wf.getInputPorts(), wf.getOutputPorts());
+            loadSettingsInternal(settings, spec.getInputIDs(), spec.getOutputIDs());
         } catch (InvalidSettingsException e) {
             //should never happen
             throw new RuntimeException(e);
@@ -227,13 +223,6 @@ class SettingsModelIONodes extends SettingsModel {
             throw new IllegalStateException(
                 "Node config instance couldn't be created. Most likely and implementation error.");
         }
-    }
-
-    private static Optional<Port> findMatchingPort(final String nodeIDSuffix, final int portIdx,
-        final List<Port> ports) {
-        return ports.stream()
-            .filter(p -> p.getID().getNodeIDSuffix().toString().equals(nodeIDSuffix) && p.getID().getIndex() == portIdx)
-            .findFirst();
     }
 
     /**
@@ -260,28 +249,26 @@ class SettingsModelIONodes extends SettingsModel {
         loadSettingsInternal(settings, null, null);
     }
 
-    private void loadSettingsInternal(final NodeSettingsRO settings, final List<Port> inPorts,
-        final List<Port> outPorts) throws InvalidSettingsException {
+    private void loadSettingsInternal(final NodeSettingsRO settings, final List<String> inputs,
+        final List<String> outputs) throws InvalidSettingsException {
         boolean changed = false;
         if (settings.containsKey(m_configName)) {
             NodeSettingsRO subsettings = settings.getNodeSettings(m_configName);
             //load actual input configs
             if (subsettings.containsKey(CFG_NUM_INPUTS)) {
-                Map<PortID, InputNodeConfig> inputNodeConfigs = new HashMap<>();
+                Map<String, InputNodeConfig> inputNodeConfigs = new HashMap<>();
                 for (int i = 0; i < subsettings.getInt(CFG_NUM_INPUTS); i++) {
                     NodeSettingsRO node = subsettings.getNodeSettings(CFG_KEY_INPUT_NODE + i);
                     InputNodeConfig config =
                         (InputNodeConfig)createConfigInstanceForName(node.getString(CFG_KEY_NODE_CONFIG_CLASS));
                     config.loadSettingsFrom(node.getNodeSettings(CFG_KEY_NODE_CONFIG));
-                    String nodeIDSuffix = node.getString(CFG_KEY_NODE_ID_SUFFIX);
-                    int portIdx = node.getInt(CFG_KEY_PORT_IDX);
-                    if (inPorts != null) {
-                        Optional<Port> port = findMatchingPort(nodeIDSuffix, portIdx, inPorts);
-                        if (port.isPresent()) {
-                            inputNodeConfigs.put(port.get().getID(), config);
+                    String inputID = node.getString(CFG_KEY_INPUT_ID);
+                    if (inputs != null) {
+                        if (inputs.contains(inputID)) {
+                            inputNodeConfigs.put(inputID, config);
                         }
                     } else {
-                        inputNodeConfigs.put(new PortID(NodeIDSuffix.fromString(nodeIDSuffix), portIdx), config);
+                        inputNodeConfigs.put(inputID, config);
                     }
                 }
                 if (!inputNodeConfigs.equals(m_inputNodeConfigs)) {
@@ -297,22 +284,19 @@ class SettingsModelIONodes extends SettingsModel {
 
             //load actual output configs
             if (subsettings.containsKey(CFG_NUM_OUTPUTS)) {
-                Map<PortID, OutputNodeConfig> outputNodeConfigs = new HashMap<>();
+                Map<String, OutputNodeConfig> outputNodeConfigs = new HashMap<>();
                 for (int i = 0; i < subsettings.getInt(CFG_NUM_OUTPUTS); i++) {
                     NodeSettingsRO node = subsettings.getNodeSettings(CFG_KEY_OUTPUT_NODE + i);
                     OutputNodeConfig config =
                         (OutputNodeConfig)createConfigInstanceForName(node.getString(CFG_KEY_NODE_CONFIG_CLASS));
                     config.loadSettingsFrom(node.getNodeSettings(CFG_KEY_NODE_CONFIG));
-                    String nodeIDSuffix = node.getString(CFG_KEY_NODE_ID_SUFFIX);
-                    int portIdx = node.getInt(CFG_KEY_PORT_IDX);
-                    if (outPorts != null) {
-                        Optional<Port> port = findMatchingPort(nodeIDSuffix, portIdx, outPorts);
-                        if (port.isPresent()) {
-                            outputNodeConfigs.put(port.get().getID(), config);
+                    String outputID = node.getString(CFG_KEY_OUTPUT_ID);
+                    if (outputs != null) {
+                        if (outputs.contains(outputID)) {
+                            outputNodeConfigs.put(outputID, config);
                         }
                     } else {
-                        outputNodeConfigs.put(new PortID(NodeIDSuffix.fromString(nodeIDSuffix), portIdx),
-                            config);
+                        outputNodeConfigs.put(outputID, config);
                     }
                 }
                 if (!outputNodeConfigs.equals(m_outputNodeConfigs)) {
@@ -342,12 +326,11 @@ class SettingsModelIONodes extends SettingsModel {
         if (numInPorts > 0) {
             subsettings.addInt(CFG_NUM_INPUTS, numInPorts);
             int i = 0;
-            for (Entry<PortID, InputNodeConfig> inConfigs : m_inputNodeConfigs.entrySet()) {
+            for (Entry<String, InputNodeConfig> inConfigs : m_inputNodeConfigs.entrySet()) {
                 if (inConfigs.getValue() != null) {
                     NodeSettingsWO node = subsettings.addNodeSettings(CFG_KEY_INPUT_NODE + i);
                     node.addString(CFG_KEY_NODE_CONFIG_CLASS, inConfigs.getValue().getClass().getCanonicalName());
-                    node.addString(CFG_KEY_NODE_ID_SUFFIX, inConfigs.getKey().getNodeIDSuffix().toString());
-                    node.addInt(CFG_KEY_PORT_IDX, inConfigs.getKey().getIndex());
+                    node.addString(CFG_KEY_INPUT_ID, inConfigs.getKey());
                     NodeSettingsWO config = node.addNodeSettings(CFG_KEY_NODE_CONFIG);
                     inConfigs.getValue().saveSettingsTo(config);
                     i++;
@@ -359,12 +342,11 @@ class SettingsModelIONodes extends SettingsModel {
         if (numOutPorts > 0) {
             subsettings.addInt(CFG_NUM_OUTPUTS, numOutPorts);
             int i = 0;
-            for (Entry<PortID, OutputNodeConfig> outConfigs : m_outputNodeConfigs.entrySet()) {
+            for (Entry<String, OutputNodeConfig> outConfigs : m_outputNodeConfigs.entrySet()) {
                 if (outConfigs.getValue() != null) {
                     NodeSettingsWO node = subsettings.addNodeSettings(CFG_KEY_OUTPUT_NODE + i);
                     node.addString(CFG_KEY_NODE_CONFIG_CLASS, outConfigs.getValue().getClass().getCanonicalName());
-                    node.addString(CFG_KEY_NODE_ID_SUFFIX, outConfigs.getKey().getNodeIDSuffix().toString());
-                    node.addInt(CFG_KEY_PORT_IDX, outConfigs.getKey().getIndex());
+                    node.addString(CFG_KEY_OUTPUT_ID, outConfigs.getKey());
                     NodeSettingsWO config = node.addNodeSettings(CFG_KEY_NODE_CONFIG);
                     outConfigs.getValue().saveSettingsTo(config);
                     i++;

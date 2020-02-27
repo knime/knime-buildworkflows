@@ -50,11 +50,11 @@ package org.knime.buildworkflows.capture.end;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 import org.knime.core.data.DataTable;
@@ -81,10 +81,9 @@ import org.knime.core.node.workflow.CaptureWorkflowStartNode;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
-import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowFragment;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Port;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
 import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
@@ -116,9 +115,9 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
 
     private WorkflowFragment m_lastFragment;
 
-    private final Map<PortID, String> m_inPortNames = new HashMap<>();
+    private final List<String> m_inputIDs = new ArrayList<>();
 
-    private final Map<PortID, String> m_outPortNames = new HashMap<>();
+    private final List<String> m_outputIDs = new ArrayList<>();
 
     /**
      * @param portsConfiguration the {@link PortsConfiguration} provided by the user
@@ -145,7 +144,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         removeFragment();
         m_lastFragment = wff;
         final WorkflowPortObjectSpec spec =
-            new WorkflowPortObjectSpec(wff, getCustomWorkflowName(), m_inPortNames, m_outPortNames);
+            new WorkflowPortObjectSpec(wff, getCustomWorkflowName(), m_inputIDs, m_outputIDs);
         return Stream.concat(Arrays.stream(inSpecs), Stream.of(spec)).toArray(PortObjectSpec[]::new);
     }
 
@@ -155,13 +154,12 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
     @Override
     protected PortObject[] execute(final PortObject[] inObjects, final ExecutionContext exec) throws Exception {
         checkForCaptureNodeStart();
-        Map<PortID, DataTable> inputData = null;
+        Map<String, DataTable> inputData = null;
         if (m_addInputData.getBooleanValue()) {
-            inputData = getInputData(m_lastFragment.getInputPorts(), m_maxNumRows.getIntValue(), exec);
+            inputData = getInputData(m_lastFragment.getConnectedInputs(), m_inputIDs, m_maxNumRows.getIntValue(), exec);
         }
         final WorkflowPortObject po = new WorkflowPortObject(
-            new WorkflowPortObjectSpec(m_lastFragment, getCustomWorkflowName(), m_inPortNames, m_outPortNames),
-            inputData);
+            new WorkflowPortObjectSpec(m_lastFragment, getCustomWorkflowName(), m_inputIDs, m_outputIDs), inputData);
         return Stream.concat(Arrays.stream(inObjects), Stream.of(po)).toArray(PortObject[]::new);
     }
 
@@ -170,30 +168,34 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
     }
 
     /*
-     * Retrieves the input tables for the given input ports (if they accept tables).
+     * Retrieves the input tables for the given inputs (if they accept tables).
      */
-    private static Map<PortID, DataTable> getInputData(final List<Port> inputPorts, final int numRowsToStore,
-        final ExecutionContext exec) throws CanceledExecutionException {
+    private static Map<String, DataTable> getInputData(final List<Input> inputs, final List<String> inputIDs,
+        final int numRowsToStore, final ExecutionContext exec) throws CanceledExecutionException {
         WorkflowManager wfm = NodeContext.getContext().getNodeContainer().getParent();
-        Map<PortID, DataTable> inputData = new HashMap<>();
-        for (Port p : inputPorts) {
-            if (p.getType().isPresent() && p.getType().get().equals(BufferedDataTable.TYPE)) {
+        Map<String, DataTable> inputData = new HashMap<>();
+        int i = 0;
+        for (Input input : inputs) {
+            if (input.getType().isPresent() && input.getType().get().equals(BufferedDataTable.TYPE)
+                && !input.getConnectedPorts().isEmpty()) {
+                PortID connectingPort = input.getConnectedPorts().iterator().next();
                 ConnectionContainer cc = wfm.getIncomingConnectionFor(
-                    p.getID().getNodeIDSuffix().prependParent(wfm.getID()), p.getID().getIndex());
+                    connectingPort.getNodeIDSuffix().prependParent(wfm.getID()), connectingPort.getIndex());
                 BufferedDataTable table = (BufferedDataTable)wfm.getNodeContainer(cc.getSource())
                     .getOutPort(cc.getSourcePort()).getPortObject();
                 if (numRowsToStore > 0) {
                     BufferedDataContainer container = exec.createDataContainer(table.getDataTableSpec());
                     try (CloseableRowIterator iterator = table
-                        .filter(TableFilter.filterRowsToIndex(Math.min(numRowsToStore, table.size()))).iterator()) {
+                        .filter(TableFilter.filterRowsToIndex(Math.min(numRowsToStore, table.size()) - 1)).iterator()) {
                         exec.checkCanceled();
                         container.addRowToTable(iterator.next());
                     }
                     container.close();
                     table = container.getTable();
                 }
-                inputData.put(p.getID(), table);
+                inputData.put(inputIDs.get(i), table);
             }
+            i++;
         }
         return inputData;
     }
@@ -239,33 +241,24 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         }
         m_addInputData.saveSettingsTo(settings);
         m_maxNumRows.saveSettingsTo(settings);
-        savePortNames(settings, m_inPortNames, m_outPortNames);
+        saveInputOutputIDs(settings, m_inputIDs, m_outputIDs);
     }
 
-    static void savePortNames(final NodeSettingsWO settings, final Map<PortID, String> inPortNames,
-        final Map<PortID, String> outPortNames) {
-        if (inPortNames.isEmpty() && outPortNames.isEmpty()) {
+    static void saveInputOutputIDs(final NodeSettingsWO settings, final List<String> inputIDs,
+        final List<String> outputIDs) {
+        if (inputIDs.isEmpty() && outputIDs.isEmpty()) {
             return;
         }
-        NodeSettingsWO subSettings = settings.addNodeSettings("port_names");
-        int i = 0;
-        subSettings.addInt("num_in_port_names", inPortNames.size());
-        for (Entry<PortID, String> in : inPortNames.entrySet()) {
-            NodeSettingsWO portSettings = subSettings.addNodeSettings("in_port_" + i);
-            portSettings.addString("node_id", in.getKey().getNodeIDSuffix().toString());
-            portSettings.addInt("index", in.getKey().getIndex());
-            portSettings.addString("name", in.getValue());
-            i++;
+        NodeSettingsWO subSettings = settings.addNodeSettings("input_ids");
+        subSettings.addInt("num_ids", inputIDs.size());
+        for (int i = 0; i < inputIDs.size(); i++) {
+            subSettings.addString("id_" + i, inputIDs.get(i));
         }
 
-        i = 0;
-        subSettings.addInt("num_out_port_names", outPortNames.size());
-        for (Entry<PortID, String> in : outPortNames.entrySet()) {
-            NodeSettingsWO portSettings = subSettings.addNodeSettings("out_port_" + i);
-            portSettings.addString("node_id", in.getKey().getNodeIDSuffix().toString());
-            portSettings.addInt("index", in.getKey().getIndex());
-            portSettings.addString("name", in.getValue());
-            i++;
+        subSettings = settings.addNodeSettings("output_ids");
+        subSettings.addInt("num_ids", outputIDs.size());
+        for (int i = 0; i < outputIDs.size(); i++) {
+            subSettings.addString("id_" + i, outputIDs.get(i));
         }
     }
 
@@ -288,9 +281,9 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         }
         m_addInputData.loadSettingsFrom(settings);
         m_maxNumRows.loadSettingsFrom(settings);
-        m_inPortNames.clear();
-        m_outPortNames.clear();
-        loadAndFillPortNames(settings, m_inPortNames, m_outPortNames);
+        m_inputIDs.clear();
+        m_outputIDs.clear();
+        loadAndFillInputOutputIDs(settings, m_inputIDs, m_outputIDs);
     }
 
     /**
@@ -301,26 +294,23 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
      * @param outPortNames the map the output port names are added to
      * @throws InvalidSettingsException
      */
-    static void loadAndFillPortNames(final NodeSettingsRO settings, final Map<PortID, String> inPortNames,
-        final Map<PortID, String> outPortNames) throws InvalidSettingsException {
-        if (!settings.containsKey("port_names")) {
-            return;
-        }
-        NodeSettingsRO subSettings = settings.getNodeSettings("port_names");
-        int num = subSettings.getInt("num_in_port_names");
-        for (int i = 0; i < num; i++) {
-            NodeSettingsRO portSettings = subSettings.getNodeSettings("in_port_" + i);
-            inPortNames.put(
-                new PortID(NodeIDSuffix.fromString(portSettings.getString("node_id")), portSettings.getInt("index")),
-                portSettings.getString("name"));
+    static void loadAndFillInputOutputIDs(final NodeSettingsRO settings, final List<String> inputIDs,
+        final List<String> outputIDs) throws InvalidSettingsException {
+
+        if (settings.containsKey("input_ids")) {
+            NodeSettingsRO subSettings = settings.getNodeSettings("input_ids");
+            int num = subSettings.getInt("num_ids");
+            for (int i = 0; i < num; i++) {
+                inputIDs.add(subSettings.getString("id_" + i));
+            }
         }
 
-        num = subSettings.getInt("num_out_port_names");
-        for (int i = 0; i < num; i++) {
-            NodeSettingsRO portSettings = subSettings.getNodeSettings("out_port_" + i);
-            outPortNames.put(
-                new PortID(NodeIDSuffix.fromString(portSettings.getString("node_id")), portSettings.getInt("index")),
-                portSettings.getString("name"));
+        if (settings.containsKey("output_ids")) {
+            NodeSettingsRO subSettings = settings.getNodeSettings("output_ids");
+            int num = subSettings.getInt("num_ids");
+            for (int i = 0; i < num; i++) {
+                outputIDs.add(subSettings.getString("id_" + i));
+            }
         }
 
     }

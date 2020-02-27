@@ -49,7 +49,10 @@
 package org.knime.buildworkflows.combiner;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -57,37 +60,32 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.util.CheckUtils;
-import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Port;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
+import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
 import org.knime.core.util.Pair;
 
 /**
- * Represents the connections between two workflows (i.e. connections between the output ports of the first and input
- * ports of the second workflow).
+ * Represents the connections between two workflow fragments (i.e. connections between the outputs of the first and
+ * inputs of the second workflow fragment). The inputs and outputs are referenced by their id.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 class ConnectionMap {
 
-    private static final String CFG_NUM_CONNECTED_PORTS = "num_connected_ports";
+    private static final String CFG_NUM_CONNECTIONS = "num_connections";
 
-    private static final String CFG_IN_PORT = "in_port_";
+    private static final String CFG_INPUT_ID = "input_id_";
 
-    private static final String CFG_OUT_PORT = "out_port_";
+    private static final String CFG_OUTPUT_ID = "output_id_";
 
-    private static final String CFG_PORT_INDEX = "index";
-
-    private static final String CFG_NODE_ID = "node_id";
-
-    private List<Pair<PortID, PortID>> m_connections = null;
+    private List<Pair<String, String>> m_connections = null;
 
     /**
      * A new connection map.
      *
-     * @param connections connections represented as a list of pairs of ports
+     * @param connections connections represented as a list of pairs of ids
      */
-    ConnectionMap(final List<Pair<PortID, PortID>> connections) {
+    ConnectionMap(final List<Pair<String, String>> connections) {
         m_connections = connections;
     }
 
@@ -99,59 +97,77 @@ class ConnectionMap {
     }
 
     /**
-     * Gets all configured connections for the given output and input ports.
+     * Gets all configured connections for the given outputs and inputs, based on their respective id.
      *
-     * @param out the available output ports to get the connections for
-     * @param in the available input ports to get the connections for
-     * @return the connections represented as a list of pairs of out-ports connected to in-ports
-     * @throws InvalidSettingsException if the given ports couldn't be connected appropriately
+     * @param out the available outputs to get the connections for (deterministic iteration in the order ot the ports
+     *            expected!!)
+     * @param in the available inputs to get the connections for (deterministic iteration in the order of the ports
+     *            expected!!)
+     * @return the connections represented as a list of pairs of output id connected to an input id
+     * @throws InvalidSettingsException if the given outputs and inputs couldn't be connected appropriately
      */
-    List<Pair<PortID, PortID>> getConnectionsFor(final List<Port> out, final List<Port> in)
+    List<Pair<String, String>> getConnectionsFor(final Map<String, Output> out, final Map<String, Input> in)
         throws InvalidSettingsException {
-        List<Pair<PortID, PortID>> res = new ArrayList<>();
+        List<Pair<String, String>> res = new ArrayList<>();
         if (m_connections == null) {
             CheckUtils.checkSetting(out.size() == in.size(),
-                "Can't pair-wise connect ports: The number of output and input ports differ");
-            for (int i = 0; i < out.size(); i++) {
-                CheckUtils.checkSetting(out.get(i).getType().get().equals(in.get(i).getType().get()),
-                    "Can't pair-wise connect ports: types of some ports differ.");
-            }
-            for (int i = 0; i < out.size(); i++) {
-                res.add(Pair.create(out.get(i).getID(), in.get(i).getID()));
+                "Can't pair-wise connect outputs to inputs: The number of output and input ports differ");
+            Iterator<Entry<String, Output>> outIt = out.entrySet().iterator();
+            Iterator<Entry<String, Input>> inIt = in.entrySet().iterator();
+            while (outIt.hasNext() && inIt.hasNext()) {
+                Entry<String, Output> outEntry = outIt.next();
+                Entry<String, Input> inEntry = inIt.next();
+                CheckUtils.checkSetting(outEntry.getValue().getType().equals(inEntry.getValue().getType()),
+                    "Can't pair-wise connect outputs to inputs: types of some ports differ.");
+                res.add(Pair.create(outEntry.getKey(), inEntry.getKey()));
             }
         } else {
-            res = m_connections.stream().filter(c -> contains(c.getFirst(), out) && contains(c.getSecond(), in))
+            res = m_connections.stream().filter(c -> out.containsKey(c.getFirst()) && in.containsKey(c.getSecond()))
                 .collect(Collectors.toList());
         }
         return res;
     }
 
-    private static boolean contains(final PortID id, final List<Port> l) {
-        return l.stream().anyMatch(p -> p.getID().equals(id));
-    }
-
     /**
-     * Gets the output port for a given input port as configured by this connection map.
+     * Gets the output for a given input as configured by this connection map if<br/>
+     * 1. there is connection to the given input id<br/>
+     * 2. the output-id of the connection is contained in the list of all available outputs<br/>
+     * 3. the port types of the output and input are compatible<br/>
      *
-     * @param in the input port to get the output port for - must be contained in the 'ins'-list
-     * @param outs list of all available output ports
-     * @param ins the list of all available input ports
-     * @return the output port or an empty optional if there is no mapping
+     * Otherwise an empty optional is returned.
+     *
+     * @param in the input to get the output for - must be contained in the 'ins'-list
+     * @param outs map of all available outputs (in deterministic order of the ports!)
+     * @param ins the list of all available inputs (in deterministic order of the ports!)
+     * @return the output or an empty optional if there is no mapping
      */
-    Optional<PortID> getOutPortForInPort(final PortID in, final List<PortID> outs, final List<PortID> ins) {
-        assert ins.contains(in);
+    Optional<String> getOutPortForInPort(final String in, final Map<String, Output> outs,
+        final Map<String, Input> ins) {
+        assert ins.keySet().contains(in);
         if (m_connections == null) {
             //default pair-wise connection
-            int idx = ins.indexOf(in);
-            if (idx == -1 || outs.size() <= idx) {
-                return Optional.empty();
-            } else {
-                return Optional.of(outs.get(idx));
+            Iterator<Entry<String, Output>> outIt = outs.entrySet().iterator();
+            Iterator<Entry<String, Input>> inIt = ins.entrySet().iterator();
+            while (inIt.hasNext() && outIt.hasNext()) {
+                Entry<String, Output> output = outIt.next();
+                Entry<String, Input> input = inIt.next();
+                if (input.getKey().equals(in)) {
+                    //check port type compatibility
+                    if (output.getValue().getType().equals(input.getValue().getType())) {
+                        return Optional.of(output.getKey());
+                    }
+                }
             }
+            return Optional.empty();
         } else {
-            return m_connections.stream().filter(p -> p.getSecond().equals(in))
-                .filter(p -> outs.contains(p.getFirst()) && ins.contains(p.getSecond())).map(Pair::getFirst)
-                .findFirst();
+            return m_connections.stream().filter(c -> c.getSecond().equals(in)).filter(p -> {
+                //make sure that
+                //1. the give input-id is part of a connection in this connection map
+                //2. there is a connection where the output-id is contained in the list of available outputs
+                //3. those port types are compatible
+                return in.equals(p.getSecond()) && outs.keySet().contains(p.getFirst())
+                    && outs.get(p.getFirst()).getType().equals(ins.get(p.getSecond()).getType());
+            }).map(Pair::getFirst).findFirst();
         }
     }
 
@@ -162,17 +178,13 @@ class ConnectionMap {
      */
     void save(final NodeSettingsWO settings) {
         if (m_connections == null) {
-            settings.addInt(CFG_NUM_CONNECTED_PORTS, -1);
+            settings.addInt(CFG_NUM_CONNECTIONS, -1);
             return;
         }
-        settings.addInt(CFG_NUM_CONNECTED_PORTS, m_connections.size());
+        settings.addInt(CFG_NUM_CONNECTIONS, m_connections.size());
         for (int i = 0; i < m_connections.size(); i++) {
-            NodeSettingsWO portSettings = settings.addNodeSettings(CFG_IN_PORT + i);
-            portSettings.addString(CFG_NODE_ID, m_connections.get(i).getSecond().getNodeIDSuffix().toString());
-            portSettings.addInt(CFG_PORT_INDEX, m_connections.get(i).getSecond().getIndex());
-            portSettings = settings.addNodeSettings(CFG_OUT_PORT + i);
-            portSettings.addString(CFG_NODE_ID, m_connections.get(i).getFirst().getNodeIDSuffix().toString());
-            portSettings.addInt(CFG_PORT_INDEX, m_connections.get(i).getFirst().getIndex());
+            settings.addString(CFG_INPUT_ID + i, m_connections.get(i).getSecond());
+            settings.addString(CFG_OUTPUT_ID + i, m_connections.get(i).getFirst());
         }
     }
 
@@ -183,19 +195,15 @@ class ConnectionMap {
      * @throws InvalidSettingsException
      */
     void load(final NodeSettingsRO settings) throws InvalidSettingsException {
-        int numPorts = settings.getInt(CFG_NUM_CONNECTED_PORTS);
-        if (numPorts == -1) {
+        int num = settings.getInt(CFG_NUM_CONNECTIONS);
+        if (num == -1) {
             return;
         }
-        m_connections = new ArrayList<>(numPorts);
-        for (int i = 0; i < numPorts; i++) {
-            NodeSettingsRO portSettings = settings.getNodeSettings(CFG_IN_PORT + i);
-            PortID inPort = new PortID(NodeIDSuffix.fromString(portSettings.getString(CFG_NODE_ID)),
-                portSettings.getInt(CFG_PORT_INDEX));
-            portSettings = settings.getNodeSettings(CFG_OUT_PORT + i);
-            PortID outPort = new PortID(NodeIDSuffix.fromString(portSettings.getString(CFG_NODE_ID)),
-                portSettings.getInt(CFG_PORT_INDEX));
-            m_connections.add(Pair.create(outPort, inPort));
+        m_connections = new ArrayList<>(num);
+        for (int i = 0; i < num; i++) {
+            String inputID = settings.getString(CFG_INPUT_ID + i);
+            String outputID = settings.getString(CFG_OUTPUT_ID + i);
+            m_connections.add(Pair.create(outputID, inputID));
         }
     }
 }

@@ -31,43 +31,41 @@
 		<tab name="Workflow Connections">
 			<option name="Connect workflow i with (i+1)">
 				For each pair of consecutive workflows (in the order of the workflow
-				ports), select if and how to connect the output ports of the first
-				workflow to the input ports of the second workflow.
+				ports), select if and how to connect the outputs of the first
+				workflow to the inputs of the second workflow.
 				<br />
 				<b>Default configuration:</b>
 				By default (i.e. if
 				not configured otherwise)
 				the
-				input
-				ports of each
+				inputs
+				of each
 				workflow will be
 				automatically connected with
 				the
-				output ports of the
-				predecessor
-				workflow, i.e., the workflow
+				outputs of the
+				predecessor workflow, i.e., the workflow
 				connected to the previous
-				input
-				port. The
+				input port. The
 				<tt>i-th</tt>
-				output port
+				output
 				of workflow
 				<tt>j</tt>
 				will be connected to the
 				<tt>i-th</tt>
-				input port of workflow
+				input of workflow
 				<tt>j+1</tt>
 				.
-				If the default pairing of ports cannot be applied (because of a
-				non-matching number of input and output ports or incompatible port
+				If the default pairing of inputs and outputs cannot be applied (because of a
+				non-matching number of inputs and outputs or incompatible port
 				types), the node can not be executed and requires manual
 				configuration.
 				<br />
 				<b>Manual configuration:</b>
 				If the default configuration is not applicable or not desired, the
-				output port to input port pairing can be chosen manually. This is
-				done by selecting the output ports that are to be connected to an
-				input port of the subsequent workflow. Only compatible port types
+				output to input pairing can be chosen manually. This is
+				done by selecting the outputs that are to be connected to an
+				inputs of the subsequent workflow. Only compatible port types
 				are eligible.
 			</option>
 		</tab>

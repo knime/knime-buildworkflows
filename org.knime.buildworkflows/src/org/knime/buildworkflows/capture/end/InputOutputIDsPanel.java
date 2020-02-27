@@ -48,13 +48,12 @@
  */
 package org.knime.buildworkflows.capture.end;
 
+import java.awt.Color;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
@@ -63,68 +62,71 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-import org.knime.core.node.workflow.capture.WorkflowFragment.Port;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
-
 /**
- * Panel to optionally assign names to ports.
+ * Panel to assign custom input and output ids.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 @SuppressWarnings("serial")
-class PortNamesPanel extends JPanel {
+class InputOutputIDsPanel extends JPanel {
 
-    private Map<PortID, JTextField> m_inputNames;
+    private List<JTextField> m_inputIDs;
 
-    private Map<PortID, JTextField> m_outputNames;
+    private List<JTextField> m_outputIDs;
 
-    PortNamesPanel(final List<Port> inputPorts, final List<Port> outputPorts, final Map<PortID, String> initInPortNames,
-        final Map<PortID, String> initOutPortNames) {
-        JPanel inputs = new JPanel();
-        setBorder(inputs, "Input ports names");
-        m_inputNames = fillPanel(inputs, inputPorts, initInPortNames);
-        JPanel outputs = new JPanel();
-        setBorder(outputs, "Output ports names");
-        m_outputNames = fillPanel(outputs, outputPorts, initOutPortNames);
+    InputOutputIDsPanel(final List<String> inputIDs, final List<String> outputIDs) {
+        JPanel inputsPanel = new JPanel();
+        setBorder(inputsPanel, "Input ports IDs");
+        m_inputIDs = fillPanel(inputsPanel, inputIDs, "Input");
+        JPanel outputsPanel = new JPanel();
+        setBorder(outputsPanel, "Output ports IDs");
+        m_outputIDs = fillPanel(outputsPanel, outputIDs, "Output");
 
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-        add(inputs);
-        add(outputs);
+        add(inputsPanel);
+        add(outputsPanel);
     }
 
     private static void setBorder(final JPanel p, final String title) {
         p.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), title));
     }
 
-    private static Map<PortID, JTextField> fillPanel(final JPanel p, final List<Port> ports,
-        final Map<PortID, String> initPortNames) {
+    private static List<JTextField> fillPanel(final JPanel p, final List<String> ids, final String label) {
         p.setLayout(new GridBagLayout());
         GridBagConstraints c = new GridBagConstraints();
         c.gridwidth = 1;
-        Map<PortID, JTextField> res = new HashMap<>(ports.size());
-        for (Port port : ports) {
+        List<JTextField> res = new ArrayList<>(ids.size());
+        int i = 0;
+        for (String id : ids) {
             c.insets = new Insets(15, 0, 0, 0);
             c.gridy++;
-            p.add(new JLabel(port.toString() + ":"), c);
+            JLabel jLabel = new JLabel(label + " #" + i);
+            p.add(jLabel, c);
             c.insets = new Insets(0, 0, 0, 0);
             JTextField text = new JTextField(12);
-            if (initPortNames.containsKey(port.getID())) {
-                text.setText(initPortNames.get(port.getID()));
-            }
+            text.setText(id);
             c.gridy++;
             p.add(text, c);
-            res.put(port.getID(), text);
+            res.add(text);
+            i++;
         }
         return res;
     }
 
-    Map<PortID, String> getInPortNames() {
-        return m_inputNames.entrySet().stream().filter(e -> !e.getValue().getText().isEmpty())
-            .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getText()));
+    void setInputsOutputsInvalid(final boolean inputsInvalid, final boolean outputsInvalid) {
+        for (JTextField t : m_inputIDs) {
+            t.setBackground(inputsInvalid ? Color.red : Color.white);
+        }
+        for (JTextField t : m_outputIDs) {
+            t.setBackground(outputsInvalid ? Color.red : Color.white);
+        }
     }
 
-    Map<PortID, String> getOutPortNames() {
-        return m_outputNames.entrySet().stream().filter(e -> !e.getValue().getText().isEmpty())
-            .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getText()));
+    List<String> getInputIDs() {
+        return m_inputIDs.stream().map(JTextField::getText).collect(Collectors.toList());
+    }
+
+    List<String> getOutputIDs() {
+        return m_outputIDs.stream().map(JTextField::getText).collect(Collectors.toList());
     }
 }
