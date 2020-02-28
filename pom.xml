@@ -26,7 +26,6 @@
 	<modules>
 		<module>org.knime.buildworkflows</module>
 		<module>org.knime.features.buildworkflows</module>
-		<module>org.knime.features.buildworkflows.testing</module>
 		<module>org.knime.update.buildworkflows</module>
 	</modules>
 
@@ -62,24 +61,14 @@
 			<url>${knime.workbench.p2}</url>
 		</repository>
 		<repository>
-			<id>p2-knime-javasnippet</id>
-			<layout>p2</layout>
-			<url>${knime.javasnippet.p2}</url>
-		</repository>
-		<repository>
 			<id>p2-knime-expressions</id>
 			<layout>p2</layout>
 			<url>${knime.expressions.p2}</url>
 		</repository>
 		<repository>
-			<id>p2-knime-datageneration</id>
+			<id>p2-knime-javasnippet</id>
 			<layout>p2</layout>
-			<url>${knime.datageneration.p2}</url>
-		</repository>
-		<repository>
-			<id>p2-knime-filehandling</id>
-			<layout>p2</layout>
-			<url>${knime.filehandling.p2}</url>
+			<url>${knime.javasnippet.p2}</url>
 		</repository>
 	</repositories>
 </project>

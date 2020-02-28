@@ -7,10 +7,6 @@
 		version="0.0.0">
 		<category name="knime-buildworkflows" />
 	</feature>
-	<feature id="org.knime.features.buildworkflows.testing"
-		version="0.0.0">
-		<category name="knime-buildworkflows" />
-	</feature>
 
 	<category-def name="knime-buildworkflows"
 		label="Build artifacts from knime-buildworkflows">
