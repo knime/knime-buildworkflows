@@ -52,6 +52,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -173,21 +174,42 @@ final class WorkflowCombinerNodeModel extends NodeModel {
             String workflowName = inWorkflowSpecs[0].getWorkflowName(); //TODO make configurable
             Pair<List<String>, List<Input>> newInputs = collectAndMapAllRemainingInputPorts(inWorkflowFragments);
             Pair<List<String>, List<Output>> newOutputs = collectAndMapAllRemainingOutputPorts(inWorkflowFragments);
-            Optional<List<String>> newInputIDs = ensureUniqueness(newInputs.getFirst());
-            boolean duplicateInputIDs = newInputIDs.isPresent();
-            Optional<List<String>> newOutputIDs = ensureUniqueness(newOutputs.getFirst());
-            boolean duplicateOutputIDs = newOutputIDs.isPresent();
-            if (duplicateInputIDs || duplicateOutputIDs) {
-                setWarningMessage("Some input/output ids in the combined worklfows have been modified to be unique");
+            List<String> duplicates = getDuplicates(newInputs.getFirst());
+            if (!duplicates.isEmpty()) {
+                throw new IllegalStateException(
+                    "Duplicate input IDs: " + duplicates.stream().collect(Collectors.joining(",")));
             }
-            return new PortObject[]{new WorkflowPortObject(new WorkflowPortObjectSpec(
-                new WorkflowFragment(wfm, newInputs.getSecond(), newOutputs.getSecond(), objectReferenceReaderNodes),
-                workflowName, newInputIDs.orElse(newInputs.getFirst()), newOutputIDs.orElse(newOutputs.getFirst())),
+            duplicates = getDuplicates(newOutputs.getFirst());
+            if (!duplicates.isEmpty()) {
+                throw new IllegalStateException(
+                    "Duplicate output IDs: " + duplicates.stream().collect(Collectors.joining(",")));
+            }
+            return new PortObject[]{new WorkflowPortObject(
+                new WorkflowPortObjectSpec(new WorkflowFragment(wfm, newInputs.getSecond(), newOutputs.getSecond(),
+                    objectReferenceReaderNodes), workflowName, newInputs.getFirst(), newOutputs.getFirst()),
                 inputData)};
         } catch (final Exception e) {
             // in case something goes wrong ensure that newly created metanode/component is removed
             clear();
             throw (e);
+        }
+    }
+
+    private static List<String> getDuplicates(final List<String> ids) {
+        Set<String> set = new HashSet<>(ids);
+        if (ids.size() == set.size()) {
+            return Collections.emptyList();
+        } else {
+            set.clear();
+            List<String> res = new ArrayList<>();
+            for (String s : ids) {
+                if (set.contains(s)) {
+                    res.add(s);
+                } else {
+                    set.add(s);
+                }
+            }
+            return res;
         }
     }
 
