@@ -173,11 +173,11 @@ final class WorkflowCombinerNodeModel extends NodeModel {
             String workflowName = inWorkflowSpecs[0].getWorkflowName(); //TODO make configurable
             Pair<List<String>, List<Input>> newInputs = collectAndMapAllRemainingInputPorts(inWorkflowFragments);
             Pair<List<String>, List<Output>> newOutputs = collectAndMapAllRemainingOutputPorts(inWorkflowFragments);
-            Optional<List<String>> newInputIDs = WorkflowPortObjectSpec.ensureUniqueness(newInputs.getFirst());
-            boolean collidingInputIDs = newInputIDs.isPresent();
-            Optional<List<String>> newOutputIDs = WorkflowPortObjectSpec.ensureUniqueness(newOutputs.getFirst());
-            boolean collidingOutputIDs = newOutputIDs.isPresent();
-            if (collidingInputIDs || collidingOutputIDs) {
+            Optional<List<String>> newInputIDs = ensureUniqueness(newInputs.getFirst());
+            boolean duplicateInputIDs = newInputIDs.isPresent();
+            Optional<List<String>> newOutputIDs = ensureUniqueness(newOutputs.getFirst());
+            boolean duplicateOutputIDs = newOutputIDs.isPresent();
+            if (duplicateInputIDs || duplicateOutputIDs) {
                 setWarningMessage("Some input/output ids in the combined worklfows have been modified to be unique");
             }
             return new PortObject[]{new WorkflowPortObject(new WorkflowPortObjectSpec(
@@ -194,6 +194,30 @@ final class WorkflowCombinerNodeModel extends NodeModel {
     private static WorkflowManager createWFM() {
         return WorkflowManager.EXTRACTED_WORKFLOW_ROOT.createAndAddSubWorkflow(new PortType[0], new PortType[0],
             "workflow_combiner");
+    }
+
+    /**
+     * Makes sure that the list of ids doesn't contain duplicates and returns 'fixed' list it does.
+     *
+     * @param ids the list to check
+     * @return an empty optional if there are no duplicates, otherwise a list with fixed ids to be unique ('*' appended)
+     */
+    private static Optional<List<String>> ensureUniqueness(final List<String> ids) {
+        Set<String> set = new HashSet<>(ids);
+        if (set.size() == ids.size()) {
+            return Optional.empty();
+        }
+        List<String> res = new ArrayList<>();
+        set.clear();
+        for (int i = 0; i < ids.size(); i++) {
+            if (set.contains(ids.get(i))) {
+                res.add(ids.get(i) + "*");
+            } else {
+                res.add(ids.get(i));
+            }
+            set.add(res.get(i));
+        }
+        return Optional.of(res);
     }
 
     private static WorkflowFragmentMeta copy(final WorkflowManager wfm, final WorkflowPortObjectSpec toCopy) {
