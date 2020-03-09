@@ -206,7 +206,7 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
                 Files.copy(localSourcePath, dest);
             }
         } else if (workflowAware) {
-            ((WorkflowAware)provider).deployWorkflow(localSource, dest, openAfterWrite);
+            ((WorkflowAware)provider).deployWorkflow(localSource, dest, overwrite, openAfterWrite);
         } else {
             for (Path path : Files.walk(localSourcePath).collect(Collectors.toList())) {
                 final Path rel = localSourcePath.relativize(path);
