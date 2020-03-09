@@ -96,10 +96,13 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
 
         final GridBagConstraints gbc = createAndInitGBC();
         m_archive = new DialogComponentBoolean(getConfig().isArchive(), "Export workflow as knwf archive");
-        m_archive.setToolTipText("If a workflow archive (.knwf) should be written instead of a directory");
-        m_openAfterWrite = new DialogComponentBoolean(getConfig().isOpenAfterWrite(), "Open after write");
+        m_archive.setToolTipText("Should a workflow archive (.knwf) be written instead of a directory?");
+        m_openAfterWrite =
+            new DialogComponentBoolean(getConfig().isOpenAfterWrite(), "Refresh explorer and open after write");
+        m_openAfterWrite.setToolTipText("Should the KNIME Explorer be refreshed and the workflow opened after write?");
         final JPanel writeOptionsPanel = new JPanel(new GridBagLayout());
-        writeOptionsPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Write Options"));
+        writeOptionsPanel
+            .setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Deployment Options"));
         gbc.gridy++;
         writeOptionsPanel.add(m_archive.getComponentPanel(), gbc);
         gbc.gridy++;
@@ -120,7 +123,6 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         gbc.gridy++;
         customNamePanel.add(m_customName.getComponentPanel(), gbc);
         addAdditionalPanel(customNamePanel);
-
 
         m_ioNodes = new DialogComponentIONodes(getConfig().getIONodes(), 0);
         addTab("Inputs & Outputs", m_ioNodes.getComponentPanel());
@@ -170,12 +172,14 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
 
         final boolean isCustomURL =
             config.getFileChooserModel().getFileSystemChoice().getType() == Choice.CUSTOM_URL_FS;
+        final boolean isMountpoint =
+                config.getFileChooserModel().getFileSystemChoice().getType() == Choice.KNIME_MOUNTPOINT;
         final SettingsModelBoolean archive = config.isArchive();
         config.getOverwriteModel().setEnabled(!isCustomURL);
         config.getCreateDirectoryModel().setEnabled(!isCustomURL);
         config.getTimeoutModel().setEnabled(isCustomURL);
         archive.setEnabled(!isCustomURL);
-        config.isOpenAfterWrite().setEnabled(!archive.getBooleanValue());
+        config.isOpenAfterWrite().setEnabled(!archive.getBooleanValue() && isMountpoint);
         customName.setEnabled(config.isUseCustomName().getBooleanValue());
     }
 

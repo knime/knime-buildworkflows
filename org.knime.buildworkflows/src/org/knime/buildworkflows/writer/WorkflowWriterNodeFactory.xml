@@ -90,8 +90,9 @@
 				archive
 				instead of a directory.
 			</option>
-			<option name="Open after write">
-				Determines whether the workflow should be opened
+			<option name="Refresh explorer and open after write">
+				Determines whether the KNIME Explorer should be refreshed and
+				the workflow should be opened
 				in KNIME Analytics Platform
 				after it has been written to a local
 				workspace.

@@ -54,6 +54,7 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelInteger;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
+import org.knime.filehandling.core.defaultnodesettings.FileSystemChoice.Choice;
 import org.knime.filehandling.core.defaultnodesettings.SettingsModelFileChooser2;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeConfig;
 
@@ -90,6 +91,13 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
         final SettingsModelInteger timeout = getTimeoutModel();
         fc.addChangeListener(e -> {
             switch (fc.getFileSystemChoice().getType()) {
+                case KNIME_MOUNTPOINT:
+                    overwrite.setEnabled(true);
+                    createParentDirectory.setEnabled(true);
+                    timeout.setEnabled(false);
+                    m_archive.setEnabled(true);
+                    m_openAfterWrite.setEnabled(true);
+                    break;
                 case CUSTOM_URL_FS:
                     overwrite.setBooleanValue(false);
                     overwrite.setEnabled(false);
@@ -98,12 +106,16 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
                     timeout.setEnabled(true);
                     m_archive.setBooleanValue(true);
                     m_archive.setEnabled(false);
+                    m_openAfterWrite.setBooleanValue(false);
+                    m_openAfterWrite.setEnabled(false);
                     break;
                 default:
                     overwrite.setEnabled(true);
                     createParentDirectory.setEnabled(true);
                     timeout.setEnabled(false);
                     m_archive.setEnabled(true);
+                    m_openAfterWrite.setBooleanValue(false);
+                    m_openAfterWrite.setEnabled(false);
             }
         });
 
@@ -111,7 +123,7 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
             if (m_archive.getBooleanValue()) {
                 m_openAfterWrite.setBooleanValue(false);
                 m_openAfterWrite.setEnabled(false);
-            } else {
+            } else if (fc.getFileSystemChoice().getType().equals(Choice.KNIME_MOUNTPOINT)) {
                 m_openAfterWrite.setEnabled(true);
             }
         });

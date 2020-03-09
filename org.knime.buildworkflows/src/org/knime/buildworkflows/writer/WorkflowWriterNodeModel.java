@@ -58,7 +58,7 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
+import java.nio.file.spi.FileSystemProvider;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -66,19 +66,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.IEditorDescriptor;
-import org.eclipse.ui.IWorkbench;
-import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.ide.FileStoreEditorInput;
-import org.eclipse.ui.ide.IDE;
 import org.knime.core.data.container.DataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsWO;
@@ -92,10 +84,8 @@ import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
-import org.knime.core.node.workflow.NodeTimer;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.node.workflow.capture.WorkflowFragment;
 import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
 import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
@@ -103,12 +93,8 @@ import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
+import org.knime.filehandling.core.connections.WorkflowAware;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectToPathWriterNodeModel;
-import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.knime.workbench.explorer.view.ContentObject;
-import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  * Workflow writer node.
@@ -117,8 +103,6 @@ import org.knime.workbench.explorer.view.ExplorerView;
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<WorkflowWriterNodeConfig> {
-
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowWriterNodeModel.class);
 
     WorkflowWriterNodeModel(final NodeCreationConfiguration creationConfig) {
         super(creationConfig, new WorkflowWriterNodeConfig());
@@ -136,6 +120,8 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
         final WorkflowFragment fragment = workflowPortObject.getSpec().getWorkflowFragment();
         final WorkflowWriterNodeConfig config = getConfig();
         final boolean archive = config.isArchive().getBooleanValue();
+        final boolean createParent = config.getCreateDirectoryModel().getBooleanValue();
+        final boolean openAfterWrite = config.isOpenAfterWrite().getBooleanValue();
         final boolean overwrite = config.getOverwriteModel().getBooleanValue();
 
         // determine workflow name
@@ -156,14 +142,10 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
             }
         }
 
-        // create parent directories, if applicable
-        final boolean parentDirectoriesCreated;
-        if (config.getCreateDirectoryModel().getBooleanValue() && !Files.exists(outputPath)) {
-            exec.setMessage(() -> "Creating parent directory.");
+     // create parent directories, if applicable
+        if (createParent && !Files.exists(outputPath)) {
+        	exec.setProgress(.25, () -> "Creating parent directory.");
             Files.createDirectories(outputPath);
-            parentDirectoriesCreated = true;
-        } else {
-            parentDirectoriesCreated = false;
         }
 
         // resolve destination path and check if it is present already
@@ -196,97 +178,53 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
             addReferenceReaderNodes(fragment, wfm, tmpDataDir, exec);
             addIONodes(wfm, config, workflowPortObject, exec);
 
-            exec.setProgress(.2, () -> "Saving workflow to disk.");
-            // write workflow to temporary directory
+            exec.setProgress(.5, () -> "Saving workflow to disk.");
+         // write workflow to temporary directory
             wfm.save(tmpWorkflowDir, exec.createSubProgress(.2), false);
         } finally {
             fragment.disposeWorkflow();
         }
 
-        // zip temporary directory if applicable and resolve source path
-        final Path source;
+        // zip temporary directory if applicable
+        final File localSource;
         if (archive) {
-            final File knwf = new File(tmpDir, String.format("%s.knwf", workflowName));
-            FileUtil.zipDir(knwf, tmpWorkflowDir, 9);
-            source = knwf.toPath();
+            localSource = new File(tmpDir, String.format("%s.knwf", workflowName));
+            FileUtil.zipDir(localSource, tmpWorkflowDir, 9);
         } else {
-            source = tmpWorkflowDir.toPath();
+            localSource = tmpWorkflowDir;
         }
+        final Path localSourcePath = localSource.toPath();
 
         // copy workflow from temporary source to desired destination
-        exec.setProgress(.6, () -> "Copying workflow to destination.");
-        for (Path path : Files.walk(source).collect(Collectors.toList())) {
-            final Path rel = source.relativize(path);
-            final Path res = dest.resolve(rel.toString());
-            if (overwrite) {
-                try {
-                    Files.copy(path, res, StandardCopyOption.REPLACE_EXISTING);
-                } catch (DirectoryNotEmptyException e) {
-                    // we do not care about these when in overwrite mode
-                }
+        exec.setProgress(.75, () -> "Copying workflow to destination.");
+        final FileSystemProvider provider = dest.getFileSystem().provider();
+        final boolean workflowAware = provider instanceof WorkflowAware;
+        if (archive) {
+            if (overwrite && Files.exists(dest)) {
+                Files.copy(localSourcePath, dest, StandardCopyOption.REPLACE_EXISTING);
             } else {
-                Files.copy(path, res);
+                Files.copy(localSourcePath, dest);
+            }
+        } else if (workflowAware) {
+            ((WorkflowAware)provider).deployWorkflow(localSource, dest, openAfterWrite);
+        } else {
+            for (Path path : Files.walk(localSourcePath).collect(Collectors.toList())) {
+                final Path rel = localSourcePath.relativize(path);
+                final String relString = rel.toString();
+                final Path res = dest.resolve(relString);
+                exec.setMessage(() -> String.format("Copying file %s.", relString));
+                if (overwrite) {
+                    try {
+                        Files.copy(path, res, StandardCopyOption.REPLACE_EXISTING);
+                    } catch (DirectoryNotEmptyException e) {
+                        // we do not care about these when in overwrite mode
+                    }
+                } else {
+                    Files.copy(path, res);
+                }
             }
         }
         FileUtil.deleteRecursively(tmpDir);
-
-        exec.setProgress(.8, () -> "Refreshing project explorer.");
-        final AbstractExplorerFileStore localFileStore;
-        final File localFile;
-        final ExplorerFileSystem fs = ExplorerMountTable.getFileSystem();
-        switch (getConfig().getFileChooserModel().getFileSystemChoice().getType()) {
-            case LOCAL_FS:
-            case KNIME_FS:
-                localFile = archive ? dest.toAbsolutePath().toFile()
-                    : dest.toAbsolutePath().resolve(WorkflowPersistor.WORKFLOW_FILE).toFile();
-                localFileStore = fs.fromLocalFile(localFile);
-                break;
-            case KNIME_MOUNTPOINT:
-            case CUSTOM_URL_FS:
-                localFileStore = archive ? fs.getStore(dest.toUri())
-                    : fs.getStore(dest.toUri()).getChild(WorkflowPersistor.WORKFLOW_FILE);
-                localFile = localFileStore.toLocalFile();
-                break;
-            default:
-                localFileStore = null;
-                localFile = null;
-        }
-
-        if (PlatformUI.isWorkbenchRunning() && localFileStore != null && localFile != null && localFile.exists()) {
-            final IWorkbench workbenck = PlatformUI.getWorkbench();
-
-            // refresh project explorer, if applicable
-            Arrays.stream(workbenck.getWorkbenchWindows()).flatMap(window -> Arrays.stream(window.getPages()))
-                .flatMap(page -> Arrays.stream(page.getViewReferences()))
-                .filter(ref -> ref.getId().equals(ExplorerView.ID)).map(ref -> (ExplorerView)ref.getView(true))
-                .map(ExplorerView::getViewer).findAny().ifPresent(viewer -> {
-                    viewer.getControl().getDisplay().asyncExec(() -> {
-                        final AbstractExplorerFileStore parentDir =
-                            archive ? localFileStore.getParent() : localFileStore.getParent().getParent();
-                        viewer.refresh(ContentObject.forFile(parentDir));
-                        // for some reason, refresh does not work if the parentOfWorkflowDir is the root
-                        if (parentDirectoriesCreated || parentDir.getParent() == null) {
-                            viewer.refresh(null);
-                        }
-                    });
-                });
-
-            // open workflow, if applicable
-            if (!archive && config.isOpenAfterWrite().getBooleanValue()) {
-                Display.getDefault().asyncExec(() -> {
-                    try {
-                        final IEditorDescriptor editorDescriptor =
-                            IDE.getEditorDescriptor(localFileStore.getName(), true, true);
-                        workbenck.getActiveWorkbenchWindow().getActivePage()
-                            .openEditor(new FileStoreEditorInput(localFileStore), editorDescriptor.getId());
-                        NodeTimer.GLOBAL_TIMER.incWorkflowOpening();
-                    } catch (PartInitException ex) {
-                        LOGGER.info(String.format("Could not open editor for new workflow %s: %s.", workflowName,
-                            ex.getMessage()), ex);
-                    }
-                });
-            }
-        }
     }
 
     private static void addReferenceReaderNodes(final WorkflowFragment fragment, final WorkflowManager wfm,
