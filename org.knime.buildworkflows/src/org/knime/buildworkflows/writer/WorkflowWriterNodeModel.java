@@ -298,7 +298,7 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
         for (NodeIDSuffix portObjectReaderSufId : portObjectReaderSufIds) {
 
             final NodeID portObjectReaderId = portObjectReaderSufId.prependParent(wfm.getID());
-            final NodeContainer portObjectReaderNC = wfm.getNodeContainer(portObjectReaderId);
+            final NodeContainer portObjectReaderNC = wfm.findNodeContainer(portObjectReaderId);
             assert portObjectReaderNC instanceof NativeNodeContainer;
             final NodeModel portObjectReaderNM = ((NativeNodeContainer)portObjectReaderNC).getNodeModel();
             assert portObjectReaderNM instanceof PortObjectInNodeModel;
