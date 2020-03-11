@@ -142,7 +142,7 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
             }
         }
 
-     // create parent directories, if applicable
+        // create parent directories, if applicable
         if (createParent && !Files.exists(outputPath)) {
         	exec.setProgress(.25, () -> "Creating parent directory.");
             Files.createDirectories(outputPath);
