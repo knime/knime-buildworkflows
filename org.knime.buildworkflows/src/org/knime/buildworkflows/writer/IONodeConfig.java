@@ -59,6 +59,7 @@ import javax.swing.JTextField;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTable;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
@@ -73,6 +74,7 @@ import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
+import org.knime.core.util.Pair;
 
 /**
  * Represents the (likely reduced) configuration of input and output nodes. Also provides the functionality to
@@ -83,13 +85,6 @@ import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 abstract class IONodeConfig {
-
-    // vertical distance between newly added input and output nodes
-    private static final int NODE_DIST = 120;
-
-    private static final int NODE_WIDTH = 124;
-
-    private static final int NODE_HEIGHT = 83;
 
     /**
      * Helper to add, connect and configure input or output nodes.
@@ -109,14 +104,13 @@ abstract class IONodeConfig {
         throws InvalidSettingsException {
 
         int numNodes = inputOrOutputIDs.size();
-        int y_bb_center = (int)Math.round((wfBounds[3] - wfBounds[1]) / 2.0 + wfBounds[1]);
-        int y_offset = (int)Math.floor(y_bb_center - ((numNodes - 1) * NODE_DIST) / 2.0 - NODE_HEIGHT / 2.0);
-        int x_pos = (int)Math.round((in ? wfBounds[0] - NODE_DIST : wfBounds[2] + NODE_DIST) - NODE_WIDTH / 2.0);
+        Pair<Integer, int[]> positions = BuildWorkflowsUtil.getInputOutputNodePositions(wfBounds, numNodes, in);
+
         int i = 0;
         for (String id : inputOrOutputIDs) {
-            idToConfigMap.apply(id).addConnectAndConfigureNode(wfm, idToPortsMap.apply(id), x_pos,
+            idToConfigMap.apply(id).addConnectAndConfigureNode(wfm, idToPortsMap.apply(id), positions.getFirst(),
                 //add and configure
-                (int)Math.floor(y_offset + i * NODE_DIST), idToInputDataMap.apply(id));
+                positions.getSecond()[i], idToInputDataMap.apply(id));
             i++;
         }
     }
