@@ -92,11 +92,11 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
 
     private boolean m_portConfigChanged = false;
 
-    private JButton m_button;
+    private final JButton m_button;
 
-    private JLabel m_portAdjustmentLabel;
+    private final JLabel m_portAdjustmentLabel;
 
-    private JCheckBox m_debug;
+    private final JCheckBox m_debug;
 
     WorkflowExecutorNodeDialogPane() {
         JPanel options = new JPanel();

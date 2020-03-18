@@ -75,6 +75,7 @@ import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
+import org.knime.core.node.port.PortTypeRegistry;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.FlowVariable;
@@ -139,9 +140,13 @@ class WorkflowExecutorNodeModel extends NodeModel {
                 throw new IllegalStateException("Execution didn't finish successfully");
             }
 
-            // copy data tables
             PortObject[] portObjects = Arrays.stream(output.getFirst()).map(po -> {
                 if (po instanceof BufferedDataTable) {
+                    // copy data tables
+                    // This is required in order to copy the data tables from the node(s) within the metanode
+                    // the workflow fragment has been executed in into this node. The data tables to copy could
+                    // be 'spread' over multiple nodes (i.e. via back-references, e.g. column appender) and this
+                    // operation also turens those into one single table stored with this node.
                     BufferedDataTable bdt = (BufferedDataTable)po;
                     BufferedDataContainer container = exec.createDataContainer((bdt).getDataTableSpec());
                     for (DataRow row : bdt) {
@@ -150,6 +155,7 @@ class WorkflowExecutorNodeModel extends NodeModel {
                     container.close();
                     return container.getTable();
                 } else {
+                    // port objects are always copied and this is already a copy
                     return po;
                 }
             }).toArray(PortObject[]::new);
@@ -288,7 +294,8 @@ class WorkflowExecutorNodeModel extends NodeModel {
 
             //add virtual in node
             List<Input> inputs = wf.getConnectedInputs();
-            PortType[] inTypes = inputs.stream().map(i -> i.getType().get()).toArray(s -> new PortType[s]);
+            PortType[] inTypes =
+                inputs.stream().map(i -> getNonOptionalType(i.getType().get())).toArray(s -> new PortType[s]);
             int[] wfBounds = NodeUIInformation.getBoundingBoxOf(m_wfm.getNodeContainers());
             m_virtualStartID = m_wfm.createAndAddNode(new VirtualParallelizedChunkPortObjectInNodeFactory(inTypes));
             Pair<Integer, int[]> pos = BuildWorkflowsUtil.getInputOutputNodePositions(wfBounds, 1, true);
@@ -297,7 +304,8 @@ class WorkflowExecutorNodeModel extends NodeModel {
 
             //add virtual out node
             List<Output> outputs = wf.getConnectedOutputs();
-            PortType[] outTypes = outputs.stream().map(o -> o.getType().get()).toArray(s -> new PortType[s]);
+            PortType[] outTypes =
+                outputs.stream().map(o -> getNonOptionalType(o.getType().get())).toArray(s -> new PortType[s]);
             m_virtualEndID = m_wfm.createAndAddNode(new VirtualParallelizedChunkPortObjectOutNodeFactory(outTypes));
             pos = BuildWorkflowsUtil.getInputOutputNodePositions(wfBounds, 1, false);
             m_wfm.getNodeContainer(m_virtualEndID).setUIInformation(
@@ -317,6 +325,10 @@ class WorkflowExecutorNodeModel extends NodeModel {
                 m_wfm.addConnection(p.getNodeIDSuffix().prependParent(m_wfm.getID()), p.getIndex(), m_virtualEndID,
                     i + 1);
             }
+        }
+
+        private static PortType getNonOptionalType(final PortType p) {
+            return PortTypeRegistry.getInstance().getPortType(p.getPortObjectClass());
         }
 
         /**
