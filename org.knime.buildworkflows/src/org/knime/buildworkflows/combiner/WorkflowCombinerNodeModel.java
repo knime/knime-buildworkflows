@@ -266,8 +266,14 @@ final class WorkflowCombinerNodeModel extends NodeModel {
             final NodeID[] newIds = pastedContent.getNodeIDs();
             for (int i = 0; i < ids.length; i++) {
                 final NodeIDSuffix toCopyID = NodeIDSuffix.create(toCopyWFM.getID(), ids[i]);
-                if (wfToCopy.getPortObjectReferenceReaderNodes().contains(toCopyID)) {
-                    objectReferenceReaderNodes.add(NodeIDSuffix.create(wfm.getID(), newIds[i]));
+                for (NodeIDSuffix refNode : wfToCopy.getPortObjectReferenceReaderNodes()) {
+                    int[] suffixArray = refNode.getSuffixArray();
+                    //compare and replace the very first id only (because reference reader nodes can be summarized
+                    //in metanodes)
+                    if (suffixArray[0] == toCopyID.getSuffixArray()[0]) {
+                        suffixArray[0] = newIds[i].getIndex();
+                        objectReferenceReaderNodes.add(new NodeIDSuffix(suffixArray));
+                    }
                 }
 
                 final List<Input> inputs = wfToCopy.getConnectedInputs();
