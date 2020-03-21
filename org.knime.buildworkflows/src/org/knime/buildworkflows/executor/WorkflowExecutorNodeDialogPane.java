@@ -162,6 +162,12 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
         if (nc == null) {
             m_portAdjustmentLabel.setText("Not a local workflow");
             m_button.setEnabled(false);
+            return;
+        }
+        if (spec == null) {
+            m_portAdjustmentLabel.setText("No workflow given");
+            m_button.setEnabled(false);
+            return;
         }
         try {
             WorkflowExecutorNodeModel.checkPortCompatibility(spec, nc);
