@@ -141,7 +141,12 @@ class WorkflowExecutorNodeModel extends NodeModel {
             Pair<PortObject[], List<FlowVariable>> output =
                 we.executeWorkflow(Arrays.copyOfRange(inObjects, 1, inObjects.length), exec);
             if (output.getFirst() == null || Arrays.stream(output.getFirst()).anyMatch(Objects::isNull)) {
-                throw new IllegalStateException("Execution didn't finish successfully");
+                NodeContainer nc = NodeContext.getContext().getNodeContainer();
+                String message = "Execution didn't finish successfully";
+                if (!checkPortsCompatibility(workflowInputTypes(wpo.getSpec()), nodeInputTypes(nc), false)) {
+                    message += " - node input(s) not compatible with workflow input(s)";
+                }
+                throw new IllegalStateException(message);
             }
 
             exec.setMessage("Transferring result data");
@@ -223,23 +228,50 @@ class WorkflowExecutorNodeModel extends NodeModel {
     static void checkPortCompatibility(final WorkflowPortObjectSpec spec, final NodeContainer nc)
         throws InvalidSettingsException {
         String configMessage = "Node needs to be re-configured.";
-        List<PortType> wfInputs =
-            spec.getWorkflowFragment().getConnectedInputs().stream().map(i -> i.getType().get()).collect(toList());
-        List<PortType> nodeInputs =
-            IntStream.range(2, nc.getNrInPorts()).mapToObj(i -> nc.getInPort(i).getPortType()).collect(toList());
-        if (!wfInputs.equals(nodeInputs)) {
+        if (!checkPortsCompatibility(workflowInputTypes(spec), nodeInputTypes(nc), true)) {
             throw new InvalidSettingsException(
                 "The node inputs don't match with the workflow inputs. " + configMessage);
         }
 
-        List<PortType> wfOutputs =
-            spec.getWorkflowFragment().getConnectedOutputs().stream().map(i -> i.getType().get()).collect(toList());
-        List<PortType> nodeOutputs =
-            IntStream.range(1, nc.getNrOutPorts()).mapToObj(i -> nc.getOutPort(i).getPortType()).collect(toList());
-        if (!wfOutputs.equals(nodeOutputs)) {
+        if (!checkPortsCompatibility(workflowOutputTypes(spec), nodeOutputTypes(nc), true)) {
             throw new InvalidSettingsException(
                 "The node outputs don't match with the workflow outputs. " + configMessage);
         }
+    }
+
+    private static List<PortType> nodeInputTypes(final NodeContainer nc) {
+        return IntStream.range(2, nc.getNrInPorts()).mapToObj(i -> nc.getInPort(i).getPortType()).collect(toList());
+    }
+
+    private static List<PortType> workflowInputTypes(final WorkflowPortObjectSpec spec) {
+        return spec.getWorkflowFragment().getConnectedInputs().stream().map(i -> i.getType().get()).collect(toList());
+    }
+
+    private static List<PortType> nodeOutputTypes(final NodeContainer nc) {
+        return IntStream.range(1, nc.getNrOutPorts()).mapToObj(i -> nc.getOutPort(i).getPortType()).collect(toList());
+    }
+
+    private static List<PortType> workflowOutputTypes(final WorkflowPortObjectSpec spec) {
+        return spec.getWorkflowFragment().getConnectedOutputs().stream().map(i -> i.getType().get()).collect(toList());
+    }
+
+    /**
+     * Checks that the two lists are compatible (same size and same port types) with one peculiarity: If a node port is
+     * of type {@link PortObject#TYPE}, i.e. the generic port object, the respective workflow port can be of any port
+     * type (if generic node ports are ignored for comparison).
+     */
+    private static boolean checkPortsCompatibility(final List<PortType> workflowPorts, final List<PortType> nodePorts,
+        final boolean ignoreGenericNodePorts) {
+        if (workflowPorts.size() != nodePorts.size()) {
+            return false;
+        }
+        for (int i = 0; i < workflowPorts.size(); i++) {
+            if (!workflowPorts.get(i).equals(nodePorts.get(i))
+                && (!nodePorts.get(i).equals(PortObject.TYPE) || !ignoreGenericNodePorts)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
