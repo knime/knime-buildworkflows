@@ -50,6 +50,8 @@ package org.knime.buildworkflows.executor;
 
 import static java.util.stream.Collectors.toList;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,6 +64,7 @@ import java.util.stream.Stream;
 
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataRow;
+import org.knime.core.data.filestore.FileStorePortObject;
 import org.knime.core.node.BufferedDataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
@@ -76,6 +79,7 @@ import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.PortTypeRegistry;
+import org.knime.core.node.port.PortUtil;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.FlowVariable;
@@ -140,25 +144,35 @@ class WorkflowExecutorNodeModel extends NodeModel {
                 throw new IllegalStateException("Execution didn't finish successfully");
             }
 
-            PortObject[] portObjects = Arrays.stream(output.getFirst()).map(po -> {
+            exec.setMessage("Transferring result data");
+            PortObject[] portObjects = new PortObject[output.getFirst().length];
+            for (int i = 0; i < output.getFirst().length; i++) {
+                PortObject po = output.getFirst()[i];
                 if (po instanceof BufferedDataTable) {
                     // copy data tables
                     // This is required in order to copy the data tables from the node(s) within the metanode
                     // the workflow fragment has been executed in into this node. The data tables to copy could
                     // be 'spread' over multiple nodes (i.e. via back-references, e.g. column appender) and this
-                    // operation also turens those into one single table stored with this node.
+                    // operation also turns those into one single table stored with this node.
                     BufferedDataTable bdt = (BufferedDataTable)po;
                     BufferedDataContainer container = exec.createDataContainer((bdt).getDataTableSpec());
                     for (DataRow row : bdt) {
                         container.addRowToTable(row);
                     }
                     container.close();
-                    return container.getTable();
+                    portObjects[i] = container.getTable();
+                } else if (po instanceof FileStorePortObject) {
+                    //copy file store port objects
+                    //TODO is there a way to reduce the memory footprint of the copy operation?
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    PortUtil.writeObjectToStream(po, out, exec);
+                    ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+                    portObjects[i] = PortUtil.readObjectFromStream(in, exec);
                 } else {
                     // port objects are always copied and this is already a copy
-                    return po;
+                    portObjects[i] = po;
                 }
-            }).toArray(PortObject[]::new);
+            }
 
             //push flow variables
             for (FlowVariable fv : output.getSecond()) {
