@@ -94,6 +94,7 @@ import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
 import org.knime.filehandling.core.connections.WorkflowAware;
+import org.knime.filehandling.core.connections.base.UnixStylePathUtil;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectToPathWriterNodeModel;
 
 /**
@@ -210,7 +211,7 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
         } else {
             for (Path path : Files.walk(localSourcePath).collect(Collectors.toList())) {
                 final Path rel = localSourcePath.relativize(path);
-                final String relString = rel.toString();
+                final String relString = UnixStylePathUtil.asUnixStylePath(rel.toString());
                 final Path res = dest.resolve(relString);
                 exec.setMessage(() -> String.format("Copying file %s.", relString));
                 if (overwrite) {
