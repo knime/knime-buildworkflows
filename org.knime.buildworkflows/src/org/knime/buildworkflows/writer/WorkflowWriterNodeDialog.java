@@ -124,7 +124,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         customNamePanel.add(m_customName.getComponentPanel(), gbc);
         addAdditionalPanel(customNamePanel);
 
-        m_ioNodes = new DialogComponentIONodes(getConfig().getIONodes(), 0);
+        m_ioNodes = new DialogComponentIONodes(getConfig().getIONodes(), getPortObjectIndex());
         addTab("Inputs & Outputs", m_ioNodes.getComponentPanel());
     }
 
