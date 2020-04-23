@@ -48,6 +48,8 @@
  */
 package org.knime.buildworkflows.writer;
 
+import java.util.stream.Stream;
+
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
@@ -91,6 +93,7 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
         final SettingsModelInteger timeout = getTimeoutModel();
         fc.addChangeListener(e -> {
             switch (fc.getFileSystemChoice().getType()) {
+                case KNIME_FS:
                 case KNIME_MOUNTPOINT:
                     overwrite.setEnabled(true);
                     createParentDirectory.setEnabled(true);
@@ -123,7 +126,8 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
             if (m_archive.getBooleanValue()) {
                 m_openAfterWrite.setBooleanValue(false);
                 m_openAfterWrite.setEnabled(false);
-            } else if (fc.getFileSystemChoice().getType().equals(Choice.KNIME_MOUNTPOINT)) {
+            } else if (Stream.of(Choice.KNIME_FS, Choice.KNIME_MOUNTPOINT)
+                .anyMatch(c -> c.equals(fc.getFileSystemChoice().getType()))) {
                 m_openAfterWrite.setEnabled(true);
             }
         });

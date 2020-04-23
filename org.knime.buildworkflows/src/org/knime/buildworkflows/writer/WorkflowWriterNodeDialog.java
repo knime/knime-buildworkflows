@@ -50,6 +50,7 @@ package org.knime.buildworkflows.writer;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
 import javax.swing.JFileChooser;
@@ -170,16 +171,17 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         }
         m_originalName.setText(String.format("Default workflow name: %s", workflowName));
 
+        // TODO: consider refactoring this code to WorkflowWriterNodeConfig
         final boolean isCustomURL =
             config.getFileChooserModel().getFileSystemChoice().getType() == Choice.CUSTOM_URL_FS;
-        final boolean isMountpoint =
-                config.getFileChooserModel().getFileSystemChoice().getType() == Choice.KNIME_MOUNTPOINT;
+        final boolean isWorkflowAware = Stream.of(Choice.KNIME_FS, Choice.KNIME_MOUNTPOINT)
+            .anyMatch(c -> c.equals(config.getFileChooserModel().getFileSystemChoice().getType()));
         final SettingsModelBoolean archive = config.isArchive();
         config.getOverwriteModel().setEnabled(!isCustomURL);
         config.getCreateDirectoryModel().setEnabled(!isCustomURL);
         config.getTimeoutModel().setEnabled(isCustomURL);
         archive.setEnabled(!isCustomURL);
-        config.isOpenAfterWrite().setEnabled(!archive.getBooleanValue() && isMountpoint);
+        config.isOpenAfterWrite().setEnabled(!archive.getBooleanValue() && isWorkflowAware);
         customName.setEnabled(config.isUseCustomName().getBooleanValue());
     }
 
