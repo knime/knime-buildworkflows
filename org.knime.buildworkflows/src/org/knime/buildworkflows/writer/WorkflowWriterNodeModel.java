@@ -121,7 +121,6 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
         final WorkflowFragment fragment = workflowPortObject.getSpec().getWorkflowFragment();
         final WorkflowWriterNodeConfig config = getConfig();
         final boolean archive = config.isArchive().getBooleanValue();
-        final boolean createParent = config.getCreateDirectoryModel().getBooleanValue();
         final boolean openAfterWrite = config.isOpenAfterWrite().getBooleanValue();
         final boolean overwrite = config.getOverwriteModel().getBooleanValue();
 
@@ -143,9 +142,8 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
             }
         }
 
-        // create parent directories, if applicable
-        if (createParent && !Files.exists(outputPath)) {
-        	exec.setProgress(.25, () -> "Creating parent directory.");
+        // create directory at output path, if applicable (parent path was already checked in super class)
+        if (!Files.exists(outputPath)) {
             Files.createDirectories(outputPath);
         }
 
@@ -179,9 +177,9 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
             addReferenceReaderNodes(fragment, wfm, tmpDataDir, exec);
             addIONodes(wfm, config, workflowPortObject, exec);
 
-            exec.setProgress(.5, () -> "Saving workflow to disk.");
+            exec.setProgress(.33, () -> "Saving workflow to disk.");
          // write workflow to temporary directory
-            wfm.save(tmpWorkflowDir, exec.createSubProgress(.2), false);
+            wfm.save(tmpWorkflowDir, exec.createSubProgress(.34), false);
         } finally {
             fragment.disposeWorkflow();
         }
@@ -197,7 +195,7 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
         final Path localSourcePath = localSource.toPath();
 
         // copy workflow from temporary source to desired destination
-        exec.setProgress(.75, () -> "Copying workflow to destination.");
+        exec.setProgress(.67, () -> "Copying workflow to destination.");
         final FileSystemProvider provider = dest.getFileSystem().provider();
         final boolean workflowAware = provider instanceof WorkflowAware;
         if (archive) {
@@ -209,19 +207,21 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
         } else if (workflowAware) {
             ((WorkflowAware)provider).deployWorkflow(localSource, dest, overwrite, openAfterWrite);
         } else {
-            for (Path path : Files.walk(localSourcePath).collect(Collectors.toList())) {
-                final Path rel = localSourcePath.relativize(path);
-                final String relString = UnixStylePathUtil.asUnixStylePath(rel.toString());
-                final Path res = dest.resolve(relString);
-                exec.setMessage(() -> String.format("Copying file %s.", relString));
-                if (overwrite) {
-                    try {
-                        Files.copy(path, res, StandardCopyOption.REPLACE_EXISTING);
-                    } catch (DirectoryNotEmptyException e) {
-                        // we do not care about these when in overwrite mode
+            try (final Stream<Path> streams = Files.walk(localSourcePath)) {
+                for (final Path path : streams.collect(Collectors.toList())) {
+                    final Path rel = localSourcePath.relativize(path);
+                    final String relString = UnixStylePathUtil.asUnixStylePath(rel.toString());
+                    final Path res = dest.resolve(relString);
+                    exec.setMessage(() -> String.format("Copying file %s.", relString));
+                    if (overwrite) {
+                        try {
+                            Files.copy(path, res, StandardCopyOption.REPLACE_EXISTING);
+                        } catch (DirectoryNotEmptyException e) {
+                            // we do not care about these when in overwrite mode
+                        }
+                    } else {
+                        Files.copy(path, res);
                     }
-                } else {
-                    Files.copy(path, res);
                 }
             }
         }
@@ -246,7 +246,7 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
             assert poOpt.isPresent();
             final PortObject po = poOpt.get();
 
-            final String poFileName = portObjectReaderSufId.toString().replaceAll(":", "_");
+            final String poFileName = portObjectReaderSufId.toString().replace(":", "_");
             final URI poFileRelativeURI = new URI("knime://knime.workflow/data/" + poFileName);
             final File tmpPoFile = new File(tmpDataDir, poFileName);
             final PortObjectIDSettings poSettings = portObjectReader.getInputNodeSettingsCopy();
