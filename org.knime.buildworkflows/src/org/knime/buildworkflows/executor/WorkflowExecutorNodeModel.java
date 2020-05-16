@@ -50,36 +50,43 @@ package org.knime.buildworkflows.executor;
 
 import static java.util.stream.Collectors.toList;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
-import org.knime.core.data.DataRow;
-import org.knime.core.data.filestore.FileStorePortObject;
-import org.knime.core.node.BufferedDataContainer;
-import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.ports.PortsConfiguration;
+import org.knime.core.node.exec.dataexchange.PortObjectRepository;
 import org.knime.core.node.port.PortObject;
+import org.knime.core.node.port.PortObjectHolder;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.PortTypeRegistry;
-import org.knime.core.node.port.PortUtil;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.FlowVariable;
@@ -99,6 +106,7 @@ import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
 import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.core.node.workflow.virtual.parchunk.FlowVirtualScopeContext;
 import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkNodeInput;
 import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPortObjectInNodeFactory;
 import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPortObjectInNodeModel;
@@ -109,13 +117,21 @@ import org.knime.core.util.Pair;
 /**
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class WorkflowExecutorNodeModel extends NodeModel {
+class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
 
     static final String CFG_DEBUG = "debug";
+
+    private static final String CFG_PORT_OBJECT_IDS = "port_object_ids";
+
+    private static final String INTERNALS_FILE_PORT_OBJECT_IDS = "port_object_ids.xml.gz";
 
     private WorkflowExecutable m_executable;
 
     private boolean m_debug = false;
+
+    private List<UUID> m_portObjectIds;
+
+    private List<PortObject> m_portObjects;
 
     WorkflowExecutorNodeModel(final PortsConfiguration portsConf) {
         super(portsConf.getInputPorts(), portsConf.getOutputPorts());
@@ -152,31 +168,7 @@ class WorkflowExecutorNodeModel extends NodeModel {
             exec.setMessage("Transferring result data");
             PortObject[] portObjects = new PortObject[output.getFirst().length];
             for (int i = 0; i < output.getFirst().length; i++) {
-                PortObject po = output.getFirst()[i];
-                if (po instanceof BufferedDataTable) {
-                    // copy data tables
-                    // This is required in order to copy the data tables from the node(s) within the metanode
-                    // the workflow fragment has been executed in into this node. The data tables to copy could
-                    // be 'spread' over multiple nodes (i.e. via back-references, e.g. column appender) and this
-                    // operation also turns those into one single table stored with this node.
-                    BufferedDataTable bdt = (BufferedDataTable)po;
-                    BufferedDataContainer container = exec.createDataContainer((bdt).getDataTableSpec());
-                    for (DataRow row : bdt) {
-                        container.addRowToTable(row);
-                    }
-                    container.close();
-                    portObjects[i] = container.getTable();
-                } else if (po instanceof FileStorePortObject) {
-                    //copy file store port objects
-                    //TODO is there a way to reduce the memory footprint of the copy operation?
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    PortUtil.writeObjectToStream(po, out, exec);
-                    ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
-                    portObjects[i] = PortUtil.readObjectFromStream(in, exec);
-                } else {
-                    // port objects are always copied and this is already a copy
-                    portObjects[i] = po;
-                }
+                portObjects[i] = PortObjectRepository.copy(output.getFirst()[i], exec, exec);
             }
 
             //push flow variables
@@ -277,13 +269,36 @@ class WorkflowExecutorNodeModel extends NodeModel {
     @Override
     protected void loadInternals(final File nodeInternDir, final ExecutionMonitor exec)
         throws IOException, CanceledExecutionException {
-        //
+        File f = new File(nodeInternDir, INTERNALS_FILE_PORT_OBJECT_IDS);
+        if (f.exists()) {
+            try (InputStream in = new GZIPInputStream(new BufferedInputStream(new FileInputStream(f)))) {
+                try {
+                    NodeSettingsRO settings = NodeSettings.loadFromXML(in);
+                    if (settings.containsKey(CFG_PORT_OBJECT_IDS)) {
+                        m_portObjectIds = Arrays.stream(settings.getStringArray(CFG_PORT_OBJECT_IDS))
+                            .map(UUID::fromString).collect(Collectors.toList());
+                        addToPortObjectRepository();
+                    }
+                } catch (InvalidSettingsException ise) {
+                    throw new IOException("Unable to read port object ids", ise);
+                }
+            }
+        }
     }
 
     @Override
     protected void saveInternals(final File nodeInternDir, final ExecutionMonitor exec)
         throws IOException, CanceledExecutionException {
-        //
+        if (m_portObjectIds != null) {
+            NodeSettings settings = new NodeSettings("port_object_ids");
+            String[] ids =
+                m_portObjectIds.stream().map(UUID::toString).toArray(i -> new String[m_portObjectIds.size()]);
+            settings.addStringArray(CFG_PORT_OBJECT_IDS, ids);
+            try (GZIPOutputStream gzs = new GZIPOutputStream(
+                new BufferedOutputStream(new FileOutputStream(new File(nodeInternDir, INTERNALS_FILE_PORT_OBJECT_IDS))))) {
+                settings.saveToXML(gzs);
+            }
+        }
     }
 
     @Override
@@ -306,9 +321,42 @@ class WorkflowExecutorNodeModel extends NodeModel {
         if (!m_debug) {
             disposeWorkflowExecutable();
         }
+        if (m_portObjectIds != null) {
+            for (UUID id : m_portObjectIds) {
+                PortObjectRepository.remove(id);
+            }
+            m_portObjectIds = null;
+            m_portObjects = null;
+        }
     }
 
-    private static class WorkflowExecutable {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setInternalPortObjects(final PortObject[] portObjects) {
+        m_portObjects = Arrays.asList(portObjects);
+        addToPortObjectRepository();
+    }
+
+    private void addToPortObjectRepository() {
+        if (m_portObjects != null && m_portObjectIds != null) {
+            assert m_portObjects.size() == m_portObjectIds.size();
+            for (int i = 0; i < m_portObjects.size(); i++) {
+                PortObjectRepository.add(m_portObjectIds.get(i), m_portObjects.get(i));
+            }
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public PortObject[] getInternalPortObjects() {
+        return m_portObjects.toArray(new PortObject[m_portObjects.size()]);
+    }
+
+    private class WorkflowExecutable {
 
         private WorkflowManager m_wfm;
 
@@ -373,7 +421,7 @@ class WorkflowExecutorNodeModel extends NodeModel {
             }
         }
 
-        private static PortType getNonOptionalType(final PortType p) {
+        private PortType getNonOptionalType(final PortType p) {
             return PortTypeRegistry.getInstance().getPortType(p.getPortObjectClass());
         }
 
@@ -387,23 +435,42 @@ class WorkflowExecutorNodeModel extends NodeModel {
          * @throws CanceledExecutionException
          */
         Pair<PortObject[], List<FlowVariable>> executeWorkflow(final PortObject[] inputData,
-            final ExecutionMonitor exec) throws InterruptedException, CanceledExecutionException {
+            final ExecutionContext exec) throws Exception {
+            NativeNodeContainer virtualInNode = ((NativeNodeContainer)m_wfm.getNodeContainer(m_virtualStartID));
             VirtualParallelizedChunkPortObjectInNodeModel inNM =
-                (VirtualParallelizedChunkPortObjectInNodeModel)((NativeNodeContainer)m_wfm
-                    .getNodeContainer(m_virtualStartID)).getNodeModel();
+                (VirtualParallelizedChunkPortObjectInNodeModel)virtualInNode.getNodeModel();
+            AtomicReference<Exception> exception = new AtomicReference<>();
+            virtualInNode.getOutgoingFlowObjectStack().peek(FlowVirtualScopeContext.class).setPortObjectIDCallback(fct -> {
+                try {
+                    UUID id = fct.apply(exec);
+                    m_portObjectIds.add(id);
+                    m_portObjects.add(PortObjectRepository.get(id).get());
+                } catch (CompletionException e) {
+                    exception.set((Exception)e.getCause());
+                }
+            });
+            if(exception.get() != null) {
+                throw exception.get();
+            }
             inNM.setVirtualNodeInput(new VirtualParallelizedChunkNodeInput(inputData,
                 collectOutputFlowVariablesFromUpstreamNodes(m_thisNode), 0));
-
-            m_wfm.executeUpToHere(m_virtualEndID);
-            while (m_wfm.getNodeContainerState().isExecutionInProgress()) {
-                m_wfm.waitWhileInExecution(1, TimeUnit.SECONDS);
-                exec.checkCanceled();
-            }
-
             NativeNodeContainer nnc = (NativeNodeContainer)m_wfm.getNodeContainer(m_virtualEndID);
             VirtualParallelizedChunkPortObjectOutNodeModel outNM =
                 (VirtualParallelizedChunkPortObjectOutNodeModel)nnc.getNodeModel();
+            m_portObjectIds = new ArrayList<>();
+            m_portObjects = new ArrayList<>();
+            m_wfm.executeUpToHere(m_virtualEndID);
+            waitWhileInExecution(m_wfm, exec);
+
             return Pair.create(outNM.getOutObjects(), getFlowVariablesFromNC(nnc).collect(toList()));
+        }
+
+        private void waitWhileInExecution(final WorkflowManager wfm, final ExecutionContext exec)
+            throws InterruptedException, CanceledExecutionException {
+            while (wfm.getNodeContainerState().isExecutionInProgress()) {
+                wfm.waitWhileInExecution(1, TimeUnit.SECONDS);
+                exec.checkCanceled();
+            }
         }
 
         void dispose() {
@@ -417,7 +484,7 @@ class WorkflowExecutorNodeModel extends NodeModel {
             }
         }
 
-        private static Stream<FlowVariable> getFlowVariablesFromNC(final NodeContainer nc) {
+        private Stream<FlowVariable> getFlowVariablesFromNC(final NodeContainer nc) {
             if (nc instanceof SingleNodeContainer) {
                 return ((SingleNodeContainer)nc).createOutFlowObjectStack().getAllAvailableFlowVariables().values()
                     .stream().filter(fv -> fv.getScope() == Scope.Flow);
@@ -430,7 +497,7 @@ class WorkflowExecutorNodeModel extends NodeModel {
          * Essentially only take the flow variables coming in via the 2nd to nth input port (and ignore flow var (0th)
          * and workflow (1st) port). Otherwise those will always take precedence what we don't want.
          */
-        private static List<FlowVariable> collectOutputFlowVariablesFromUpstreamNodes(final NodeContainer thisNode) {
+        private List<FlowVariable> collectOutputFlowVariablesFromUpstreamNodes(final NodeContainer thisNode) {
             //skip flow var (0th) and workflow (1st) input port
             WorkflowManager wfm = thisNode.getParent();
             List<FlowVariable> res = new ArrayList<>();
