@@ -187,8 +187,10 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
                     BufferedDataContainer container = exec.createDataContainer(table.getDataTableSpec());
                     try (CloseableRowIterator iterator = table
                         .filter(TableFilter.filterRowsToIndex(Math.min(numRowsToStore, table.size()) - 1)).iterator()) {
-                        exec.checkCanceled();
-                        container.addRowToTable(iterator.next());
+                        while (iterator.hasNext()) {
+                            exec.checkCanceled();
+                            container.addRowToTable(iterator.next());
+                        }
                     }
                     container.close();
                     table = container.getTable();
