@@ -89,4 +89,12 @@ class TableInputNodeConfig extends InputNodeConfig {
         throws InvalidSettingsException {
         ContainerTableInputNodeModel.saveConfigAsNodeSettings(settings, getParameterName(), inputData);
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected String getDefaultParameterName() {
+        return "table-input";
+    }
 }

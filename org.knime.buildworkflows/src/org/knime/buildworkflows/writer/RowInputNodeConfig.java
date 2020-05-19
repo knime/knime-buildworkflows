@@ -96,4 +96,12 @@ class RowInputNodeConfig extends InputNodeConfig {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected String getDefaultParameterName() {
+        return "row-input";
+    }
+
 }

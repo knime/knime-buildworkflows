@@ -270,6 +270,10 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
     private void addIONodes(final WorkflowManager wfm, final WorkflowWriterNodeConfig config,
         final WorkflowPortObject workflowPortObject, final ExecutionContext exec) throws InvalidSettingsException {
         exec.setMessage(() -> "Adding input and output nodes");
+
+        config.getIONodes().initWithDefaults(workflowPortObject.getSpec().getInputIDs(),
+            workflowPortObject.getSpec().getOutputIDs());
+
         //add, connect and configure input and output nodes
         int[] wfmb = NodeUIInformation.getBoundingBoxOf(wfm.getNodeContainers());
         List<String> configuredInputs =

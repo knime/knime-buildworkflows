@@ -147,6 +147,7 @@ class DialogComponentIONodes extends DialogComponent {
             .filter(e -> isValid(e.getValue())).map(Entry::getKey).collect(Collectors.toList());
 
         SettingsModelIONodes model = (SettingsModelIONodes)getModel();
+        model.initWithDefaults(inputs, outputs);
 
         m_inputs.updatePanel(inputs, p -> model.getInputNodeConfig(p).orElse(null));
         m_outputs.updatePanel(outputs, p -> model.getOutputNodeConfig(p).orElse(null));

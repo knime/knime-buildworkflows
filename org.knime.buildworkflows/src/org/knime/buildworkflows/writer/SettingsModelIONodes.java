@@ -94,22 +94,29 @@ class SettingsModelIONodes extends SettingsModel {
 
     private int m_workflowInputPortIndex = -1;
 
-    private Map<String, InputNodeConfig> m_inputNodeConfigs;
+    /* null indicates the default config */
+    private Map<String, InputNodeConfig> m_inputNodeConfigs = null;
 
-    private Map<String, OutputNodeConfig> m_outputNodeConfigs;
+    /* null indicates the default config */
+    private Map<String, OutputNodeConfig> m_outputNodeConfigs = null;
 
     public SettingsModelIONodes(final String configName) {
         m_configName = configName;
-        m_inputNodeConfigs = new HashMap<>();
-        m_outputNodeConfigs = new HashMap<>();
     }
 
-    private SettingsModelIONodes(final String configName, final int workflowInputPortIndex,
-        final Map<String, InputNodeConfig> inputNodeConfigs, final Map<String, OutputNodeConfig> outputNodeConfigs) {
-        m_inputNodeConfigs = inputNodeConfigs;
-        m_outputNodeConfigs = outputNodeConfigs;
-        m_configName = configName;
-        m_workflowInputPortIndex = workflowInputPortIndex;
+    void initWithDefaults(final List<String> inputs, final List<String> outputs) {
+        if (m_inputNodeConfigs == null) {
+            m_inputNodeConfigs = new HashMap<>();
+            for (String input : inputs) {
+                m_inputNodeConfigs.put(input, new TableInputNodeConfig());
+            }
+        }
+        if (m_outputNodeConfigs == null) {
+            m_outputNodeConfigs = new HashMap<>();
+            for (String output : outputs) {
+                m_outputNodeConfigs.put(output, new TableOutputNodeConfig());
+            }
+        }
     }
 
     Optional<InputNodeConfig> getInputNodeConfig(final String p) {
@@ -276,7 +283,7 @@ class SettingsModelIONodes extends SettingsModel {
                     changed = true;
                 }
             } else {
-                if (!m_inputNodeConfigs.isEmpty()) {
+                if (m_inputNodeConfigs != null && !m_inputNodeConfigs.isEmpty()) {
                     m_inputNodeConfigs.clear();
                     changed = true;
                 }
@@ -304,7 +311,7 @@ class SettingsModelIONodes extends SettingsModel {
                     changed = true;
                 }
             } else {
-                if (!m_outputNodeConfigs.isEmpty()) {
+                if (m_outputNodeConfigs != null && !m_outputNodeConfigs.isEmpty()) {
                     m_outputNodeConfigs.clear();
                     changed = true;
                 }
@@ -322,8 +329,8 @@ class SettingsModelIONodes extends SettingsModel {
     protected void saveSettingsForModel(final NodeSettingsWO settings) {
         NodeSettingsWO subsettings = settings.addNodeSettings(m_configName);
 
-        int numInPorts = (int)m_inputNodeConfigs.values().stream().filter(Objects::nonNull).count();
-        if (numInPorts > 0) {
+        if (m_inputNodeConfigs != null) {
+            int numInPorts = (int)m_inputNodeConfigs.values().stream().filter(Objects::nonNull).count();
             subsettings.addInt(CFG_NUM_INPUTS, numInPorts);
             int i = 0;
             for (Entry<String, InputNodeConfig> inConfigs : m_inputNodeConfigs.entrySet()) {
@@ -338,8 +345,8 @@ class SettingsModelIONodes extends SettingsModel {
             }
         }
 
-        int numOutPorts = (int)m_outputNodeConfigs.values().stream().filter(Objects::nonNull).count();
-        if (numOutPorts > 0) {
+        if (m_outputNodeConfigs != null) {
+            int numOutPorts = (int)m_outputNodeConfigs.values().stream().filter(Objects::nonNull).count();
             subsettings.addInt(CFG_NUM_OUTPUTS, numOutPorts);
             int i = 0;
             for (Entry<String, OutputNodeConfig> outConfigs : m_outputNodeConfigs.entrySet()) {

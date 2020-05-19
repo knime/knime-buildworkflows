@@ -87,4 +87,12 @@ class TableOutputNodeConfig extends OutputNodeConfig {
     protected void saveActualNodeSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
         ContainerTableOutputNodeModel.saveConfigAsNodeSettings(settings, getParameterName());
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected String getDefaultParameterName() {
+        return "table-output";
+    }
 }

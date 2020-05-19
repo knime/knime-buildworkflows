@@ -115,7 +115,7 @@ abstract class IONodeConfig {
         }
     }
 
-    private String m_paramName;
+    private String m_paramName = getDefaultParameterName();
 
     private JTextField m_dlgParamName;
 
@@ -220,8 +220,13 @@ abstract class IONodeConfig {
     }
 
     void loadSettingsFrom(final NodeSettingsRO settings) {
-        m_paramName = settings.getString("param_name", "");
+        m_paramName = settings.getString("param_name", getDefaultParameterName());
     }
+
+    /**
+     * @return the default parameter name
+     */
+    protected abstract String getDefaultParameterName();
 
     void validateSettingsBeforeSave() throws InvalidSettingsException {
         String param = getParameterName();
