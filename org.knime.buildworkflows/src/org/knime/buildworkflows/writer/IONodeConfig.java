@@ -129,7 +129,7 @@ abstract class IONodeConfig {
     JPanel getOrCreateJPanel() {
         if (m_panel == null) {
             m_panel = new JPanel();
-            m_panel.add(new JLabel("Paramter name"));
+            m_panel.add(new JLabel("Parameter name"));
             m_dlgParamName = new JTextField(20);
             m_dlgParamName.setText("param");
             m_dlgParamName.setText(m_paramName);
