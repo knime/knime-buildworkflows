@@ -317,14 +317,22 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
     }
 
     @Override
+    protected void onDispose() {
+        disposeInternal(true);
+    }
+
+    @Override
     protected void reset() {
-        if (!m_debug) {
+        disposeInternal(!m_debug);
+    }
+
+    private void disposeInternal(final boolean disposeWorkflowExecutable) {
+        if (disposeWorkflowExecutable) {
             disposeWorkflowExecutable();
         }
         if (m_portObjectIds != null) {
-            for (UUID id : m_portObjectIds) {
-                PortObjectRepository.remove(id);
-            }
+            m_portObjectIds.forEach(PortObjectRepository::remove);
+            m_portObjects.forEach(PortObjectRepository::removeIDFor);
             m_portObjectIds = null;
             m_portObjects = null;
         }
@@ -440,18 +448,23 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
             VirtualParallelizedChunkPortObjectInNodeModel inNM =
                 (VirtualParallelizedChunkPortObjectInNodeModel)virtualInNode.getNodeModel();
             AtomicReference<Exception> exception = new AtomicReference<>();
-            virtualInNode.getOutgoingFlowObjectStack().peek(FlowVirtualScopeContext.class).setPortObjectIDCallback(fct -> {
-                try {
-                    UUID id = fct.apply(exec);
-                    m_portObjectIds.add(id);
-                    m_portObjects.add(PortObjectRepository.get(id).get());
-                } catch (CompletionException e) {
-                    exception.set((Exception)e.getCause());
-                }
-            });
-            if(exception.get() != null) {
-                throw exception.get();
-            }
+
+            // Sets the port object id call back on the virtual scope.
+            // The call back is triggered (possibly multiple times) during the execution of this workflow (fragment),
+            // e.g., if there is a 'Capture Workflow End' node whose scope has 'static' input directly connected into
+            // the scope. Those 'static inputs' are made available via this call back (via the the PortObjectRepository)
+            // such that this node can, retrieve, persist and later restore them for downstream nodes (that make use of
+            // the potentially output workflow port object by this workflow execution, such as the Workflow Writer).
+            virtualInNode.getOutgoingFlowObjectStack().peek(FlowVirtualScopeContext.class)
+                .setPortObjectIDCallback(fct -> {
+                    try {
+                        UUID id = fct.apply(exec);
+                        m_portObjectIds.add(id);
+                        m_portObjects.add(PortObjectRepository.get(id).get());
+                    } catch (CompletionException e) {
+                        exception.set((Exception)e.getCause());
+                    }
+                });
             inNM.setVirtualNodeInput(new VirtualParallelizedChunkNodeInput(inputData,
                 collectOutputFlowVariablesFromUpstreamNodes(m_thisNode), 0));
             NativeNodeContainer nnc = (NativeNodeContainer)m_wfm.getNodeContainer(m_virtualEndID);
@@ -462,6 +475,9 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
             m_wfm.executeUpToHere(m_virtualEndID);
             waitWhileInExecution(m_wfm, exec);
 
+            if(exception.get() != null) {
+                throw exception.get();
+            }
             return Pair.create(outNM.getOutObjects(), getFlowVariablesFromNC(nnc).collect(toList()));
         }
 
