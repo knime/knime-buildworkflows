@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
       id="org.knime.features.buildworkflows"
-      label="KNIME Workflows build Workflows"
+      label="KNIME Integrated Deployment"
       version="4.2.0.qualifier"
       provider-name="KNIME AG, Zurich, Switzerland">
 
