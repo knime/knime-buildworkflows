@@ -139,7 +139,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         try {
             wff = manager.createCaptureOperationFor(container.getID()).capture();
         } catch (Exception e) {
-            throw new IllegalStateException("Capturing the workflow failed.", e);
+            throw new IllegalStateException("Capturing the workflow failed: " + e.getMessage(), e);
         }
         removeFragment();
         m_lastFragment = wff;
