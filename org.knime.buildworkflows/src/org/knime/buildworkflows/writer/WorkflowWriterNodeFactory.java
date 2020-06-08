@@ -73,9 +73,7 @@ public final class WorkflowWriterNodeFactory
 
     @Override
     protected WorkflowWriterNodeDialog createDialog(final NodeCreationConfiguration creationConfig) {
-        // creationConfig.getPortConfig().get() can never return null if ports have been added to the
-        // PortsConfigurationBuilder (which they have in PortObjectWriterNodeFactory)
-        return new WorkflowWriterNodeDialog(creationConfig.getPortConfig().get(), "workflow_writer");
+        return new WorkflowWriterNodeDialog(creationConfig, "workflow_writer");
     }
 
 }

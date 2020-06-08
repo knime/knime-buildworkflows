@@ -95,6 +95,7 @@ import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
 import org.knime.filehandling.core.connections.WorkflowAware;
 import org.knime.filehandling.core.connections.base.UnixStylePathUtil;
+import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.FileOverwritePolicy;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectToPathWriterNodeModel;
 
 /**
@@ -106,7 +107,7 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectToPathWriter
 final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<WorkflowWriterNodeConfig> {
 
     WorkflowWriterNodeModel(final NodeCreationConfiguration creationConfig) {
-        super(creationConfig, new WorkflowWriterNodeConfig());
+        super(creationConfig, new WorkflowWriterNodeConfig(creationConfig));
     }
 
     @Override
@@ -122,7 +123,8 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
         final WorkflowWriterNodeConfig config = getConfig();
         final boolean archive = config.isArchive().getBooleanValue();
         final boolean openAfterWrite = config.isOpenAfterWrite().getBooleanValue();
-        final boolean overwrite = config.getOverwriteModel().getBooleanValue();
+        final boolean overwrite =
+            config.getFileChooserModel().getFileOverwritePolicy() == FileOverwritePolicy.OVERWRITE;
 
         // determine workflow name
         final String workflowName;
@@ -178,7 +180,7 @@ final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<Work
             addIONodes(wfm, config, workflowPortObject, exec);
 
             exec.setProgress(.33, () -> "Saving workflow to disk.");
-         // write workflow to temporary directory
+            // write workflow to temporary directory
             wfm.save(tmpWorkflowDir, exec.createSubProgress(.34), false);
         } finally {
             fragment.disposeWorkflow();

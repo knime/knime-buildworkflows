@@ -53,14 +53,13 @@ import java.awt.GridBagLayout;
 import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
-import javax.swing.JFileChooser;
 import javax.swing.JPanel;
 
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
-import org.knime.core.node.context.ports.PortsConfiguration;
+import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
 import org.knime.core.node.defaultnodesettings.DialogComponentLabel;
 import org.knime.core.node.defaultnodesettings.DialogComponentString;
@@ -70,6 +69,7 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.util.FileUtil;
 import org.knime.filehandling.core.defaultnodesettings.FileSystemChoice.Choice;
+import org.knime.filehandling.core.node.portobject.SelectionMode;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDialog;
 
 /**
@@ -79,6 +79,8 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDi
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<WorkflowWriterNodeConfig> {
+
+    static final SelectionMode SELECTION_MODE = SelectionMode.FILE_AND_FOLDER;
 
     private final DialogComponentLabel m_originalName;
 
@@ -92,8 +94,10 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
 
     private final DialogComponentIONodes m_ioNodes;
 
-    WorkflowWriterNodeDialog(final PortsConfiguration portsConfig, final String fileChooserHistoryId) {
-        super(portsConfig, new WorkflowWriterNodeConfig(), fileChooserHistoryId, JFileChooser.DIRECTORIES_ONLY);
+    private final int m_workflowInputPortIndex;
+
+    WorkflowWriterNodeDialog(final NodeCreationConfiguration creationConfig, final String fileChooserHistoryId) {
+        super(new WorkflowWriterNodeConfig(creationConfig), fileChooserHistoryId, SELECTION_MODE);
 
         final GridBagConstraints gbc = createAndInitGBC();
         m_archive = new DialogComponentBoolean(getConfig().isArchive(), "Export workflow as knwf archive");
@@ -125,7 +129,9 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         customNamePanel.add(m_customName.getComponentPanel(), gbc);
         addAdditionalPanel(customNamePanel);
 
-        m_ioNodes = new DialogComponentIONodes(getConfig().getIONodes(), getPortObjectIndex());
+        m_workflowInputPortIndex =
+            creationConfig.getPortConfig().get().getInputPortLocation().get(getPortObjectInputGrpName())[0];
+        m_ioNodes = new DialogComponentIONodes(getConfig().getIONodes(), m_workflowInputPortIndex);
         addTab("Inputs & Outputs", m_ioNodes.getComponentPanel());
     }
 
@@ -145,7 +151,8 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
                 throw new InvalidSettingsException("Custom workflow name must not be empty.");
             }
             if (FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(customName).find()) {
-                throw new InvalidSettingsException(String.format("Custom workflow name must not contain any control characters or any of the characters %s.",
+                throw new InvalidSettingsException(String.format(
+                    "Custom workflow name must not contain any control characters or any of the characters %s.",
                     FileUtil.ILLEGAL_FILENAME_CHARS));
             }
         }
@@ -161,7 +168,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         m_openAfterWrite.loadSettingsFrom(settings, specs);
         m_ioNodes.loadSettingsFrom(settings, specs);
 
-        final WorkflowPortObjectSpec portObject = (WorkflowPortObjectSpec)specs[getPortObjectIndex()];
+        final WorkflowPortObjectSpec portObject = (WorkflowPortObjectSpec)specs[m_workflowInputPortIndex];
         final String workflowName = portObject.getWorkflowName();
         final String escapedName = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(workflowName).replaceAll("_");
         final WorkflowWriterNodeConfig config = getConfig();
@@ -172,14 +179,11 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         m_originalName.setText(String.format("Default workflow name: %s", workflowName));
 
         // TODO: consider refactoring this code to WorkflowWriterNodeConfig
-        final boolean isCustomURL =
-            config.getFileChooserModel().getFileSystemChoice().getType() == Choice.CUSTOM_URL_FS;
-        final boolean isWorkflowAware = Stream.of(Choice.KNIME_FS, Choice.KNIME_MOUNTPOINT)
-            .anyMatch(c -> c.equals(config.getFileChooserModel().getFileSystemChoice().getType()));
+        final Choice fileSystemChoice = config.getFileChooserModel().getLocation().getFileSystemChoice();
+        final boolean isCustomURL = fileSystemChoice == Choice.CUSTOM_URL_FS;
+        final boolean isWorkflowAware =
+            Stream.of(Choice.KNIME_FS, Choice.KNIME_MOUNTPOINT).anyMatch(c -> c.equals(fileSystemChoice));
         final SettingsModelBoolean archive = config.isArchive();
-        config.getOverwriteModel().setEnabled(!isCustomURL);
-        config.getCreateDirectoryModel().setEnabled(!isCustomURL);
-        config.getTimeoutModel().setEnabled(isCustomURL);
         archive.setEnabled(!isCustomURL);
         config.isOpenAfterWrite().setEnabled(!archive.getBooleanValue() && isWorkflowAware);
         customName.setEnabled(config.isUseCustomName().getBooleanValue());

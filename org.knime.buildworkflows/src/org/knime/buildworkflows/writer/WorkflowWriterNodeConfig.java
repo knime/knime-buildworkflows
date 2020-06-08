@@ -53,11 +53,11 @@ import java.util.stream.Stream;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
-import org.knime.core.node.defaultnodesettings.SettingsModelInteger;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.filehandling.core.defaultnodesettings.FileSystemChoice.Choice;
-import org.knime.filehandling.core.defaultnodesettings.SettingsModelFileChooser2;
+import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeConfig;
 
 /**
@@ -86,48 +86,20 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
 
     private final SettingsModelIONodes m_ioNodes = new SettingsModelIONodes(CFG_IO_NODES);
 
-    WorkflowWriterNodeConfig() {
-        final SettingsModelFileChooser2 fc = getFileChooserModel();
-        final SettingsModelBoolean overwrite = getOverwriteModel();
-        final SettingsModelBoolean createParentDirectory = getCreateDirectoryModel();
-        final SettingsModelInteger timeout = getTimeoutModel();
-        fc.addChangeListener(e -> {
-            switch (fc.getFileSystemChoice().getType()) {
-                case KNIME_FS:
-                case KNIME_MOUNTPOINT:
-                    overwrite.setEnabled(true);
-                    createParentDirectory.setEnabled(true);
-                    timeout.setEnabled(false);
-                    m_archive.setEnabled(true);
-                    m_openAfterWrite.setEnabled(true);
-                    break;
-                case CUSTOM_URL_FS:
-                    overwrite.setBooleanValue(false);
-                    overwrite.setEnabled(false);
-                    createParentDirectory.setBooleanValue(false);
-                    createParentDirectory.setEnabled(false);
-                    timeout.setEnabled(true);
-                    m_archive.setBooleanValue(true);
-                    m_archive.setEnabled(false);
-                    m_openAfterWrite.setBooleanValue(false);
-                    m_openAfterWrite.setEnabled(false);
-                    break;
-                default:
-                    overwrite.setEnabled(true);
-                    createParentDirectory.setEnabled(true);
-                    timeout.setEnabled(false);
-                    m_archive.setEnabled(true);
-                    m_openAfterWrite.setBooleanValue(false);
-                    m_openAfterWrite.setEnabled(false);
-            }
-        });
-
+    /**
+     * Constructor for configs in which the file chooser doesn't filter on file suffixes.
+     *
+     * @param creationConfig {@link NodeCreationConfiguration} of the corresponding KNIME node
+     */
+    WorkflowWriterNodeConfig(final NodeCreationConfiguration creationConfig) {
+        super(creationConfig, WorkflowWriterNodeDialog.SELECTION_MODE);
+        SettingsModelWriterFileChooser fc = getFileChooserModel();
         m_archive.addChangeListener(e -> {
             if (m_archive.getBooleanValue()) {
                 m_openAfterWrite.setBooleanValue(false);
                 m_openAfterWrite.setEnabled(false);
             } else if (Stream.of(Choice.KNIME_FS, Choice.KNIME_MOUNTPOINT)
-                .anyMatch(c -> c.equals(fc.getFileSystemChoice().getType()))) {
+                .anyMatch(c -> c.equals(fc.getLocation().getFileSystemChoice()))) {
                 m_openAfterWrite.setEnabled(true);
             }
         });
