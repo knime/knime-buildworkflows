@@ -68,7 +68,7 @@ import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.util.FileUtil;
-import org.knime.filehandling.core.defaultnodesettings.FileSystemChoice.Choice;
+import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.node.portobject.SelectionMode;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDialog;
 
@@ -179,10 +179,10 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         m_originalName.setText(String.format("Default workflow name: %s", workflowName));
 
         // TODO: consider refactoring this code to WorkflowWriterNodeConfig
-        final Choice fileSystemChoice = config.getFileChooserModel().getLocation().getFileSystemChoice();
-        final boolean isCustomURL = fileSystemChoice == Choice.CUSTOM_URL_FS;
+        final FSCategory fileSystemCategory = config.getFileChooserModel().getLocation().getFSCategory();
+        final boolean isCustomURL = fileSystemCategory == FSCategory.CUSTOM_URL;
         final boolean isWorkflowAware =
-            Stream.of(Choice.KNIME_FS, Choice.KNIME_MOUNTPOINT).anyMatch(c -> c.equals(fileSystemChoice));
+            Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT).anyMatch(c -> c == fileSystemCategory);
         final SettingsModelBoolean archive = config.isArchive();
         archive.setEnabled(!isCustomURL);
         config.isOpenAfterWrite().setEnabled(!archive.getBooleanValue() && isWorkflowAware);

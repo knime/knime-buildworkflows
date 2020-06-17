@@ -56,7 +56,7 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
-import org.knime.filehandling.core.defaultnodesettings.FileSystemChoice.Choice;
+import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeConfig;
 
@@ -98,8 +98,8 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
             if (m_archive.getBooleanValue()) {
                 m_openAfterWrite.setBooleanValue(false);
                 m_openAfterWrite.setEnabled(false);
-            } else if (Stream.of(Choice.KNIME_FS, Choice.KNIME_MOUNTPOINT)
-                .anyMatch(c -> c.equals(fc.getLocation().getFileSystemChoice()))) {
+            } else if (Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT)
+                .anyMatch(c -> c == fc.getLocation().getFSCategory())) {
                 m_openAfterWrite.setEnabled(true);
             }
         });
