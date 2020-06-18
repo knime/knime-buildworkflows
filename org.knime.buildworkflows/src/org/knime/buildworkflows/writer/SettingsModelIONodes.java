@@ -72,7 +72,7 @@ import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class SettingsModelIONodes extends SettingsModel {
+public class SettingsModelIONodes extends SettingsModel {
 
     private static final String CFG_KEY_INPUT_NODE = "input_node_";
 

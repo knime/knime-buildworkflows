@@ -32,6 +32,11 @@
     <node
           after="org.knime.buildworkflows.writer.WorkflowWriterNodeFactory"
           category-path="/labs/captureworkflows"
+          factory-class="org.knime.buildworkflows.deploy.DeployWorkflowNodeFactory">
+    </node>
+    <node
+          after="org.knime.buildworkflows.deploy.DeployWorkflowNodeFactory"
+          category-path="/labs/captureworkflows"
           factory-class="org.knime.buildworkflows.executor.WorkflowExecutorNodeFactory">
     </node>
  </extension>

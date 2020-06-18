@@ -69,7 +69,7 @@ import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class DialogComponentIONodes extends DialogComponent {
+public class DialogComponentIONodes extends DialogComponent {
 
     private static final String NONE_CHOICE = "None";
 
