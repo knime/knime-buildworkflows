@@ -49,14 +49,19 @@
 package org.knime.buildworkflows.deploy;
 
 import java.awt.Component;
+import java.awt.Dimension;
+import java.net.URI;
+import java.util.Optional;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.event.ChangeListener;
 
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformation;
-import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformationPortObjectSpec;
 import org.knime.base.filehandling.remote.dialog.RemoteFileChooser;
 import org.knime.base.filehandling.remote.dialog.RemoteFileChooserPanel;
 import org.knime.buildworkflows.writer.DialogComponentIONodes;
@@ -76,6 +81,9 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.util.ButtonGroupEnumInterface;
 import org.knime.core.node.workflow.VariableType.StringType;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.filehandling.core.defaultnodesettings.status.DefaultStatusMessage;
+import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage;
+import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
 
 /**
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
@@ -83,7 +91,7 @@ import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 final class DeployWorkflowNodeDialog extends NodeDialogPane {
 
     enum ExistsOption implements ButtonGroupEnumInterface {
-            FAIL("Fail on execution"), OVERWRITE("Overwrite");
+            FAIL("Fail"), OVERWRITE("Overwrite");
 
         private final String m_name;
 
@@ -110,6 +118,24 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         public boolean isDefault() {
             return this == EXISTS_OPTION_DEF;
         }
+    }
+
+    private static Component group(final String label, final Component... components) {
+        final JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), label));
+        for (Component component : components) {
+            panel.add(alignLeft(component));
+        }
+        return panel;
+    }
+
+    private static Component alignLeft(final Component component) {
+        final Box box = Box.createHorizontalBox();
+        component.setMaximumSize(new Dimension(component.getPreferredSize().width, component.getMaximumSize().height));
+        box.add(component);
+        box.add(Box.createHorizontalGlue());
+        return box;
     }
 
     static final String WORKFLOW_GRP_CFG = "workflow-group";
@@ -150,8 +176,10 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         new RemoteFileChooserPanel(getPanel(), "Workflow Group", false, "deploymentTargetHistory",
             RemoteFileChooser.SELECT_DIR, createFlowVariableModel(WORKFLOW_GRP_CFG, StringType.INSTANCE), null);
 
+    private final StatusView m_workflowGrpStatus = new StatusView(400);
+
     private final DialogComponentBoolean m_createParent =
-        new DialogComponentBoolean(createCreateParentModel(), "Create workflow group if it does not exist");
+        new DialogComponentBoolean(createCreateParentModel(), "Create folder if it does not exist");
 
     private final DialogComponentLabel m_originalName = new DialogComponentLabel(" ");
 
@@ -161,8 +189,10 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
     private final DialogComponentString m_customName =
         new DialogComponentString(createCustomNameModel(), "Custom workflow name: ", true, 20);
 
-    private final DialogComponentButtonGroup m_existsOption = new DialogComponentButtonGroup(createExistsOptionModel(),
-        "If workflow already exists", false, ExistsOption.values());
+    private final StatusView m_workflowNameStatus = new StatusView(400);
+
+    private final DialogComponentButtonGroup m_existsOption =
+        new DialogComponentButtonGroup(createExistsOptionModel(), "If exists", false, ExistsOption.values());
 
     private final DialogComponentBoolean m_createSnapshot =
         new DialogComponentBoolean(createCreateSnapshotModel(), "Create Snapshot");
@@ -172,42 +202,35 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
 
     private final DialogComponentIONodes m_ioNodes = new DialogComponentIONodes(createIONodesModel(), 1);
 
+    // lazily initialized
+    private ChangeListener m_workflowNameChangeListener;
+
     DeployWorkflowNodeDialog() {
+        m_workflowGrp.getPanel().setMaximumSize(new Dimension(m_workflowGrp.getPanel().getMaximumSize().width, m_workflowGrp.getPanel().getPreferredSize().height));
         m_customName.getComponentPanel().setToolTipText("Name of the workflow directory or file to be written");
 
-        m_useCustomName.getModel().addChangeListener(e -> m_customName.getModel()
-            .setEnabled(((SettingsModelBoolean)m_useCustomName.getModel()).getBooleanValue()));
-        m_createSnapshot.getModel().addChangeListener(e -> m_snapshotMessage.getModel()
-            .setEnabled(((SettingsModelBoolean)m_createSnapshot.getModel()).getBooleanValue()));
+        m_useCustomName.getModel().addChangeListener(e -> enableDisableCustomName());
+        m_createSnapshot.getModel().addChangeListener(e -> enableDisableSnapshotMessage());
+        @SuppressWarnings("unchecked")
+        final JComboBox<String> workflowGrp = (JComboBox<String>)(m_workflowGrp.getPanel().getComponent(0));
+        workflowGrp.addActionListener(e -> updateWorkflowGrpStatus());
 
         final Box optionsTab = Box.createVerticalBox();
-        optionsTab.add(group("Workflow group on KNIME Server", m_info.getComponentPanel(), m_workflowGrp.getPanel(),
-            m_createParent.getComponentPanel()));
+        optionsTab.add(Box.createVerticalStrut(20));
+        final Box folderBox = Box.createHorizontalBox();
+        folderBox.add(new JLabel("Folder: "));
+        folderBox.add(m_workflowGrp.getPanel());
+        optionsTab.add(group("Choose folder on KNIME Server", m_info.getComponentPanel(), folderBox,
+            m_createParent.getComponentPanel(), m_workflowGrpStatus.getLabel()));
+        optionsTab.add(Box.createVerticalStrut(20));
         optionsTab.add(group("Workflow name", m_originalName.getComponentPanel(), m_useCustomName.getComponentPanel(),
-            m_customName.getComponentPanel()));
+            m_customName.getComponentPanel(), m_workflowNameStatus.getLabel()));
+        optionsTab.add(Box.createVerticalStrut(20));
         optionsTab.add(group("Deployment options", m_existsOption.getComponentPanel(),
             m_createSnapshot.getComponentPanel(), m_snapshotMessage.getComponentPanel()));
         addTab("Options", optionsTab);
 
         addTab("Inputs & Outputs", m_ioNodes.getComponentPanel());
-    }
-
-    private static Component group(final String label, final Component... components) {
-        final JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), label));
-        for (Component component : components) {
-            panel.add(alignLeft(component));
-        }
-        return panel;
-    }
-
-    private static Component alignLeft(final Component component) {
-        final Box box = Box.createHorizontalBox();
-        component.setMaximumSize(component.getPreferredSize());
-        box.add(component);
-        box.add(Box.createHorizontalGlue());
-        return box;
     }
 
     @Override
@@ -217,6 +240,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         m_useCustomName.saveSettingsTo(settings);
         m_customName.saveSettingsTo(settings);
         m_existsOption.saveSettingsTo(settings);
+        m_createSnapshot.saveSettingsTo(settings);
         m_snapshotMessage.saveSettingsTo(settings);
         m_ioNodes.saveSettingsTo(settings);
     }
@@ -225,21 +249,13 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
     protected void loadSettingsFrom(final NodeSettingsRO settings, final PortObjectSpec[] specs)
         throws NotConfigurableException {
 
-        final ConnectionInformationPortObjectSpec con = (ConnectionInformationPortObjectSpec)specs[0];
-        if (con == null) {
-            throw new NotConfigurableException("No connection available.");
-        }
-        final ConnectionInformation conInf = con.getConnectionInformation();
-        if (conInf == null) {
-            throw new NotConfigurableException("No connection information available.");
-        }
+        final ConnectionInformation conInf =
+            DeployWorkflowNodeModel.validateAndGetConnectionInformation(specs[0], NotConfigurableException::new);
+        final WorkflowPortObjectSpec portObjectSpec =
+            DeployWorkflowNodeModel.validateAndGetWorkflowPortObjectSpec(specs[1], NotConfigurableException::new);
 
-        final WorkflowPortObjectSpec portObjectSpec = (WorkflowPortObjectSpec)specs[1];
-        if (portObjectSpec == null) {
-            throw new NotConfigurableException("No workflow available.");
-        }
-
-        m_info.setText("Connection: " + conInf.toURI());
+        final URI uri = conInf.toURI();
+        m_info.setText(uri.getScheme() + "://" + uri.getAuthority());
         m_workflowGrp.setConnectionInformation(conInf);
         m_workflowGrp.setSelection(settings.getString(WORKFLOW_GRP_CFG, DeployWorkflowNodeModel.WORKFLOW_GRP_PREFIX));
         m_createParent.loadSettingsFrom(settings, specs);
@@ -248,10 +264,49 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         m_useCustomName.loadSettingsFrom(settings, specs);
         m_customName.loadSettingsFrom(settings, specs);
         m_existsOption.loadSettingsFrom(settings, specs);
+        m_createSnapshot.loadSettingsFrom(settings, specs);
         m_snapshotMessage.loadSettingsFrom(settings, specs);
         m_ioNodes.loadSettingsFrom(settings, specs);
 
+        enableDisableCustomName();
+        enableDisableSnapshotMessage();
+        updateWorkflowGrpStatus();
+        updateWorkflowNameStatus(portObjectSpec);
+
+        if (m_workflowNameChangeListener == null) {
+            m_workflowNameChangeListener = e -> updateWorkflowNameStatus(portObjectSpec);
+            m_useCustomName.getModel().addChangeListener(m_workflowNameChangeListener);
+            m_customName.getModel().addChangeListener(m_workflowNameChangeListener);
+        }
+    }
+
+    private void enableDisableCustomName() {
         m_customName.getModel().setEnabled(((SettingsModelBoolean)m_useCustomName.getModel()).getBooleanValue());
-        m_snapshotMessage.getModel().setEnabled(((SettingsModelBoolean)m_createSnapshot.getModel()).getBooleanValue());
+    }
+
+    private void enableDisableSnapshotMessage() {
+        m_snapshotMessage.getModel()
+        .setEnabled(((SettingsModelBoolean)m_createSnapshot.getModel()).getBooleanValue());
+    }
+
+    private void updateWorkflowGrpStatus() {
+        final Optional<String> err = DeployWorkflowNodeModel.validateWorkflowGrp(m_workflowGrp.getSelection());
+        if (err.isPresent()) {
+            m_workflowGrpStatus.setStatus(new DefaultStatusMessage(StatusMessage.MessageType.ERROR, err.get()));
+        } else {
+            m_workflowGrpStatus.clearStatus();
+        }
+    }
+
+    private void updateWorkflowNameStatus(final WorkflowPortObjectSpec portObjectSpec) {
+        final Optional<String> err = DeployWorkflowNodeModel.validateWorkflowName(portObjectSpec,
+            ((SettingsModelBoolean)m_useCustomName.getModel()).getBooleanValue(),
+            ((SettingsModelString)m_customName.getModel()).getStringValue());
+        if (err.isPresent()) {
+            m_workflowNameStatus
+                .setStatus(new DefaultStatusMessage(StatusMessage.MessageType.ERROR, err.get()));
+        } else {
+            m_workflowNameStatus.clearStatus();
+        }
     }
 }

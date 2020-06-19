@@ -53,6 +53,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 
 import javax.ws.rs.core.Response;
@@ -95,6 +97,54 @@ final class DeployWorkflowNodeModel extends NodeModel {
         return FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(spec.getWorkflowName()).replaceAll("_");
     }
 
+    static <E extends Exception> ConnectionInformation validateAndGetConnectionInformation(final PortObjectSpec spec,
+        final Function<String, E> errorConsumer) throws E {
+
+        final ConnectionInformationPortObjectSpec con = (ConnectionInformationPortObjectSpec)spec;
+        if (con == null) {
+            throw errorConsumer.apply("No connection available.");
+        }
+        final ConnectionInformation conInf = con.getConnectionInformation();
+        if (conInf == null) {
+            throw errorConsumer.apply("No connection information available.");
+        }
+        return conInf;
+    }
+
+    static <E extends Exception> WorkflowPortObjectSpec validateAndGetWorkflowPortObjectSpec(final PortObjectSpec spec,
+        final Function<String, E> errorFunction) throws E {
+
+        final WorkflowPortObjectSpec portObjectSpec = (WorkflowPortObjectSpec)spec;
+        if (portObjectSpec == null) {
+            throw errorFunction.apply("No workflow available.");
+        }
+        return portObjectSpec;
+    }
+
+    static Optional<String> validateWorkflowGrp(final String workflowGrp) {
+        if (!workflowGrp.startsWith(WORKFLOW_GRP_PREFIX)) {
+            return Optional.of(String.format("Path to folder must start with %s.", WORKFLOW_GRP_PREFIX));
+        }
+        return Optional.empty();
+    }
+
+    static Optional<String> validateWorkflowName(final WorkflowPortObjectSpec portObjectSpec,
+        final boolean useCustomName, final String customName) {
+        if (useCustomName) {
+            if (customName.isEmpty()) {
+                return Optional.of("Custom workflow name is empty.");
+            }
+            final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(customName);
+            if (matcher.find()) {
+                return Optional.of(String.format("Illegal character in custom workflow name \"%s\" at index %d.",
+                    customName, matcher.start()));
+            }
+        } else if (determineWorkflowName(portObjectSpec).isEmpty()) {
+            return Optional.of("Default workflow name is empty. Consider using a custom workflow name.");
+        }
+        return Optional.empty();
+    }
+
     private static final String REST_ENDPOINT = "/knime/rest";
 
     private static final String REST_VERSION = "/v4/repository";
@@ -129,39 +179,15 @@ final class DeployWorkflowNodeModel extends NodeModel {
     @Override
     protected PortObjectSpec[] configure(final PortObjectSpec[] inSpecs) throws InvalidSettingsException {
 
-        final ConnectionInformationPortObjectSpec con = (ConnectionInformationPortObjectSpec)inSpecs[0];
-        if (con == null) {
-            throw new InvalidSettingsException("No connection available.");
-        }
-        final ConnectionInformation conInf = con.getConnectionInformation();
-        if (conInf == null) {
-            throw new InvalidSettingsException("No connection information available.");
-        }
+        validateAndGetConnectionInformation(inSpecs[0], InvalidSettingsException::new);
+        final WorkflowPortObjectSpec portObjectSpec =
+            validateAndGetWorkflowPortObjectSpec(inSpecs[1], InvalidSettingsException::new);
 
-        final WorkflowPortObjectSpec portObjectSpec = (WorkflowPortObjectSpec)inSpecs[1];
-        if (portObjectSpec == null) {
-            throw new InvalidSettingsException("No workflow available.");
-        }
-
-        final String workflowGrp = m_workflowGrp.getStringValue();
-        if (!workflowGrp.startsWith(WORKFLOW_GRP_PREFIX)) {
-            throw new InvalidSettingsException(
-                String.format("Workflow group must start with %s.", WORKFLOW_GRP_PREFIX));
-        }
-
-        if (m_useCustomName.getBooleanValue()) {
-            final String customName = m_customName.getStringValue();
-            if (customName.isEmpty()) {
-                throw new InvalidSettingsException("Custom workflow name is empty.");
-            }
-            final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(customName);
-            if (matcher.find()) {
-                throw new InvalidSettingsException(String.format(
-                    "Illegal character in custom workflow name \"%s\" at index %d.", customName, matcher.start()));
-            }
-        } else if (determineWorkflowName(portObjectSpec).isEmpty()) {
-            throw new InvalidSettingsException(
-                "Default workflow name is empty. Consider using a custom workflow name.");
+        final Optional<String> err = validateWorkflowGrp(m_workflowGrp.getStringValue()).map(Optional::of)
+            .orElseGet(() -> validateWorkflowName(portObjectSpec, m_useCustomName.getBooleanValue(),
+                m_customName.getStringValue()));
+        if (err.isPresent()) {
+            throw new InvalidSettingsException(err.get());
         }
 
         return new PortObjectSpec[0];
