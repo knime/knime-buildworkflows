@@ -124,7 +124,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         final JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), label));
-        for (Component component : components) {
+        for (final Component component : components) {
             panel.add(alignLeft(component));
         }
         return panel;
@@ -137,6 +137,14 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         box.add(Box.createHorizontalGlue());
         return box;
     }
+
+    static final String REST_ENDPOINT = "/knime/rest";
+
+    private static final String REST_VERSION = "/v4/repository";
+
+    private static final String WORKFLOW_GRP_PREFIX = REST_ENDPOINT + REST_VERSION;
+
+    static final String PATH_SEPARATOR = "/";
 
     static final String WORKFLOW_GRP_CFG = "workflow-group";
 
@@ -206,14 +214,21 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
     private ChangeListener m_workflowNameChangeListener;
 
     DeployWorkflowNodeDialog() {
-        m_workflowGrp.getPanel().setMaximumSize(new Dimension(m_workflowGrp.getPanel().getMaximumSize().width, m_workflowGrp.getPanel().getPreferredSize().height));
+        m_workflowGrp.getPanel().setMaximumSize(new Dimension(m_workflowGrp.getPanel().getMaximumSize().width,
+            m_workflowGrp.getPanel().getPreferredSize().height));
         m_customName.getComponentPanel().setToolTipText("Name of the workflow directory or file to be written");
 
         m_useCustomName.getModel().addChangeListener(e -> enableDisableCustomName());
         m_createSnapshot.getModel().addChangeListener(e -> enableDisableSnapshotMessage());
         @SuppressWarnings("unchecked")
         final JComboBox<String> workflowGrp = (JComboBox<String>)(m_workflowGrp.getPanel().getComponent(0));
-        workflowGrp.addActionListener(e -> updateWorkflowGrpStatus());
+        workflowGrp.addActionListener(e -> {
+            final String s = (String)workflowGrp.getSelectedItem();
+            if (s != null) {
+                workflowGrp.setSelectedItem(s.replace(WORKFLOW_GRP_PREFIX, ""));
+            }
+            updateWorkflowGrpStatus();
+        });
 
         final Box optionsTab = Box.createVerticalBox();
         optionsTab.add(Box.createVerticalStrut(20));
@@ -257,7 +272,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         final URI uri = conInf.toURI();
         m_info.setText(uri.getScheme() + "://" + uri.getAuthority());
         m_workflowGrp.setConnectionInformation(conInf);
-        m_workflowGrp.setSelection(settings.getString(WORKFLOW_GRP_CFG, DeployWorkflowNodeModel.WORKFLOW_GRP_PREFIX));
+        m_workflowGrp.setSelection(settings.getString(WORKFLOW_GRP_CFG, PATH_SEPARATOR));
         m_createParent.loadSettingsFrom(settings, specs);
         m_originalName.setText(
             String.format("Default workflow name: %s", DeployWorkflowNodeModel.determineWorkflowName(portObjectSpec)));
@@ -285,8 +300,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
     }
 
     private void enableDisableSnapshotMessage() {
-        m_snapshotMessage.getModel()
-        .setEnabled(((SettingsModelBoolean)m_createSnapshot.getModel()).getBooleanValue());
+        m_snapshotMessage.getModel().setEnabled(((SettingsModelBoolean)m_createSnapshot.getModel()).getBooleanValue());
     }
 
     private void updateWorkflowGrpStatus() {
@@ -303,8 +317,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
             ((SettingsModelBoolean)m_useCustomName.getModel()).getBooleanValue(),
             ((SettingsModelString)m_customName.getModel()).getStringValue());
         if (err.isPresent()) {
-            m_workflowNameStatus
-                .setStatus(new DefaultStatusMessage(StatusMessage.MessageType.ERROR, err.get()));
+            m_workflowNameStatus.setStatus(new DefaultStatusMessage(StatusMessage.MessageType.ERROR, err.get()));
         } else {
             m_workflowNameStatus.clearStatus();
         }

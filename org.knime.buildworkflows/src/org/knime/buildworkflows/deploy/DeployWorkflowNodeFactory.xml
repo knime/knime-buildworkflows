@@ -14,8 +14,7 @@
 		</intro>
 		<tab name="Options">
 		    <option name="Folder">
-				Enter a valid path pointing to a folder / workflow group on the KNIME Server.
-				The path has to start with the REST endpoint and version, i.e., /knime/rest/repository/v4.
+				Enter a valid (absolute) path pointing to a folder / workflow group on the KNIME Server.
 			</option>
 			<option name="Create folder if it does not exist">
 				If checked, the folder and any of its parents will be created when they do not exist.

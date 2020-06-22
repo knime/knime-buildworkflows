@@ -94,7 +94,7 @@ import com.knime.enterprise.server.rest.client.filehandling.RepositoryClient;
 final class DeployWorkflowNodeModel extends NodeModel {
 
     static final String determineWorkflowName(final WorkflowPortObjectSpec spec) {
-        return FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(spec.getWorkflowName()).replaceAll("_");
+        return FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(spec.getWorkflowName()).replaceAll("_").trim();
     }
 
     static <E extends Exception> ConnectionInformation validateAndGetConnectionInformation(final PortObjectSpec spec,
@@ -122,8 +122,13 @@ final class DeployWorkflowNodeModel extends NodeModel {
     }
 
     static Optional<String> validateWorkflowGrp(final String workflowGrp) {
-        if (!workflowGrp.startsWith(WORKFLOW_GRP_PREFIX)) {
-            return Optional.of(String.format("Path to folder must start with %s.", WORKFLOW_GRP_PREFIX));
+        if (workflowGrp == null || workflowGrp.trim().isEmpty()) {
+            return Optional.of("Path to folder must not be empty.");
+        }
+        if (!workflowGrp.trim().startsWith(DeployWorkflowNodeDialog.PATH_SEPARATOR)) {
+            return Optional
+                .of(String.format("Path to folder must be absolute and start with a path separator (\"%s\").",
+                    DeployWorkflowNodeDialog.PATH_SEPARATOR));
         }
         return Optional.empty();
     }
@@ -131,7 +136,7 @@ final class DeployWorkflowNodeModel extends NodeModel {
     static Optional<String> validateWorkflowName(final WorkflowPortObjectSpec portObjectSpec,
         final boolean useCustomName, final String customName) {
         if (useCustomName) {
-            if (customName.isEmpty()) {
+            if (customName.trim().isEmpty()) {
                 return Optional.of("Custom workflow name is empty.");
             }
             final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(customName);
@@ -145,18 +150,10 @@ final class DeployWorkflowNodeModel extends NodeModel {
         return Optional.empty();
     }
 
-    private static final String REST_ENDPOINT = "/knime/rest";
-
-    private static final String REST_VERSION = "/v4/repository";
-
-    private static final String PATH_SEPARATOR = "/";
-
     private static final long TIMEOUT_IN_MS = 60_000L;
 
-    static final String WORKFLOW_GRP_PREFIX = REST_ENDPOINT + REST_VERSION + PATH_SEPARATOR;
-
     private final SettingsModelString m_workflowGrp =
-        new SettingsModelString(DeployWorkflowNodeDialog.WORKFLOW_GRP_CFG, WORKFLOW_GRP_PREFIX);
+        new SettingsModelString(DeployWorkflowNodeDialog.WORKFLOW_GRP_CFG, DeployWorkflowNodeDialog.PATH_SEPARATOR);
 
     private final SettingsModelBoolean m_createParent = DeployWorkflowNodeDialog.createCreateParentModel();
 
@@ -204,10 +201,12 @@ final class DeployWorkflowNodeModel extends NodeModel {
         final WorkflowPortObjectSpec workflowPortObjectSpec = workflowPortObject.getSpec();
         final WorkflowFragment fragment = workflowPortObjectSpec.getWorkflowFragment();
 
-        final String[] splitPath = m_workflowGrp.getStringValue().split(REST_VERSION);
-        final URI endpoint = new URI(conInf.getProtocol(), conInf.getHost(), splitPath[0], null);
-        final String workflowGrp = splitPath[1].endsWith(PATH_SEPARATOR) ? splitPath[1] : splitPath[1] + PATH_SEPARATOR;
-        final String workflowName = m_useCustomName.getBooleanValue() ? m_customName.getStringValue()
+        final String path = m_workflowGrp.getStringValue().trim();
+        final URI endpoint =
+            new URI(conInf.getProtocol(), conInf.getHost(), DeployWorkflowNodeDialog.REST_ENDPOINT, null);
+        final String workflowGrp = path.endsWith(DeployWorkflowNodeDialog.PATH_SEPARATOR) ? path
+            : path + DeployWorkflowNodeDialog.PATH_SEPARATOR;
+        final String workflowName = m_useCustomName.getBooleanValue() ? m_customName.getStringValue().trim()
             : determineWorkflowName(workflowPortObjectSpec);
         final String workflowPath = workflowGrp + workflowName;
         final ExistsOption existsOption = ExistsOption.valueOf(m_existsOption.getStringValue());
