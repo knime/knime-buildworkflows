@@ -57,6 +57,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformation;
@@ -87,6 +88,8 @@ import com.knime.enterprise.server.rest.api.v4.repository.ent.Snapshot;
 import com.knime.enterprise.server.rest.api.v4.repository.snapshots.Snapshots;
 import com.knime.enterprise.server.rest.client.AbstractClient;
 import com.knime.enterprise.server.rest.client.filehandling.RepositoryClient;
+import com.knime.enterprise.utility.PermissionException;
+import com.knime.enterprise.utility.WrongTypeException;
 
 /**
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
@@ -201,36 +204,26 @@ final class DeployWorkflowNodeModel extends NodeModel {
         final WorkflowPortObjectSpec workflowPortObjectSpec = workflowPortObject.getSpec();
         final WorkflowFragment fragment = workflowPortObjectSpec.getWorkflowFragment();
 
-        final String path = m_workflowGrp.getStringValue().trim();
         final URI endpoint =
             new URI(conInf.getProtocol(), conInf.getHost(), DeployWorkflowNodeDialog.REST_ENDPOINT, null);
-        final String workflowGrp = path.endsWith(DeployWorkflowNodeDialog.PATH_SEPARATOR) ? path
-            : path + DeployWorkflowNodeDialog.PATH_SEPARATOR;
+        final String path = m_workflowGrp.getStringValue().trim();
+        final String workflowGrp =
+            path.endsWith(DeployWorkflowNodeDialog.PATH_SEPARATOR) ? path.substring(0, path.length() - 1) : path;
         final String workflowName = m_useCustomName.getBooleanValue() ? m_customName.getStringValue().trim()
             : determineWorkflowName(workflowPortObjectSpec);
-        final String workflowPath = workflowGrp + workflowName;
+        final String workflowPath = workflowGrp + DeployWorkflowNodeDialog.PATH_SEPARATOR + workflowName;
         final ExistsOption existsOption = ExistsOption.valueOf(m_existsOption.getStringValue());
 
         final RepositoryClient rc = new RepositoryClient(endpoint, user, password, TIMEOUT_IN_MS);
+
         if (!m_createParent.getBooleanValue()) {
             exec.setProgress(.1, () -> "Checking if workflow group exists.");
-            try {
-                rc.getRepositoryItem(workflowGrp);
-            } catch (NoSuchElementException e) {
-                throw new IOException(String
-                    .format("Workflow group %s does not exist and node is configured not to create it.", workflowGrp));
-            }
+            checkWorkflowGrpExists(path, workflowGrp, rc);
         }
 
         if (existsOption == ExistsOption.FAIL) {
             exec.setProgress(.3, () -> "Checking if workflow exists.");
-            try {
-                rc.getRepositoryItem(workflowPath);
-                throw new IOException(
-                    String.format("Workflow %s exists and node is configured not to overwrite it.", workflowPath));
-            } catch (NoSuchElementException e) {
-                // we are actually expecting to catch this exception here
-            }
+            checkWorkflowExists(workflowPath, rc);
         }
 
         exec.setProgress(.5, () -> "Saving workflow to disk.");
@@ -239,14 +232,60 @@ final class DeployWorkflowNodeModel extends NodeModel {
             workflowPortObject, false, this::setWarningMessage);
 
         exec.setProgress(.7, () -> "Deploying workflow onto KNIME Server.");
-        UploadApplication.uploadWorkflow(endpoint.toString(), user, password, workflowPath, localSource);
+        deployWorkflow(user, password, endpoint, workflowPath, localSource);
 
         FileUtil.deleteRecursively(tmpDir);
 
         if (m_createSnapshot.getBooleanValue()) {
             exec.setProgress(.9, () -> "Creating Snapshot.");
-            final Snapshots snapshots = AbstractClient.createProxy(Snapshots.class, endpoint, user, password,
-                "Workflow01", Duration.ofMillis(TIMEOUT_IN_MS));
+            createSnapshot(user, password, endpoint, workflowPath);
+        }
+
+        return new PortObject[0];
+    }
+
+    private static void checkWorkflowGrpExists(final String path, final String workflowGrp, final RepositoryClient rc)
+        throws PermissionException, IOException {
+        try {
+            rc.getRepositoryItem(path);
+        } catch (NoSuchElementException e) {
+            throw new IOException(String
+                .format("Workflow group %s does not exist and node is configured not to create it.", workflowGrp));
+        } catch (WebApplicationException e) {
+            throw new IllegalStateException(String.format("%s while checking for existence of folder: %s: ",
+                e.getClass().getSimpleName(), e.getResponse().getStatus()), e);
+        }
+    }
+
+    private static void checkWorkflowExists(final String workflowPath, final RepositoryClient rc)
+        throws PermissionException, IOException {
+        try {
+            rc.getRepositoryItem(workflowPath);
+            throw new IOException(
+                String.format("Workflow %s exists and node is configured not to overwrite it.", workflowPath));
+        } catch (NoSuchElementException e) {
+            // we are actually expecting to catch this exception here
+        } catch (WebApplicationException e) {
+            throw new IllegalStateException(String.format("%s while checking for existence of workflow: %s: ",
+                e.getClass().getSimpleName(), e.getResponse().getStatus()), e);
+        }
+    }
+
+    private static void deployWorkflow(final String user, final String password, final URI endpoint, final String workflowPath,
+        final File localSource) throws Exception {
+        try {
+            UploadApplication.uploadWorkflow(endpoint.toString(), user, password, workflowPath, localSource);
+        } catch (WebApplicationException e) {
+            throw new IllegalStateException(String.format("%s while uploading workflow: %s: ",
+                e.getClass().getSimpleName(), e.getResponse().getStatus()), e);
+        }
+    }
+
+    private void createSnapshot(final String user, final String password, final URI endpoint, final String workflowPath)
+        throws InstantiationException, IllegalAccessException, IOException, PermissionException, WrongTypeException {
+        final Snapshots snapshots = AbstractClient.createProxy(Snapshots.class, endpoint, user, password, "Workflow01",
+            Duration.ofMillis(TIMEOUT_IN_MS));
+        try {
             final Response response = snapshots.createSnapshot(workflowPath, m_snapshotMessage.getStringValue());
             try {
                 final Snapshot snapshot = response.readEntity(Snapshot.class);
@@ -257,9 +296,10 @@ final class DeployWorkflowNodeModel extends NodeModel {
             } finally {
                 response.close();
             }
+        } catch (WebApplicationException e) {
+            throw new IllegalStateException(String.format("%s while creating snapshot: %s: ",
+                e.getClass().getSimpleName(), e.getResponse().getStatus()), e);
         }
-
-        return new PortObject[0];
     }
 
     @Override
