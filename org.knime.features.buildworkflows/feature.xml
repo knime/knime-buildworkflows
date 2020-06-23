@@ -6,7 +6,7 @@
       provider-name="KNIME AG, Zurich, Switzerland">
 
    <description>
-      This extension contains the framework and nodes to design workflows that build workflows themselves.
+      This extension contains the nodes that capture and write workflows for continuous and Integrated Deployment.
    </description>
 
    <copyright>
