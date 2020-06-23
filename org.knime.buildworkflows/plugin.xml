@@ -3,9 +3,9 @@
 <fragment>
 	<extension point="org.knime.workbench.repository.categories">
 		<category
-			description="Nodes for programatically building workflows"
+			description="Nodes that capture and write workflows for continuous and Integrated Deployment."
 			icon="icons/capture.png" level-id="captureworkflows"
-			name="Build Workflows" path="/labs">
+			name="Integrated Deployment" path="/labs">
 		</category>
 	</extension>
  <extension
