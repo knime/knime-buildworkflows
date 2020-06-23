@@ -70,5 +70,20 @@
 			<layout>p2</layout>
 			<url>${knime.javasnippet.p2}</url>
 		</repository>
+		<repository>
+			<id>p2-knime-filehandling</id>
+			<layout>p2</layout>
+			<url>${knime.filehandling.p2}</url>
+		</repository>
+		<repository>
+			<id>p2-knime-server-api</id>
+			<layout>p2</layout>
+			<url>${knime.server.api.p2}</url>
+		</repository>
+		<repository>
+			<id>p2-knime-com-shared</id>
+			<layout>p2</layout>
+			<url>${knime.com.shared.p2}</url>
+		</repository>
 	</repositories>
 </project>
