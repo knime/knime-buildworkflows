@@ -9,103 +9,54 @@
 	</shortDescription>
 	<fullDescription>
 		<intro>
-			Writes a workflow from a port object into a directory or an
-			exported KNIME workflow (.knwf) archive.
+			Writes a workflow from a port object into a directory or an exported KNIME workflow (.knwf) archive.
 		</intro>
 		<tab name="Options">
 			<option name="Write to">
 				Select a file system to write to.
-				There are four default file system
-				options to choose from:
+				There are three default file system options to choose from:
 				<br />
 				<ul>
 					<li>Local File System:
-						Allows you to select a directory from your
-						local system.
-					</li>
-					<li>Relative to:
-						Allows you to choose whether to resolve the path
-						relative to the
-						workflow, mountpoint or node.
+						Allows you to select a directory from your local system.
 					</li>
 					<li>Mountpoint:
 						Allows you to choose a mountpoint.
-						Whenever this is
-						selected, a new drop-down menu appears to choose from
-						available
-						mountpoints.
+						Whenever this is selected, a new drop-down menu appears to choose from available mountpoints.
 					</li>
-					<li>Custom URL:
-						Uses the standard URL handler providing the ability
-						to read a file
-						from
-						URLs (e.g. file, http or KNIME protocol).
-						Browsing and reading folders as well as several of the options
-						below are
-						disabled when writing to a Custom URL.
+					<li>Relative to:
+						Allows you to choose whether to resolve the path relative to the workflow or mountpoint.
 					</li>
 				</ul>
 				It is possible to use other file systems with this node.
-				To this end,
-				you have to enable the file system connection input port of this
-				node
-				by clicking the
-				<b>...</b>
-				in the bottom left corner of the node's icon and choose
-				<i>Add File System Connection port</i>
-				.
-				Afterwards, you can simply connect the desired connector node to
-				the
-				Workflow Writer node.
-				The file system connection will then be
-				shown in
-				the drop down menu.
+				To this end, you have to enable the file system connection input port of this node by clicking the <b>...</b> in the bottom left corner of the node's icon and choose <i>Add File System Connection port</i>.
+				Afterwards, you can connect the desired connector node to the Workflow Writer node.
+				The file system connection will then be shown in the drop down menu.
 			</option>
-			<option name="File / URL">
-				Enter a valid destination.
-				Depending on the selected file system this
-				is either a path or a URL pointing to a directory.
+			<option name="Folder">
+				Enter a valid path pointing to a folder / workflow group.
 				<br />
-				You can also choose a previously selected file/folder from the
-				drop-down list, or select a destination from the
-				&quot;Browse...&quot; dialog.
+				You can also choose a previously selected folder from the drop-down list, or select a destination from the &quot;Browse...&quot; dialog.
 			</option>
-			<option name="Timeout (ms)">
-				When writing to a custom URL, this value
-				determines the maximum amount of time in milliseconds to establish a
-				connection.
+			<option name="Create parent directories">
+				If checked, any parents of the destination folder that do not exist yet are created.
 			</option>
-			<option name="Overwrite folder content if exists">
-				This checkbox determines whether to overwrite
-				existing files in the selected destination folder.
-			</option>
-			<option name="Create parent directories if required">
-				If checked, any parents of the destination folder
-				that do not exist
-				yet
-				are created.
+			<option name="If exists">
+				Choose the behavior that shall be followed when a workflow already exists at the configured location.
+				Valid options are to fail on execution or to overwrite the existing workflow.
 			</option>
 			<option name="Export workflow as knwf archive">
-				If the workflow should be written as .knwf
-				archive
-				instead of a directory.
+				If the workflow should be written as .knwf archive instead of a directory.
 			</option>
 			<option name="Refresh explorer and open after write">
-				Determines whether the KNIME Explorer should be refreshed and
-				the workflow should be opened
-				in KNIME Analytics Platform
-				after it has been written to a local
-				workspace.
+				Determines whether the KNIME Explorer should be refreshed and the workflow should be opened in KNIME Analytics Platform after it has been written.
 			</option>
 			<option name="Use custom workflow name">
-				If checked, a custom workflow name is used as
-				specified below.
-				Otherwise the original workflow name, as shown
-				above, is used.
+				If checked, a custom workflow name is used as specified below.
+				Otherwise the default workflow name, as shown above, is used.
 			</option>
 			<option name="Custom workflow name">
-				A customizable name for the to-be-written
-				workflow.
+				A customizable name for the to-be-written workflow.
 			</option>
 		</tab>
 		<tab name="Inputs &amp; Outputs">

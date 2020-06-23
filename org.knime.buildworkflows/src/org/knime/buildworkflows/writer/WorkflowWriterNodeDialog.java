@@ -63,7 +63,6 @@ import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
 import org.knime.core.node.defaultnodesettings.DialogComponentLabel;
 import org.knime.core.node.defaultnodesettings.DialogComponentString;
-import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
@@ -80,7 +79,7 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDi
  */
 final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<WorkflowWriterNodeConfig> {
 
-    static final SelectionMode SELECTION_MODE = SelectionMode.FILE_AND_FOLDER;
+    static final SelectionMode SELECTION_MODE = SelectionMode.FOLDER;
 
     private final DialogComponentLabel m_originalName;
 
@@ -178,14 +177,9 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         }
         m_originalName.setText(String.format("Default workflow name: %s", workflowName));
 
-        // TODO: consider refactoring this code to WorkflowWriterNodeConfig
-        final FSCategory fileSystemCategory = config.getFileChooserModel().getLocation().getFSCategory();
-        final boolean isCustomURL = fileSystemCategory == FSCategory.CUSTOM_URL;
-        final boolean isWorkflowAware =
-            Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT).anyMatch(c -> c == fileSystemCategory);
-        final SettingsModelBoolean archive = config.isArchive();
-        archive.setEnabled(!isCustomURL);
-        config.isOpenAfterWrite().setEnabled(!archive.getBooleanValue() && isWorkflowAware);
+        config.isOpenAfterWrite()
+            .setEnabled(!config.isArchive().getBooleanValue() && Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT)
+                .anyMatch(c -> c == config.getFileChooserModel().getLocation().getFSCategory()));
         customName.setEnabled(config.isUseCustomName().getBooleanValue());
     }
 
