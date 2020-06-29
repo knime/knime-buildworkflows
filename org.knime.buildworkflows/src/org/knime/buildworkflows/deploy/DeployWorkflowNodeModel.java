@@ -84,6 +84,7 @@ import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.util.FileUtil;
 
 import com.knime.enterprise.server.rest.api.UploadApplication;
+import com.knime.enterprise.server.rest.api.v4.repository.ent.RepositoryItem;
 import com.knime.enterprise.server.rest.api.v4.repository.ent.Snapshot;
 import com.knime.enterprise.server.rest.api.v4.repository.snapshots.Snapshots;
 import com.knime.enterprise.server.rest.client.AbstractClient;
@@ -221,9 +222,22 @@ final class DeployWorkflowNodeModel extends NodeModel {
             checkWorkflowGrpExists(path, workflowGrp, rc);
         }
 
-        if (existsOption == ExistsOption.FAIL) {
-            exec.setProgress(.3, () -> "Checking if workflow exists.");
-            checkWorkflowExists(workflowPath, rc);
+        exec.setProgress(.3, () -> "Checking if workflow exists.");
+        try {
+            final RepositoryItem item = rc.getRepositoryItem(workflowPath);
+            final RepositoryItem.Type type = item.getType();
+            if (!type.equals(RepositoryItem.Type.Workflow)) {
+                throw new IOException(String.format("An item of type \"%s\" already exists at path %s.",
+                    type.getDescription(), workflowPath));
+            } else if (existsOption == ExistsOption.FAIL) {
+                throw new IOException(
+                    String.format("Workflow %s exists and node is configured not to overwrite it.", workflowPath));
+            }
+        } catch (NoSuchElementException e) {
+            // we are actually expecting to catch this exception here
+        } catch (WebApplicationException e) {
+            throw new IllegalStateException(String.format("%s while checking for existence of workflow: %s: ",
+                e.getClass().getSimpleName(), e.getResponse().getStatus()), e);
         }
 
         exec.setProgress(.5, () -> "Saving workflow to disk.");
@@ -257,22 +271,8 @@ final class DeployWorkflowNodeModel extends NodeModel {
         }
     }
 
-    private static void checkWorkflowExists(final String workflowPath, final RepositoryClient rc)
-        throws PermissionException, IOException {
-        try {
-            rc.getRepositoryItem(workflowPath);
-            throw new IOException(
-                String.format("Workflow %s exists and node is configured not to overwrite it.", workflowPath));
-        } catch (NoSuchElementException e) {
-            // we are actually expecting to catch this exception here
-        } catch (WebApplicationException e) {
-            throw new IllegalStateException(String.format("%s while checking for existence of workflow: %s: ",
-                e.getClass().getSimpleName(), e.getResponse().getStatus()), e);
-        }
-    }
-
-    private static void deployWorkflow(final String user, final String password, final URI endpoint, final String workflowPath,
-        final File localSource) throws Exception {
+    private static void deployWorkflow(final String user, final String password, final URI endpoint,
+        final String workflowPath, final File localSource) throws Exception {
         try {
             UploadApplication.uploadWorkflow(endpoint.toString(), user, password, workflowPath, localSource);
         } catch (WebApplicationException e) {
@@ -288,10 +288,15 @@ final class DeployWorkflowNodeModel extends NodeModel {
         try {
             final Response response = snapshots.createSnapshot(workflowPath, m_snapshotMessage.getStringValue());
             try {
-                final Snapshot snapshot = response.readEntity(Snapshot.class);
-                if (snapshot.getError() != null) {
+                if (response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
+                    final Snapshot snapshot = response.readEntity(Snapshot.class);
+                    if (snapshot.getError() != null) {
+                        throw new IOException(
+                            String.format("Snapshot could not be created: %s", snapshot.getError().getMessage()));
+                    }
+                } else {
                     throw new IOException(
-                        String.format("Snapshot could not be created: %s", snapshot.getError().getMessage()));
+                        String.format("Snapshot could not be created: %s", response.readEntity(String.class)));
                 }
             } finally {
                 response.close();
