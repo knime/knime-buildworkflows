@@ -94,6 +94,7 @@ import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
+import org.knime.filehandling.core.connections.FSFiles;
 import org.knime.filehandling.core.connections.WorkflowAware;
 import org.knime.filehandling.core.connections.base.UnixStylePathUtil;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.FileOverwritePolicy;
@@ -147,7 +148,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
 
         // create directory at output path, if applicable (parent path was already checked in super class)
         if (!Files.exists(outputPath)) {
-            Files.createDirectories(outputPath);
+            FSFiles.createDirectories(outputPath);
         }
 
         // resolve destination path and check if it is present already
