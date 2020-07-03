@@ -60,6 +60,9 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.JTextComponent;
 
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformation;
 import org.knime.base.filehandling.remote.dialog.RemoteFileChooser;
@@ -222,6 +225,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         m_createSnapshot.getModel().addChangeListener(e -> enableDisableSnapshotMessage());
         @SuppressWarnings("unchecked")
         final JComboBox<String> workflowGrp = (JComboBox<String>)(m_workflowGrp.getPanel().getComponent(0));
+
         workflowGrp.addActionListener(e -> {
             final String s = (String)workflowGrp.getSelectedItem();
             if (s != null) {
@@ -229,6 +233,26 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
             }
             updateWorkflowGrpStatus();
         });
+
+        final Component editor = workflowGrp.getEditor().getEditorComponent();
+        if (editor instanceof JTextComponent) {
+            ((JTextComponent)editor).getDocument().addDocumentListener(new DocumentListener() {
+                @Override
+                public void changedUpdate(final DocumentEvent e) {
+                    updateWorkflowGrpStatus();
+                }
+
+                @Override
+                public void insertUpdate(final DocumentEvent e) {
+                    updateWorkflowGrpStatus();
+                }
+
+                @Override
+                public void removeUpdate(final DocumentEvent e) {
+                    updateWorkflowGrpStatus();
+                }
+            });
+        }
 
         final Box optionsTab = Box.createVerticalBox();
         optionsTab.add(Box.createVerticalStrut(20));
