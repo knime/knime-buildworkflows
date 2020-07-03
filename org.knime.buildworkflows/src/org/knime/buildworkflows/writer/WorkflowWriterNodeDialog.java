@@ -50,10 +50,14 @@ package org.knime.buildworkflows.writer;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.util.Arrays;
 import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.event.ChangeListener;
 
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
@@ -68,6 +72,7 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.util.FileUtil;
 import org.knime.filehandling.core.connections.FSCategory;
+import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
 import org.knime.filehandling.core.node.portobject.SelectionMode;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDialog;
 
@@ -79,6 +84,32 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDi
  */
 final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<WorkflowWriterNodeConfig> {
 
+    private static final DeploymentOption DEPLOYMENT_OPTION_DEF = DeploymentOption.WRITE;
+
+    private enum DeploymentOption {
+            WRITE("Write workflow", "Write workflow and refresh KNIME Explorer"),
+            OPEN("Write workflow and open in explorer",
+                "Write workflow, refresh KNIME Explorer, and open the workflow after write."),
+            EXPORT("Export workflow as knwf archive", "Export workflow as a workflow archive (.knwf)?");
+
+        private final JRadioButton m_button;
+
+        private DeploymentOption(final String name, final String tooltip) {
+            m_button = new JRadioButton(name);
+            m_button.setToolTipText(tooltip);
+            m_button.setActionCommand(name());
+            m_button.setSelected(isDefault());
+        }
+
+        JRadioButton getButton() {
+            return m_button;
+        }
+
+        boolean isDefault() {
+            return this == DEPLOYMENT_OPTION_DEF;
+        }
+    }
+
     static final SelectionMode SELECTION_MODE = SelectionMode.FOLDER;
 
     private final DialogComponentLabel m_originalName;
@@ -86,10 +117,6 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
     private final DialogComponentBoolean m_useCustomName;
 
     private final DialogComponentString m_customName;
-
-    private final DialogComponentBoolean m_archive;
-
-    private final DialogComponentBoolean m_openAfterWrite;
 
     private final DialogComponentIONodes m_ioNodes;
 
@@ -99,18 +126,17 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         super(new WorkflowWriterNodeConfig(creationConfig), fileChooserHistoryId, SELECTION_MODE);
 
         final GridBagConstraints gbc = createAndInitGBC();
-        m_archive = new DialogComponentBoolean(getConfig().isArchive(), "Export workflow as knwf archive");
-        m_archive.setToolTipText("Should a workflow archive (.knwf) be written instead of a directory?");
-        m_openAfterWrite =
-            new DialogComponentBoolean(getConfig().isOpenAfterWrite(), "Refresh explorer and open after write");
-        m_openAfterWrite.setToolTipText("Should the KNIME Explorer be refreshed and the workflow opened after write?");
+
+        final ButtonGroup group = new ButtonGroup();
+        Arrays.stream(DeploymentOption.values()).map(DeploymentOption::getButton).forEach(group::add);
+
         final JPanel writeOptionsPanel = new JPanel(new GridBagLayout());
         writeOptionsPanel
             .setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Deployment Options"));
-        gbc.gridy++;
-        writeOptionsPanel.add(m_archive.getComponentPanel(), gbc);
-        gbc.gridy++;
-        writeOptionsPanel.add(m_openAfterWrite.getComponentPanel(), gbc);
+        Arrays.stream(DeploymentOption.values()).map(DeploymentOption::getButton).forEach(b -> {
+            gbc.gridy++;
+            writeOptionsPanel.add(b, gbc);
+        });
         addAdditionalPanel(writeOptionsPanel);
 
         gbc.gridy = 0;
@@ -128,6 +154,26 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         customNamePanel.add(m_customName.getComponentPanel(), gbc);
         addAdditionalPanel(customNamePanel);
 
+        WorkflowWriterNodeConfig config = getConfig();
+        final SettingsModelWriterFileChooser fc = config.getFileChooserModel();
+
+        final ChangeListener cl = e -> {
+            if (Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT)
+                .noneMatch(c -> c == fc.getLocation().getFSCategory())) {
+                if (DeploymentOption.OPEN.getButton().isSelected()) {
+                    Arrays.stream(DeploymentOption.values()).filter(DeploymentOption::isDefault)
+                        .map(DeploymentOption::getButton).findFirst().ifPresent(b -> b.setSelected(true));
+                }
+                DeploymentOption.OPEN.getButton().setEnabled(false);
+            } else {
+                DeploymentOption.OPEN.getButton().setEnabled(true);
+            }
+        };
+        fc.addChangeListener(cl);
+
+        config.isUseCustomName()
+            .addChangeListener(e -> config.getCustomName().setEnabled(config.isUseCustomName().getBooleanValue()));
+
         m_workflowInputPortIndex =
             creationConfig.getPortConfig().get().getInputPortLocation().get(getPortObjectInputGrpName())[0];
         m_ioNodes = new DialogComponentIONodes(getConfig().getIONodes(), m_workflowInputPortIndex);
@@ -139,8 +185,11 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         super.saveSettingsTo(settings);
         m_useCustomName.saveSettingsTo(settings);
         m_customName.saveSettingsTo(settings);
-        m_archive.saveSettingsTo(settings);
-        m_openAfterWrite.saveSettingsTo(settings);
+
+        settings.addBoolean(getConfig().isOpenAfterWrite().getConfigName(),
+            DeploymentOption.OPEN.getButton().isSelected());
+        settings.addBoolean(getConfig().isArchive().getConfigName(), DeploymentOption.EXPORT.getButton().isSelected());
+
         m_ioNodes.saveSettingsTo(settings);
 
         final WorkflowWriterNodeConfig config = getConfig();
@@ -163,8 +212,13 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         super.loadSettingsFrom(settings, specs);
         m_useCustomName.loadSettingsFrom(settings, specs);
         m_customName.loadSettingsFrom(settings, specs);
-        m_archive.loadSettingsFrom(settings, specs);
-        m_openAfterWrite.loadSettingsFrom(settings, specs);
+
+        DeploymentOption.WRITE.getButton().setSelected(true);
+        DeploymentOption.OPEN.getButton()
+            .setSelected(settings.getBoolean(getConfig().isOpenAfterWrite().getConfigName(), false));
+        DeploymentOption.EXPORT.getButton()
+            .setSelected(settings.getBoolean(getConfig().isArchive().getConfigName(), false));
+
         m_ioNodes.loadSettingsFrom(settings, specs);
 
         final WorkflowPortObjectSpec portObject = (WorkflowPortObjectSpec)specs[m_workflowInputPortIndex];

@@ -48,18 +48,12 @@
  */
 package org.knime.buildworkflows.writer;
 
-import java.util.stream.Stream;
-
-import javax.swing.event.ChangeListener;
-
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
-import org.knime.filehandling.core.connections.FSCategory;
-import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeConfig;
 
 /**
@@ -95,21 +89,6 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
      */
     WorkflowWriterNodeConfig(final NodeCreationConfiguration creationConfig) {
         super(creationConfig, WorkflowWriterNodeDialog.SELECTION_MODE);
-        final SettingsModelWriterFileChooser fc = getFileChooserModel();
-
-        final ChangeListener cl = e -> {
-            if (m_archive.getBooleanValue() || Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT)
-                .noneMatch(c -> c == fc.getLocation().getFSCategory())) {
-                m_openAfterWrite.setBooleanValue(false);
-                m_openAfterWrite.setEnabled(false);
-            } else {
-                m_openAfterWrite.setEnabled(true);
-            }
-        };
-        fc.addChangeListener(cl);
-        m_archive.addChangeListener(cl);
-
-        m_useCustomName.addChangeListener(e -> m_customName.setEnabled(m_useCustomName.getBooleanValue()));
     }
 
     SettingsModelBoolean isUseCustomName() {
