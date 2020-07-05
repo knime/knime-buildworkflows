@@ -69,6 +69,7 @@ import org.knime.base.filehandling.remote.dialog.RemoteFileChooser;
 import org.knime.base.filehandling.remote.dialog.RemoteFileChooserPanel;
 import org.knime.buildworkflows.writer.DialogComponentIONodes;
 import org.knime.buildworkflows.writer.SettingsModelIONodes;
+import org.knime.buildworkflows.writer.WorkflowWriterNodeModel;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeSettingsRO;
@@ -291,7 +292,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         final ConnectionInformation conInf =
             DeployWorkflowNodeModel.validateAndGetConnectionInformation(specs[0], NotConfigurableException::new);
         final WorkflowPortObjectSpec portObjectSpec =
-            DeployWorkflowNodeModel.validateAndGetWorkflowPortObjectSpec(specs[1], NotConfigurableException::new);
+            WorkflowWriterNodeModel.validateAndGetWorkflowPortObjectSpec(specs[1], NotConfigurableException::new);
 
         final URI uri = conInf.toURI();
         m_info.setText(uri.getScheme() + "://" + uri.getAuthority());
@@ -299,7 +300,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         m_workflowGrp.setSelection(settings.getString(WORKFLOW_GRP_CFG, PATH_SEPARATOR));
         m_createParent.loadSettingsFrom(settings, specs);
         m_originalName.setText(
-            String.format("Default workflow name: %s", DeployWorkflowNodeModel.determineWorkflowName(portObjectSpec)));
+            String.format("Default workflow name: %s", WorkflowWriterNodeModel.determineWorkflowName(portObjectSpec)));
         m_useCustomName.loadSettingsFrom(settings, specs);
         m_customName.loadSettingsFrom(settings, specs);
         m_existsOption.loadSettingsFrom(settings, specs);
@@ -337,7 +338,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
     }
 
     private void updateWorkflowNameStatus(final WorkflowPortObjectSpec portObjectSpec) {
-        final Optional<String> err = DeployWorkflowNodeModel.validateWorkflowName(portObjectSpec,
+        final Optional<String> err = WorkflowWriterNodeModel.validateWorkflowName(portObjectSpec,
             ((SettingsModelBoolean)m_useCustomName.getModel()).getBooleanValue(),
             ((SettingsModelString)m_customName.getModel()).getStringValue());
         if (err.isPresent()) {

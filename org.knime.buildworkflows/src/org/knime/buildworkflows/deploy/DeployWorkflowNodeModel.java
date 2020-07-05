@@ -55,7 +55,6 @@ import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.regex.Matcher;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
@@ -97,10 +96,6 @@ import com.knime.enterprise.utility.WrongTypeException;
  */
 final class DeployWorkflowNodeModel extends NodeModel {
 
-    static final String determineWorkflowName(final WorkflowPortObjectSpec spec) {
-        return FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(spec.getWorkflowName()).replaceAll("_").trim();
-    }
-
     static <E extends Exception> ConnectionInformation validateAndGetConnectionInformation(final PortObjectSpec spec,
         final Function<String, E> errorConsumer) throws E {
 
@@ -115,16 +110,6 @@ final class DeployWorkflowNodeModel extends NodeModel {
         return conInf;
     }
 
-    static <E extends Exception> WorkflowPortObjectSpec validateAndGetWorkflowPortObjectSpec(final PortObjectSpec spec,
-        final Function<String, E> errorFunction) throws E {
-
-        final WorkflowPortObjectSpec portObjectSpec = (WorkflowPortObjectSpec)spec;
-        if (portObjectSpec == null) {
-            throw errorFunction.apply("No workflow available.");
-        }
-        return portObjectSpec;
-    }
-
     static Optional<String> validateWorkflowGrp(final String workflowGrp) {
         if (workflowGrp == null || workflowGrp.trim().isEmpty()) {
             return Optional.of("Path to folder must not be empty.");
@@ -133,23 +118,6 @@ final class DeployWorkflowNodeModel extends NodeModel {
             return Optional
                 .of(String.format("Path to folder must be absolute and start with a path separator (\"%s\").",
                     DeployWorkflowNodeDialog.PATH_SEPARATOR));
-        }
-        return Optional.empty();
-    }
-
-    static Optional<String> validateWorkflowName(final WorkflowPortObjectSpec portObjectSpec,
-        final boolean useCustomName, final String customName) {
-        if (useCustomName) {
-            if (customName.trim().isEmpty()) {
-                return Optional.of("Custom workflow name is empty.");
-            }
-            final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(customName);
-            if (matcher.find()) {
-                return Optional.of(String.format("Illegal character in custom workflow name \"%s\" at index %d.",
-                    customName, matcher.start()));
-            }
-        } else if (determineWorkflowName(portObjectSpec).isEmpty()) {
-            return Optional.of("Default workflow name is empty. Consider using a custom workflow name.");
         }
         return Optional.empty();
     }
@@ -182,11 +150,11 @@ final class DeployWorkflowNodeModel extends NodeModel {
 
         validateAndGetConnectionInformation(inSpecs[0], InvalidSettingsException::new);
         final WorkflowPortObjectSpec portObjectSpec =
-            validateAndGetWorkflowPortObjectSpec(inSpecs[1], InvalidSettingsException::new);
+            WorkflowWriterNodeModel.validateAndGetWorkflowPortObjectSpec(inSpecs[1], InvalidSettingsException::new);
 
         final Optional<String> err = validateWorkflowGrp(m_workflowGrp.getStringValue()).map(Optional::of)
-            .orElseGet(() -> validateWorkflowName(portObjectSpec, m_useCustomName.getBooleanValue(),
-                m_customName.getStringValue()));
+            .orElseGet(() -> WorkflowWriterNodeModel.validateWorkflowName(portObjectSpec,
+                m_useCustomName.getBooleanValue(), m_customName.getStringValue()));
         if (err.isPresent()) {
             throw new InvalidSettingsException(err.get());
         }
@@ -211,7 +179,7 @@ final class DeployWorkflowNodeModel extends NodeModel {
         final String workflowGrp =
             path.endsWith(DeployWorkflowNodeDialog.PATH_SEPARATOR) ? path.substring(0, path.length() - 1) : path;
         final String workflowName = m_useCustomName.getBooleanValue() ? m_customName.getStringValue().trim()
-            : determineWorkflowName(workflowPortObjectSpec);
+            : WorkflowWriterNodeModel.determineWorkflowName(workflowPortObjectSpec);
         final String workflowPath = workflowGrp + DeployWorkflowNodeDialog.PATH_SEPARATOR + workflowName;
         final ExistsOption existsOption = ExistsOption.valueOf(m_existsOption.getStringValue());
 

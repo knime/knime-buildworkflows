@@ -64,6 +64,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -79,6 +81,7 @@ import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.exec.dataexchange.PortObjectIDSettings;
 import org.knime.core.node.exec.dataexchange.in.PortObjectInNodeModel;
 import org.knime.core.node.port.PortObject;
+import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortUtil;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.NativeNodeContainer;
@@ -92,6 +95,7 @@ import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
 import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
 import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
+import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
 import org.knime.filehandling.core.connections.FSFiles;
@@ -120,9 +124,17 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         CheckUtils.checkArgumentNotNull(outputPath, "Output Path must not be null.");
         CheckUtils.checkArgumentNotNull(exec, "Execution Context must not be null.");
 
-        final WorkflowPortObject workflowPortObject = (WorkflowPortObject)object;
-        final WorkflowFragment fragment = workflowPortObject.getSpec().getWorkflowFragment();
         final WorkflowWriterNodeConfig config = getConfig();
+        final WorkflowPortObjectSpec workflowPortObjectSpec =
+            validateAndGetWorkflowPortObjectSpec(object.getSpec(), InvalidSettingsException::new);
+        final Optional<String> err = validateWorkflowName(workflowPortObjectSpec,
+            config.isUseCustomName().getBooleanValue(), config.getCustomName().getStringValue());
+        if (err.isPresent()) {
+            throw new InvalidSettingsException(err.get());
+        }
+
+        final WorkflowPortObject workflowPortObject = (WorkflowPortObject)object;
+        final WorkflowFragment fragment = workflowPortObjectSpec.getWorkflowFragment();
         final boolean archive = config.isArchive().getBooleanValue();
         final boolean openAfterWrite = config.isOpenAfterWrite().getBooleanValue();
         final boolean overwrite =
@@ -133,12 +145,12 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         if (config.isUseCustomName().getBooleanValue()) {
             workflowName = config.getCustomName().getStringValue();
         } else {
-            final String originalName = workflowPortObject.getSpec().getWorkflowName();
+            final String originalName = workflowPortObjectSpec.getWorkflowName();
             if (originalName == null || originalName.isEmpty()) {
                 throw new InvalidSettingsException(
                     "Default workflow name is null or empty. Consider using a custom workflow name.");
             }
-            workflowName = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(originalName).replaceAll("_");
+            workflowName = determineWorkflowName(workflowPortObjectSpec);
             if (!originalName.equals(workflowName)) {
                 setWarningMessage(String.format(
                     "Default workflow name \"%s\" contains illegal characters and has been escaped to \"%s\".",
@@ -306,6 +318,37 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
                 "Some " + (unconnectedInputs ? "input" : "") + (unconnectedInputs && unconnectedOutputs ? " and " : "")
                     + (unconnectedOutputs ? "output" : "") + " ports are not connected.");
         }
+    }
+
+    public static Optional<String> validateWorkflowName(final WorkflowPortObjectSpec portObjectSpec,
+        final boolean useCustomName, final String customName) {
+        if (useCustomName) {
+            if (customName.trim().isEmpty()) {
+                return Optional.of("Custom workflow name is empty.");
+            }
+            final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(customName);
+            if (matcher.find()) {
+                return Optional.of(String.format("Illegal character in custom workflow name \"%s\" at index %d.",
+                    customName, matcher.start()));
+            }
+        } else if (determineWorkflowName(portObjectSpec).isEmpty()) {
+            return Optional.of("Default workflow name is empty. Consider using a custom workflow name.");
+        }
+        return Optional.empty();
+    }
+
+    public static final String determineWorkflowName(final WorkflowPortObjectSpec spec) {
+        return FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(spec.getWorkflowName()).replaceAll("_").trim();
+    }
+
+    public static <E extends Exception> WorkflowPortObjectSpec validateAndGetWorkflowPortObjectSpec(
+        final PortObjectSpec spec, final Function<String, E> errorFunction) throws E {
+
+        final WorkflowPortObjectSpec portObjectSpec = (WorkflowPortObjectSpec)spec;
+        if (portObjectSpec == null) {
+            throw errorFunction.apply("No workflow available.");
+        }
+        return portObjectSpec;
     }
 
 }

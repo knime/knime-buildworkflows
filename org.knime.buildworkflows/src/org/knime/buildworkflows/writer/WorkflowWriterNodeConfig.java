@@ -76,7 +76,7 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
 
     private static final String CUSTOM_NAME = "custom-name";
 
-    private final SettingsModelString m_customName = new SettingsModelString(CUSTOM_NAME, "");
+    private final SettingsModelString m_customName = new SettingsModelString(CUSTOM_NAME, "workflow");
 
     private static final String CFG_IO_NODES = "io-nodes";
 
