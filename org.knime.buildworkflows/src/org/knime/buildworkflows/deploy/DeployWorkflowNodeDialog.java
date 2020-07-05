@@ -263,11 +263,11 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         optionsTab.add(group("Choose folder on KNIME Server", m_info.getComponentPanel(), folderBox,
             m_createParent.getComponentPanel(), m_workflowGrpStatus.getLabel()));
         optionsTab.add(Box.createVerticalStrut(20));
-        optionsTab.add(group("Workflow name", m_originalName.getComponentPanel(), m_useCustomName.getComponentPanel(),
-            m_customName.getComponentPanel(), m_workflowNameStatus.getLabel()));
+        optionsTab.add(group("Workflow", m_existsOption.getComponentPanel(), m_originalName.getComponentPanel(),
+            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getLabel()));
         optionsTab.add(Box.createVerticalStrut(20));
-        optionsTab.add(group("Deployment options", m_existsOption.getComponentPanel(),
-            m_createSnapshot.getComponentPanel(), m_snapshotMessage.getComponentPanel()));
+        optionsTab.add(
+            group("Deployment options", m_createSnapshot.getComponentPanel(), m_snapshotMessage.getComponentPanel()));
         addTab("Settings", optionsTab);
 
         addTab("Inputs & Outputs", m_ioNodes.getComponentPanel());

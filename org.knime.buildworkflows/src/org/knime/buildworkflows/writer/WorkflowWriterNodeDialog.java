@@ -68,11 +68,13 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
+import org.knime.core.node.defaultnodesettings.DialogComponentButtonGroup;
 import org.knime.core.node.defaultnodesettings.DialogComponentLabel;
 import org.knime.core.node.defaultnodesettings.DialogComponentString;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObjectSpec;
+import org.knime.core.node.util.ButtonGroupEnumInterface;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
@@ -114,7 +116,39 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         }
     }
 
+    enum ExistsOption implements ButtonGroupEnumInterface {
+            FAIL("Fail"), OVERWRITE("Overwrite");
+
+        private final String m_name;
+
+        private ExistsOption(final String name) {
+            m_name = name;
+        }
+
+        @Override
+        public String getText() {
+            return m_name;
+        }
+
+        @Override
+        public String getActionCommand() {
+            return name();
+        }
+
+        @Override
+        public String getToolTip() {
+            return "";
+        }
+
+        @Override
+        public boolean isDefault() {
+            return this == EXISTS_OPTION_DEF;
+        }
+    }
+
     private static final DeploymentOption DEPLOYMENT_OPTION_DEF = DeploymentOption.WRITE;
+
+    static final ExistsOption EXISTS_OPTION_DEF = ExistsOption.FAIL;
 
     private static JPanel group(final String label, final Component... components) {
         final JPanel panel = new JPanel();
@@ -144,6 +178,8 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
 
     private final StatusView m_workflowNameStatus = new StatusView(400);
 
+    private final DialogComponentButtonGroup m_existsOption;
+
     private final DialogComponentIONodes m_ioNodes;
 
     private final int m_workflowInputPortIndex;
@@ -155,11 +191,13 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         super(new WorkflowWriterNodeConfig(creationConfig), fileChooserHistoryId, SELECTION_MODE);
         final WorkflowWriterNodeConfig config = getConfig();
 
+        m_existsOption =
+                new DialogComponentButtonGroup(config.getExistsOption(), "If exists", false, ExistsOption.values());
         m_originalName = new DialogComponentLabel(" ");
         m_useCustomName = new DialogComponentBoolean(config.isUseCustomName(), "Use custom workflow name");
         m_customName = new DialogComponentString(config.getCustomName(), "Custom workflow name: ", true, 30);
         m_customName.setToolTipText("Name of the workflow directory or file to be written");
-        addAdditionalPanel(group("Workflow name", m_originalName.getComponentPanel(),
+        addAdditionalPanel(group("Workflow", m_existsOption.getComponentPanel(), m_originalName.getComponentPanel(),
             m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getLabel()));
 
         final ButtonGroup group = new ButtonGroup();
@@ -199,6 +237,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         settings.addBoolean(getConfig().isOpenAfterWrite().getConfigName(),
             DeploymentOption.OPEN.getButton().isSelected());
         settings.addBoolean(getConfig().isArchive().getConfigName(), DeploymentOption.EXPORT.getButton().isSelected());
+        m_existsOption.saveSettingsTo(settings);
         m_ioNodes.saveSettingsTo(settings);
     }
 
@@ -207,9 +246,8 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         throws NotConfigurableException {
         super.loadSettingsFrom(settings, specs);
 
-        final WorkflowPortObjectSpec portObjectSpec =
-            WorkflowWriterNodeModel
-                .validateAndGetWorkflowPortObjectSpec(specs[m_workflowInputPortIndex], NotConfigurableException::new);
+        final WorkflowPortObjectSpec portObjectSpec = WorkflowWriterNodeModel
+            .validateAndGetWorkflowPortObjectSpec(specs[m_workflowInputPortIndex], NotConfigurableException::new);
         final WorkflowWriterNodeConfig config = getConfig();
 
         m_originalName.setText(
@@ -221,6 +259,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
             .setSelected(settings.getBoolean(getConfig().isOpenAfterWrite().getConfigName(), false));
         DeploymentOption.EXPORT.getButton()
             .setSelected(settings.getBoolean(getConfig().isArchive().getConfigName(), false));
+        m_existsOption.loadSettingsFrom(settings, specs);
         m_ioNodes.loadSettingsFrom(settings, specs);
 
         config.getCustomName().setEnabled(config.isUseCustomName().getBooleanValue());

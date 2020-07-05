@@ -69,6 +69,7 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.knime.buildworkflows.writer.WorkflowWriterNodeDialog.ExistsOption;
 import org.knime.core.data.container.DataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
@@ -101,7 +102,6 @@ import org.knime.core.util.VMFileLocker;
 import org.knime.filehandling.core.connections.FSFiles;
 import org.knime.filehandling.core.connections.WorkflowAware;
 import org.knime.filehandling.core.connections.base.UnixStylePathUtil;
-import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.FileOverwritePolicy;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectToPathWriterNodeModel;
 
 /**
@@ -138,7 +138,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         final boolean archive = config.isArchive().getBooleanValue();
         final boolean openAfterWrite = config.isOpenAfterWrite().getBooleanValue();
         final boolean overwrite =
-            config.getFileChooserModel().getFileOverwritePolicy() == FileOverwritePolicy.OVERWRITE;
+            config.getExistsOption().getStringValue().equals(ExistsOption.OVERWRITE.getActionCommand());
 
         // determine workflow name
         final String workflowName;

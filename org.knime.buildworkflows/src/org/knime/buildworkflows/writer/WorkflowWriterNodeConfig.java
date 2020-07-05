@@ -48,12 +48,15 @@
  */
 package org.knime.buildworkflows.writer;
 
+import java.util.EnumSet;
+
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
+import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.FileOverwritePolicy;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeConfig;
 
 /**
@@ -61,6 +64,11 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeCo
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
  */
 final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
+
+    private static final String CFG_EXISTS_OPTION = "exists";
+
+    private final SettingsModelString m_existsOption =
+        new SettingsModelString(CFG_EXISTS_OPTION, WorkflowWriterNodeDialog.EXISTS_OPTION_DEF.getActionCommand());
 
     private static final String CFG_ARCHIVE = "archive";
 
@@ -88,7 +96,12 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
      * @param creationConfig {@link NodeCreationConfiguration} of the corresponding KNIME node
      */
     WorkflowWriterNodeConfig(final NodeCreationConfiguration creationConfig) {
-        super(creationConfig, WorkflowWriterNodeDialog.SELECTION_MODE);
+        super(creationConfig, WorkflowWriterNodeDialog.SELECTION_MODE, FileOverwritePolicy.APPEND,
+            EnumSet.of(FileOverwritePolicy.APPEND));
+    }
+
+    SettingsModelString getExistsOption() {
+        return m_existsOption;
     }
 
     SettingsModelBoolean isUseCustomName() {
@@ -114,6 +127,7 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
     @Override
     protected void validateConfigurationForModel(final NodeSettingsRO settings) throws InvalidSettingsException {
         super.validateConfigurationForModel(settings);
+        m_existsOption.validateSettings(settings);
         m_useCustomName.validateSettings(settings);
         m_customName.validateSettings(settings);
         m_archive.validateSettings(settings);
@@ -124,6 +138,7 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
     @Override
     protected void saveConfigurationForModel(final NodeSettingsWO settings) {
         super.saveConfigurationForModel(settings);
+        m_existsOption.saveSettingsTo(settings);
         m_useCustomName.saveSettingsTo(settings);
         m_customName.saveSettingsTo(settings);
         m_archive.saveSettingsTo(settings);
@@ -134,6 +149,7 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
     @Override
     protected void loadConfigurationForModel(final NodeSettingsRO settings) throws InvalidSettingsException {
         super.loadConfigurationForModel(settings);
+        m_existsOption.loadSettingsFrom(settings);
         m_useCustomName.loadSettingsFrom(settings);
         m_customName.loadSettingsFrom(settings);
         m_archive.loadSettingsFrom(settings);
