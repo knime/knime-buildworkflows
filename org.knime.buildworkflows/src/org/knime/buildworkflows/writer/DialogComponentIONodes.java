@@ -88,10 +88,11 @@ public class DialogComponentIONodes extends DialogComponent {
         model.setWorkflowInputPortIndex(workflowInputPortIndex);
         m_workflowInputPortIndex = workflowInputPortIndex;
 
-        m_inputs = new PortAndNodeConfigPanel<>("Add Input Node", n -> getInputConfigInstanceFor(n), NONE_CHOICE,
+        m_inputs = new PortAndNodeConfigPanel<>("Add input node", n -> getInputConfigInstanceFor(n), NONE_CHOICE,
             TableInputNodeConfig.NODE_NAME, RowInputNodeConfig.NODE_NAME);
-        m_outputs = new PortAndNodeConfigPanel<>("Add Output Node", n -> getOutputConfigInstanceFor(n), NONE_CHOICE,
+        m_outputs = new PortAndNodeConfigPanel<>("Add output node", n -> getOutputConfigInstanceFor(n), NONE_CHOICE,
             TableOutputNodeConfig.NODE_NAME, RowOutputNodeConfig.NODE_NAME);
+
         getComponentPanel().setLayout(new GridLayout(2, 1));
         getComponentPanel().add(m_inputs);
         getComponentPanel().add(m_outputs);

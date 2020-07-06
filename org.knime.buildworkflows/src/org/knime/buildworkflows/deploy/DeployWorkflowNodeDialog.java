@@ -270,7 +270,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
             group("Deployment options", m_createSnapshot.getComponentPanel(), m_snapshotMessage.getComponentPanel()));
         addTab("Settings", optionsTab);
 
-        addTab("Inputs & Outputs", m_ioNodes.getComponentPanel());
+        addTab("Inputs and outputs", m_ioNodes.getComponentPanel());
     }
 
     @Override
