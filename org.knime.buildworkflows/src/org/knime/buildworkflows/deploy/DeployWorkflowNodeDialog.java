@@ -191,7 +191,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
     private final StatusView m_workflowGrpStatus = new StatusView(400);
 
     private final DialogComponentBoolean m_createParent =
-        new DialogComponentBoolean(createCreateParentModel(), "Create folder if it does not exist");
+        new DialogComponentBoolean(createCreateParentModel(), "Create missing folders");
 
     private final DialogComponentLabel m_originalName = new DialogComponentLabel(" ");
 

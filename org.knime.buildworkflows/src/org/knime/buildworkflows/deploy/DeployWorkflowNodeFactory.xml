@@ -6,29 +6,37 @@
 
 	<name>Deploy Workflow to Server</name>
 	<shortDescription>
-		Deploys a workflow from a port object onto a KNIME Server.
+		Deploys a workflow onto a KNIME Server.
 	</shortDescription>
 	<fullDescription>
 		<intro>
-			Deploys a workflow from a port object onto a KNIME Server.
+			This node deploys a workflow from a port object onto a KNIME Server.
 		</intro>
-		<tab name="Options">
+		<tab name="Settings">
 		    <option name="Folder">
 				Enter a valid (absolute) path pointing to a folder / workflow group on the KNIME Server.
 			</option>
-			<option name="Create folder if it does not exist">
-				If checked, the folder and any of its parents will be created when they do not exist.
+			<option name="Create missing folders">
+				Select if the folders of the selected output location should be created if they do not already exist.
+			    If this option is unchecked, the node will fail if a folder does not exist.
+			</option>
+			<option name="If exists">
+				Specify the behavior of the node in case the output file already exists.
+				<ul>
+					<li><i>Overwrite:</i>
+					    Will replace any existing workflow.
+					</li>
+					<li><i>Fail:</i>
+					    Will issue an error during the node's execution (to prevent unintentional overwrite).
+					</li>
+				</ul>
 			</option>
 			<option name="Use custom workflow name">
 				If checked, a custom workflow name is used as specified below.
 				Otherwise the default workflow name, as shown above, is used.
 			</option>
 			<option name="Custom workflow name">
-				A customizable name for the to-be-deployed workflow.
-			</option>
-			<option name="If exists">
-				Choose the behavior that shall be followed when a workflow already exists at the configured location.
-				Valid options are to fail on execution or to overwrite the existing workflow.
+				A customizable name for the to-be-written workflow.
 			</option>
 			<option name="Create snapshot">
 				If checked, a snapshot will be created after the workflow has been deployed.
@@ -37,18 +45,15 @@
 				A customizable comment message that describes the created snapshot.
 			</option>
 		</tab>
-		<tab name="Inputs &amp; Outputs">
-			<option name="Add Input Node">Allows one to add input nodes connected to
-				selected inputs prior writing. Depending on the selected node
-				here is
-				a limited set of options available to pre-configure the node to be
-				added. Furthermore, if tabular input data is stored with the input,
-				it is used as examples input data for added input nodes.
+		<tab name="Inputs and outputs">
+			<option name="Add input node">
+			    Allows one to add input nodes connected to selected inputs prior writing.
+				Depending on the selected node, there is a limited set of options available to pre-configure the node to be added.
+				Furthermore, if tabular input data is stored with the input, it is used as examples input data for added input nodes.
 			</option>
-			<option name="Add Output Node">Allows one to add output nodes connected to
-				selected inputs prior writing. Depending on the selected node
-				there is a limited set of options available to pre-configure the
-				node to be added.
+			<option name="Add output node">
+			    Allows one to add output nodes connected to selected inputs prior writing.
+			    Depending on the selected node, there is a limited set of options available to pre-configure the node to be added.
 			</option>
 		</tab>
 	</fullDescription>
