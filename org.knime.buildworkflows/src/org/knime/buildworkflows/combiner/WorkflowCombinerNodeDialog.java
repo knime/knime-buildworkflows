@@ -115,9 +115,8 @@ class WorkflowCombinerNodeDialog extends NodeDialogPane {
         for (int i = 0; i < specs.length - 1; i++) {
             WorkflowPortObjectSpec w1 = (WorkflowPortObjectSpec)specs[i];
             WorkflowPortObjectSpec w2 = (WorkflowPortObjectSpec)specs[i + 1];
-            String wfNames = w1.getWorkflowName() + " -> " + w2.getWorkflowName();
             m_wfConnectPanels[i] = new WorkflowConnectPanel(w1.getOutputs(), w2.getInputs(), cm.getConnectionMap(i),
-                "Connect workflow " + (i + 1) + " with " + (i + 2), wfNames);
+                "Connect workflow " + (i + 1) + " with " + (i + 2), w1.getWorkflowName(), w2.getWorkflowName());
             m_panel.add(m_wfConnectPanels[i]);
         }
     }

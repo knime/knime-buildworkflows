@@ -49,8 +49,9 @@
 package org.knime.buildworkflows.combiner;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.GridLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -63,8 +64,6 @@ import javax.swing.BorderFactory;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.SwingConstants;
-import javax.swing.border.BevelBorder;
 
 import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
 import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
@@ -92,27 +91,40 @@ class WorkflowConnectPanel extends JPanel {
      * @param inputsWF2 the inputs of the second workflow fragment
      * @param connectionMap the original connection map to initialize the selected connections
      * @param title a custom title for the panel (titled border)
-     * @param extraLabel a extra label appearing at the top - e.g. the names of the workflows to be connected
      * @param outPortNames optional custom names for the output ports
      * @param inPortNames optional custom names for the input ports
      */
     WorkflowConnectPanel(final Map<String, Output> outputsWF1, final Map<String, Input> inputsWF2,
-        final ConnectionMap connectionMap, final String title, final String extraLabel) {
+        final ConnectionMap connectionMap, final String title, final String leftWf, final String rightWf) {
         m_inputsWF2 = inputsWF2.entrySet().stream().map(Entry::getKey)
             .collect(Collectors.toList());
         setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), title));
         setLayout(new BorderLayout());
-        JPanel selection = new JPanel(new GridLayout(inputsWF2.size(), 1));
-        m_selectedOutputs = new ArrayList<>(inputsWF2.size());
+        JPanel selection = new JPanel(new GridBagLayout());
 
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(0, 0, 10, 20);
+
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        selection.add(new JLabel(leftWf), gbc);
+        gbc.gridx = 2;
+        selection.add(new JLabel("\u2192"), gbc);
+
+        gbc.gridx = 3;
+        selection.add(new JLabel(rightWf), gbc);
+
+        m_selectedOutputs = new ArrayList<>(inputsWF2.size());
         Iterator<Entry<String, Input>> inputsIt = inputsWF2.entrySet().iterator();
         while(inputsIt.hasNext()) {
             Entry<String, Input> input = inputsIt.next();
             List<String> compatibleOutputs = outputsWF1.entrySet().stream()
                 .filter(o -> o.getValue().getType().equals(input.getValue().getType())).map(Entry::getKey)
                 .collect(Collectors.toList());
-            JPanel panel = new JPanel();
-            panel.add(new JLabel("Connect "));
+            gbc.gridx = 0;
+            gbc.gridy++;
+            selection.add(new JLabel("Connect"), gbc);
             JComboBox<String> cbox = new JComboBox<>();
             cbox.addItem(NONE_SELECTION);
             compatibleOutputs.forEach(cbox::addItem);
@@ -124,17 +136,22 @@ class WorkflowConnectPanel extends JPanel {
                 cbox.setSelectedItem(NONE_SELECTION);
             }
             m_selectedOutputs.add(cbox);
-            panel.add(cbox);
-            panel.add(new JLabel(" to " + input.getKey()));
-            selection.add(panel);
+            JPanel panel = new JPanel(new GridBagLayout());
+            GridBagConstraints innerGbc = new GridBagConstraints();
+            innerGbc.anchor = GridBagConstraints.WEST;
+            innerGbc.gridx = 0;
+            panel.add(new JLabel("Output "), innerGbc);
+            innerGbc.gridx = 1;
+            panel.add(cbox, innerGbc);
+            gbc.gridx = 1;
+            selection.add(panel, gbc);
+            gbc.gridx = 2;
+            selection.add(new JLabel("to"), gbc);
+            gbc.gridx = 3;
+            selection.add(new JLabel("Input " + input.getKey()), gbc);
         }
-        add(selection, BorderLayout.CENTER);
-        JPanel extraLabelPanel = new JPanel(new BorderLayout());
-        extraLabelPanel.setBorder(BorderFactory.createEtchedBorder(BevelBorder.LOWERED));
-        JLabel extraJLabel = new JLabel(extraLabel, SwingConstants.CENTER);
-        extraLabelPanel.add(extraJLabel, BorderLayout.CENTER);
-        extraJLabel.setForeground(Color.GRAY);
-        add(extraLabelPanel, BorderLayout.NORTH);
+
+        add(selection, BorderLayout.WEST);
 
         if (connectionMap == ConnectionMaps.SIMPLE_PAIR_WISE_CONNECTED_MAP) {
             add(new JLabel("Note: outputs automatically selected per default configuration"), BorderLayout.SOUTH);
