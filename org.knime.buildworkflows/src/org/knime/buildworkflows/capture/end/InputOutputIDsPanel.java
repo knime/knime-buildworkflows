@@ -76,11 +76,11 @@ class InputOutputIDsPanel extends JPanel {
 
     InputOutputIDsPanel(final List<String> inputIDs, final List<String> outputIDs) {
         JPanel inputsPanel = new JPanel();
-        setBorder(inputsPanel, "Input ports IDs");
-        m_inputIDs = fillPanel(inputsPanel, inputIDs, "Input");
+        setBorder(inputsPanel, "Input port IDs");
+        m_inputIDs = fillPanel(inputsPanel, inputIDs, "Input port");
         JPanel outputsPanel = new JPanel();
-        setBorder(outputsPanel, "Output ports IDs");
-        m_outputIDs = fillPanel(outputsPanel, outputIDs, "Output");
+        setBorder(outputsPanel, "Output port IDs");
+        m_outputIDs = fillPanel(outputsPanel, outputIDs, "Output port");
 
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         add(inputsPanel);
@@ -95,12 +95,14 @@ class InputOutputIDsPanel extends JPanel {
         p.setLayout(new GridBagLayout());
         GridBagConstraints c = new GridBagConstraints();
         c.gridwidth = 1;
+        c.weightx = 1;
+        c.anchor = GridBagConstraints.FIRST_LINE_START;
         List<JTextField> res = new ArrayList<>(ids.size());
-        int i = 0;
+        int i = 1;
         for (String id : ids) {
             c.insets = new Insets(15, 0, 0, 0);
             c.gridy++;
-            JLabel jLabel = new JLabel(label + " #" + i);
+            JLabel jLabel = new JLabel(label + " [" + i + "]");
             p.add(jLabel, c);
             c.insets = new Insets(0, 0, 0, 0);
             JTextField text = new JTextField(12);

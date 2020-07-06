@@ -54,25 +54,29 @@ import static org.knime.core.node.workflow.capture.WorkflowPortObjectSpec.ensure
 import static org.knime.core.node.workflow.capture.WorkflowPortObjectSpec.ensureOutputIDsCount;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
-import org.knime.core.node.defaultnodesettings.DefaultNodeSettingsPane;
 import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
 import org.knime.core.node.defaultnodesettings.DialogComponentNumber;
 import org.knime.core.node.defaultnodesettings.DialogComponentString;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
-import org.knime.core.node.defaultnodesettings.SettingsModelIntegerBounded;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
@@ -84,50 +88,74 @@ import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class CaptureWorkflowEndNodeDialog extends DefaultNodeSettingsPane {
+class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
+
+    private static Component group(final String label, final Component... components) {
+        final JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), label));
+        for (final Component component : components) {
+            panel.add(alignLeft(component));
+        }
+        return panel;
+    }
+
+    private static Component alignLeft(final Component component) {
+        final Box box = Box.createHorizontalBox();
+        component.setMaximumSize(new Dimension(component.getPreferredSize().width, component.getMaximumSize().height));
+        box.add(component);
+        box.add(Box.createHorizontalGlue());
+        return box;
+    }
+
     private static final NodeLogger LOGGER = NodeLogger.getLogger(CaptureWorkflowEndNodeDialog.class);
 
-    private final SettingsModelIntegerBounded m_maxNumOfRowsModel;
+    private final DialogComponentString m_customName =
+        new DialogComponentString(CaptureWorkflowEndNodeModel.createCustomWorkflowNameModel(), "");
 
-    private final SettingsModelBoolean m_addInputDataModel;
+    private final DialogComponentNumber m_maxNumOfRowsModel = new DialogComponentNumber(
+        CaptureWorkflowEndNodeModel.createMaxNumOfRowsModel(), "Maximum numbers of rows to store", 1);
+
+    private final DialogComponentBoolean m_addInputDataModel =
+        new DialogComponentBoolean(CaptureWorkflowEndNodeModel.createAddInputDataModel(), "Store input tables");
 
     private final JPanel m_ioIds;
 
     private InputOutputIDsPanel m_idsPanel;
 
     CaptureWorkflowEndNodeDialog() {
+        JPanel options = new JPanel();
+        options.setLayout(new BoxLayout(options, BoxLayout.PAGE_AXIS));
 
-        createNewGroup("Custom workflow name");
-        addDialogComponent(new DialogComponentString(CaptureWorkflowEndNodeModel.createCustomWorkflowNameModel(),
-            ""));
-        closeCurrentGroup();
+        options.add(group("Custom workflow name", m_customName.getComponentPanel()));
+        options
+            .add(group("Input data", m_addInputDataModel.getComponentPanel(), m_maxNumOfRowsModel.getComponentPanel()));
 
-        createNewGroup("Input Data");
-        m_addInputDataModel = CaptureWorkflowEndNodeModel.createAddInputDataModel();
-        m_maxNumOfRowsModel = CaptureWorkflowEndNodeModel.createMaxNumOfRowsModel();
-        m_addInputDataModel.addChangeListener(l -> {
-            m_maxNumOfRowsModel.setEnabled(m_addInputDataModel.getBooleanValue());
+        addTab("Settings", options);
+
+        m_addInputDataModel.getModel().addChangeListener(l -> {
+            m_maxNumOfRowsModel.getModel()
+                .setEnabled(((SettingsModelBoolean)m_addInputDataModel.getModel()).getBooleanValue());
         });
-        addDialogComponent(new DialogComponentBoolean(m_addInputDataModel, "Store input tables"));
-        addDialogComponent(new DialogComponentNumber(m_maxNumOfRowsModel, "Maximum numbers of rows to store", 1));
-        closeCurrentGroup();
 
         m_ioIds = new JPanel(new BorderLayout());
-        addTab("Input & Output IDs", m_ioIds);
+        addTab("Input and Output IDs", m_ioIds);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void loadAdditionalSettingsFrom(final NodeSettingsRO settings, final PortObjectSpec[] specs)
+    protected void loadSettingsFrom(final NodeSettingsRO settings, final PortObjectSpec[] specs)
         throws NotConfigurableException {
+        m_customName.loadSettingsFrom(settings, specs);
+        m_maxNumOfRowsModel.loadSettingsFrom(settings, specs);
+        m_addInputDataModel.loadSettingsFrom(settings, specs);
+
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         if (nc == null) {
             throw new NotConfigurableException("No node context available.");
         }
 
-        m_maxNumOfRowsModel.setEnabled(m_addInputDataModel.getBooleanValue());
+        m_maxNumOfRowsModel.getModel()
+            .setEnabled(((SettingsModelBoolean)m_addInputDataModel.getModel()).getBooleanValue());
 
         List<String> customInputIDs = new ArrayList<>();
         List<String> customOutputIDs = new ArrayList<>();
@@ -156,11 +184,12 @@ class CaptureWorkflowEndNodeDialog extends DefaultNodeSettingsPane {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void saveAdditionalSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
+    protected void saveSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
+        m_customName.saveSettingsTo(settings);
+        m_maxNumOfRowsModel.saveSettingsTo(settings);
+        m_addInputDataModel.saveSettingsTo(settings);
+
         List<String> inputIDs = m_idsPanel.getInputIDs();
         List<String> outputIDs = m_idsPanel.getOutputIDs();
         boolean inDup = hasDuplicates(inputIDs);

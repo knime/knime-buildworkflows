@@ -22,7 +22,7 @@
 			represented as static inputs
 			(but not captured).
 		</intro>
-		<tab name="Options">
+		<tab name="Settings">
 			<option name="Custom workflow name">A custom name for the captured workflow. If left
 				empty, the original name will be taken.
 			</option>
@@ -34,13 +34,12 @@
 				input data table at each workflow table input port.
 			</option>
 		</tab>
-		<tab name="Input &amp;
-		 Output IDs">
-			<option name="Input IDs">Customization of the unique identifiers for each
-				input.
+		<tab name="Input and Output IDs">
+			<option name="Input port IDs">Customization of the unique identifiers for each
+				input port.
 			</option>
-			<option name="Output IDs">Customization of the unique identifiers for each
-				output.
+			<option name="Output port IDs">Customization of the unique identifiers for each
+				output port.
 			</option>
 		</tab>
 
