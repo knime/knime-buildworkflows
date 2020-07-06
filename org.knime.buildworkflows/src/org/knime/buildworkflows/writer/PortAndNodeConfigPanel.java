@@ -159,7 +159,7 @@ class PortAndNodeConfigPanel<C extends IONodeConfig> extends JPanel {
 
             JPanel configPanel = nodeConfig.getOrCreateJPanel();
             JPanel border = new JPanel(new BorderLayout());
-            border.add(configPanel, BorderLayout.CENTER);
+            border.add(configPanel, BorderLayout.WEST);
             border.setBorder(createBorder("Configuration"));
             add(border, BorderLayout.CENTER);
         } else {
