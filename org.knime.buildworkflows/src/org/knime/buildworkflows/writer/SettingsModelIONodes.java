@@ -240,6 +240,19 @@ public class SettingsModelIONodes extends SettingsModel {
         saveSettingsForModel(settings);
     }
 
+    public void validateSettings() throws InvalidSettingsException {
+        if (m_inputNodeConfigs != null) {
+            for (InputNodeConfig config : m_inputNodeConfigs.values()) {
+                config.validateSettings();
+            }
+        }
+        if (m_outputNodeConfigs != null) {
+            for (OutputNodeConfig config : m_outputNodeConfigs.values()) {
+                config.validateSettings();
+            }
+        }
+    }
+
     /**
      * {@inheritDoc}
      */

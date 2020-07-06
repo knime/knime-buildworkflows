@@ -117,6 +117,22 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
     }
 
     @Override
+    protected void configureInternal(final PortObjectSpec[] inSpecs) throws InvalidSettingsException {
+
+        final WorkflowWriterNodeConfig config = getConfig();
+        final WorkflowPortObjectSpec workflowPortObjectSpec =
+            validateAndGetWorkflowPortObjectSpec(inSpecs[getInputTableIndex()], InvalidSettingsException::new);
+
+        final Optional<String> err = validateWorkflowName(workflowPortObjectSpec,
+            config.isUseCustomName().getBooleanValue(), config.getCustomName().getStringValue());
+        if (err.isPresent()) {
+            throw new InvalidSettingsException(err.get());
+        }
+
+        config.getIONodes().validateSettings();
+    }
+
+    @Override
     protected void writeToPath(final PortObject object, final Path outputPath, final ExecutionContext exec)
         throws Exception {
 
@@ -125,15 +141,9 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         CheckUtils.checkArgumentNotNull(exec, "Execution Context must not be null.");
 
         final WorkflowWriterNodeConfig config = getConfig();
-        final WorkflowPortObjectSpec workflowPortObjectSpec =
-            validateAndGetWorkflowPortObjectSpec(object.getSpec(), InvalidSettingsException::new);
-        final Optional<String> err = validateWorkflowName(workflowPortObjectSpec,
-            config.isUseCustomName().getBooleanValue(), config.getCustomName().getStringValue());
-        if (err.isPresent()) {
-            throw new InvalidSettingsException(err.get());
-        }
 
         final WorkflowPortObject workflowPortObject = (WorkflowPortObject)object;
+        final WorkflowPortObjectSpec workflowPortObjectSpec = workflowPortObject.getSpec();
         final WorkflowFragment fragment = workflowPortObjectSpec.getWorkflowFragment();
         final boolean archive = config.isArchive().getBooleanValue();
         final boolean openAfterWrite = config.isOpenAfterWrite().getBooleanValue();

@@ -174,16 +174,6 @@ public class DialogComponentIONodes extends DialogComponent {
     @Override
     protected void validateSettingsBeforeSave() throws InvalidSettingsException {
         updateModel();
-        for (InputNodeConfig c : m_inputs.getSelectedConfigs().values()) {
-            if (c != null) {
-                c.validateSettingsBeforeSave();
-            }
-        }
-        for (OutputNodeConfig c : m_outputs.getSelectedConfigs().values()) {
-            if (c != null) {
-                c.validateSettingsBeforeSave();
-            }
-        }
     }
 
     /**

@@ -48,13 +48,18 @@
  */
 package org.knime.buildworkflows.writer;
 
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.util.Collection;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import javax.swing.Box;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
@@ -75,6 +80,9 @@ import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.util.Pair;
+import org.knime.filehandling.core.defaultnodesettings.status.DefaultStatusMessage;
+import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage;
+import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
 
 /**
  * Represents the (likely reduced) configuration of input and output nodes. Also provides the functionality to
@@ -121,6 +129,8 @@ abstract class IONodeConfig {
 
     private JPanel m_panel;
 
+    private StatusView m_status;
+
     /**
      * Gets the already created or creates a {@link JPanel} to configure the respective node.
      *
@@ -128,13 +138,49 @@ abstract class IONodeConfig {
      */
     JPanel getOrCreateJPanel() {
         if (m_panel == null) {
-            m_panel = new JPanel();
-            m_panel.add(new JLabel("Parameter name"));
+            m_panel = new JPanel(new GridBagLayout());
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.anchor = GridBagConstraints.FIRST_LINE_START;
+
+            final JPanel param = new JPanel(new GridBagLayout());
+            param.add(new JLabel("Parameter name "), gbc);
             m_dlgParamName = new JTextField(20);
             m_dlgParamName.setText("param");
             m_dlgParamName.setText(m_paramName);
             m_paramName = null;
-            m_panel.add(m_dlgParamName);
+            gbc.gridx++;
+            param.add(m_dlgParamName, gbc);
+            m_panel.add(param, gbc);
+
+            final JPanel status = new JPanel(new GridBagLayout());
+            m_status = new StatusView(400);
+            final JLabel statusLabel = m_status.getLabel();
+            status.add(statusLabel, gbc);
+            gbc.gridy++;
+            m_panel.add(status, gbc);
+
+            m_panel.add(Box.createVerticalGlue());
+
+            updateStatus();
+            m_dlgParamName.addActionListener(e -> updateStatus());
+            m_dlgParamName.getDocument().addDocumentListener(new DocumentListener() {
+                @Override
+                public void changedUpdate(final DocumentEvent e) {
+                    updateStatus();
+                }
+
+                @Override
+                public void insertUpdate(final DocumentEvent e) {
+                    updateStatus();
+                }
+
+                @Override
+                public void removeUpdate(final DocumentEvent e) {
+                    updateStatus();
+                }
+            });
         }
         return m_panel;
     }
@@ -228,7 +274,16 @@ abstract class IONodeConfig {
      */
     protected abstract String getDefaultParameterName();
 
-    void validateSettingsBeforeSave() throws InvalidSettingsException {
+    private void updateStatus() {
+        try {
+            validateSettings();
+            m_status.clearStatus();
+        } catch (InvalidSettingsException e) {
+            m_status.setStatus(new DefaultStatusMessage(StatusMessage.MessageType.ERROR, e.getMessage()));
+        }
+    }
+
+    void validateSettings() throws InvalidSettingsException {
         String param = getParameterName();
         CheckUtils.checkSetting(StringUtils.isNotEmpty(param), "parameter name must not be null or empty");
         CheckUtils.checkSetting(DialogNode.PARAMETER_NAME_PATTERN.matcher(param).matches(),

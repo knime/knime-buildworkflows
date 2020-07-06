@@ -159,6 +159,8 @@ final class DeployWorkflowNodeModel extends NodeModel {
             throw new InvalidSettingsException(err.get());
         }
 
+        m_ioNodes.validateSettings();
+
         return new PortObjectSpec[0];
     }
 
