@@ -8,6 +8,7 @@ properties([
 		upstream('knime-workbench/' + env.BRANCH_NAME.replaceAll('/', '%2F')),
 		upstream('knime-json/' + env.BRANCH_NAME.replaceAll('/', '%2F'))
 	]),
+	parameters(workflowTests.getConfigurationsAsParameters()),
 	buildDiscarder(logRotator(numToKeepStr: '5')),
 	disableConcurrentBuilds()
 ])
@@ -26,7 +27,7 @@ try {
 		workflowTests.runSonar()
 	}
  } catch (ex) {
-	 currentBuild.result = 'FAILED'
+	 currentBuild.result = 'FAILURE'
 	 throw ex
  } finally {
 	 notifications.notifyBuild(currentBuild.result);
