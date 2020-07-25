@@ -112,8 +112,11 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectToPathWriter
  */
 public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeModel<WorkflowWriterNodeConfig> {
 
-    WorkflowWriterNodeModel(final NodeCreationConfiguration creationConfig) {
+    private final boolean m_useV2SmartInOutNames;
+
+    WorkflowWriterNodeModel(final NodeCreationConfiguration creationConfig, final boolean useV2SmartInOutNames) {
         super(creationConfig, new WorkflowWriterNodeConfig(creationConfig));
+        m_useV2SmartInOutNames = useV2SmartInOutNames;
     }
 
     @Override
@@ -193,8 +196,8 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         // create temporary local directory
         exec.setProgress(.33, () -> "Saving workflow to disk.");
         final File tmpDir = FileUtil.createTempDir("workflow-writer");
-        final File localSource = write(tmpDir, workflowName, fragment, exec, config.getIONodes(), workflowPortObject,
-            archive, this::setWarningMessage);
+        final File localSource = write(tmpDir, workflowName, fragment, exec, config.getIONodes(),
+            m_useV2SmartInOutNames, workflowPortObject, archive, this::setWarningMessage);
 
         final Path localSourcePath = localSource.toPath();
 
@@ -233,8 +236,9 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
     }
 
     public static File write(final File tmpDir, final String workflowName, final WorkflowFragment fragment,
-        final ExecutionContext exec, final SettingsModelIONodes ioNodes, final WorkflowPortObject workflowPortObject,
-        final boolean archive, final Consumer<String> warningMessageConsumer) throws Exception {
+        final ExecutionContext exec, final SettingsModelIONodes ioNodes, final boolean useV2SmartInOutNames,
+        final WorkflowPortObject workflowPortObject, final boolean archive,
+        final Consumer<String> warningMessageConsumer) throws Exception {
         final File tmpWorkflowDir = new File(tmpDir, workflowName);
         tmpWorkflowDir.mkdir();
         final File tmpDataDir = new File(tmpWorkflowDir, "data");
@@ -244,7 +248,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         wfm.setName(workflowName);
         try {
             addReferenceReaderNodes(fragment, wfm, tmpDataDir, exec);
-            addIONodes(wfm, ioNodes, workflowPortObject, exec, warningMessageConsumer);
+            addIONodes(wfm, ioNodes, useV2SmartInOutNames, workflowPortObject, exec, warningMessageConsumer);
 
             wfm.save(tmpWorkflowDir, exec.createSubProgress(.34), false);
         } finally {
@@ -300,27 +304,32 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
     }
 
     private static void addIONodes(final WorkflowManager wfm, final SettingsModelIONodes ioNodes,
-        final WorkflowPortObject workflowPortObject, final ExecutionContext exec,
+        final boolean useV2SmartInOutNames, final WorkflowPortObject workflowPortObject, final ExecutionContext exec,
         final Consumer<String> warningMessageConsumer) throws InvalidSettingsException {
         exec.setMessage(() -> "Adding input and output nodes");
 
-        ioNodes.initWithDefaults(workflowPortObject.getSpec().getInputIDs(),
+        ioNodes
+            .initWithDefaults(workflowPortObject.getSpec().getInputIDs(),
             workflowPortObject.getSpec().getOutputIDs());
 
         //add, connect and configure input and output nodes
         int[] wfmb = NodeUIInformation.getBoundingBoxOf(wfm.getNodeContainers());
         List<String> configuredInputs = ioNodes.getConfiguredInputs(workflowPortObject.getSpec().getInputIDs());
         Map<String, Input> inputs = workflowPortObject.getSpec().getInputs();
-        addConnectAndConfigureIONodes(wfm, configuredInputs, id -> inputs.get(id).getConnectedPorts().stream(),
-            id -> ioNodes.getInputNodeConfig(id).get(), id -> workflowPortObject.getInputDataFor(id).orElse(null), true,
-            wfmb);
+        addConnectAndConfigureIONodes(wfm, configuredInputs, //
+            id -> inputs.get(id).getConnectedPorts().stream(), //
+            id -> ioNodes.getInputNodeConfig(id).get(), //
+            id -> workflowPortObject.getInputDataFor(id).orElse(null), //
+            true, useV2SmartInOutNames, wfmb);
         List<String> configuredOutputs = ioNodes.getConfiguredOutputs(workflowPortObject.getSpec().getOutputIDs());
         Map<String, Output> outputs = workflowPortObject.getSpec().getOutputs();
-        addConnectAndConfigureIONodes(wfm, configuredOutputs, id -> {
-            Optional<PortID> connectedPort = outputs.get(id).getConnectedPort();
-            return connectedPort.isPresent() ? Stream.of(connectedPort.get()) : Stream.empty();
-        }, id -> ioNodes.getOutputNodeConfig(id).get(), id -> workflowPortObject.getInputDataFor(id).orElse(null),
-            false, wfmb);
+        addConnectAndConfigureIONodes(wfm, configuredOutputs, //
+            id -> {
+                Optional<PortID> connectedPort = outputs.get(id).getConnectedPort();
+                return connectedPort.isPresent() ? Stream.of(connectedPort.get()) : Stream.empty();
+            }, //
+            id -> ioNodes.getOutputNodeConfig(id).get(), id -> workflowPortObject.getInputDataFor(id).orElse(null), //
+            false, useV2SmartInOutNames, wfmb);
         boolean unconnectedInputs = inputs.size() > configuredInputs.size();
         boolean unconnectedOutputs = outputs.size() > configuredOutputs.size();
         if (unconnectedInputs || unconnectedOutputs) {

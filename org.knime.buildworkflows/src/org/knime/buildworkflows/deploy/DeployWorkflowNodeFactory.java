@@ -55,12 +55,14 @@ import org.knime.core.node.NodeView;
 /**
  *
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
+ * @deprecated replaced by {@link DeployWorkflow2NodeFactory}
  */
+@Deprecated
 public class DeployWorkflowNodeFactory extends NodeFactory<DeployWorkflowNodeModel> {
 
     @Override
     public DeployWorkflowNodeModel createNodeModel() {
-        return new DeployWorkflowNodeModel();
+        return new DeployWorkflowNodeModel(false);
     }
 
     @Override

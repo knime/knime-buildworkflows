@@ -87,10 +87,11 @@ class RowInputNodeConfig extends InputNodeConfig {
      * {@inheritDoc}
      */
     @Override
-    protected void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData)
-        throws InvalidSettingsException {
+    protected void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData,
+        final boolean useV2SmartInOutNames) throws InvalidSettingsException {
         try {
-            ContainerRowInputNodeModel.saveConfigAsNodeSettings(settings, getParameterName(), inputData);
+            ContainerRowInputNodeModel.saveConfigAsNodeSettings(settings, getParameterName(), !useV2SmartInOutNames,
+                inputData);
         } catch (IOException e) {
             throw new InvalidSettingsException("Settings couldn't be applied.", e);
         }

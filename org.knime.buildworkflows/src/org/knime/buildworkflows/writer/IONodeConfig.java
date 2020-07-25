@@ -98,18 +98,19 @@ abstract class IONodeConfig {
      * Helper to add, connect and configure input or output nodes.
      *
      * @param wfm the workflow to add the nodes to
-     * @param inputs the inputs to connect
-     * @param outputs the outputs to connect
      * @param idToConfigMap gives the node-config for a 'configured' input/output
      * @param in whether input or output nodes are to be added
+     * @param useV2SmartInOutNames true to use non-fully qualified parameter names (false for old deprecated node only)
      * @param wfBounds the workflow's bounding box
+     * @param inputs the inputs to connect
+     * @param outputs the outputs to connect
      * @throws InvalidSettingsException if the configuration failed
      */
     static void addConnectAndConfigureIONodes(final WorkflowManager wfm, final Collection<String> inputOrOutputIDs,
         final Function<String, Stream<PortID>> idToPortsMap,
         final Function<String, ? extends IONodeConfig> idToConfigMap,
-        final Function<String, DataTable> idToInputDataMap, final boolean in, final int[] wfBounds)
-        throws InvalidSettingsException {
+        final Function<String, DataTable> idToInputDataMap, final boolean in, final boolean useV2SmartInOutNames,
+        final int[] wfBounds) throws InvalidSettingsException {
 
         int numNodes = inputOrOutputIDs.size();
         Pair<Integer, int[]> positions = BuildWorkflowsUtil.getInputOutputNodePositions(wfBounds, numNodes, in);
@@ -118,7 +119,7 @@ abstract class IONodeConfig {
         for (String id : inputOrOutputIDs) {
             idToConfigMap.apply(id).addConnectAndConfigureNode(wfm, idToPortsMap.apply(id), positions.getFirst(),
                 //add and configure
-                positions.getSecond()[i], idToInputDataMap.apply(id));
+                positions.getSecond()[i], idToInputDataMap.apply(id), useV2SmartInOutNames);
             i++;
         }
     }
@@ -198,11 +199,12 @@ abstract class IONodeConfig {
      * @param x the x coordinate
      * @param y the y coordinate
      * @param inputData optional input data used to configure a node
+     * @param useV2SmartInOutNames true to use non-fully qualified parameter names (false for old deprecated node only)
      * @return the id of the new node
      * @throws InvalidSettingsException if the configuration failed
      */
-    protected NodeID addConnectAndConfigureNode(final WorkflowManager wfm, final Stream<PortID> ports, final int x, final int y,
-        final DataTable inputData) throws InvalidSettingsException {
+    protected NodeID addConnectAndConfigureNode(final WorkflowManager wfm, final Stream<PortID> ports, final int x,
+        final int y, final DataTable inputData, final boolean useV2SmartInOutNames) throws InvalidSettingsException {
         //add
         NodeID nodeID = wfm.createAndAddNode(createNodeFactory());
         NodeContainer nc = wfm.getNodeContainer(nodeID);
@@ -216,9 +218,9 @@ abstract class IONodeConfig {
         wfm.saveNodeSettings(nodeID, settings);
         NodeSettingsWO modelSettings = settings.addNodeSettings("model");
         if (this instanceof InputNodeConfig) {
-            ((InputNodeConfig)this).saveActualNodeSettingsTo(modelSettings, inputData);
+            ((InputNodeConfig)this).saveActualNodeSettingsTo(modelSettings, inputData, useV2SmartInOutNames);
         } else {
-            saveActualNodeSettingsTo(modelSettings);
+            saveActualNodeSettingsTo(modelSettings, useV2SmartInOutNames);
         }
         wfm.loadNodeSettings(nodeID, settings);
 
@@ -234,10 +236,11 @@ abstract class IONodeConfig {
      * Saves the configuration as node settings as required to pre-configure the respective node.
      *
      * @param settings the object to store the settings into
+     * @param useV2SmartInOutNames
      *
      * @throws InvalidSettingsException if the configuration failed
      */
-    protected abstract void saveActualNodeSettingsTo(NodeSettingsWO settings) throws InvalidSettingsException;
+    protected abstract void saveActualNodeSettingsTo(NodeSettingsWO settings, boolean useV2SmartInOutNames) throws InvalidSettingsException;
 
     /**
      * Connects the node to the given port.
