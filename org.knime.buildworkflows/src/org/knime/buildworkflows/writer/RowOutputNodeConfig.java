@@ -84,8 +84,9 @@ class RowOutputNodeConfig extends OutputNodeConfig {
      * {@inheritDoc}
      */
     @Override
-    protected void saveActualNodeSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
-        ContainerRowOutputNodeModel.saveConfigAsNodeSettings(settings, getParameterName());
+    protected void saveActualNodeSettingsTo(final NodeSettingsWO settings, final boolean useV2SmartInOutNames)
+        throws InvalidSettingsException {
+        ContainerRowOutputNodeModel.saveConfigAsNodeSettings(settings, getParameterName(), !useV2SmartInOutNames);
     }
 
     /**

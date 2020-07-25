@@ -44,38 +44,43 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   9 Dec 2019 (Marc Bux, KNIME GmbH, Berlin, Germany): created
+ *   11 Jun 2020 ("Marc Bux, KNIME GmbH, Berlin, Germany"): created
  */
-package org.knime.buildworkflows.writer;
+package org.knime.buildworkflows.deploy;
 
-import org.knime.core.node.context.NodeCreationConfiguration;
-import org.knime.core.node.port.PortType;
-import org.knime.core.node.workflow.capture.WorkflowPortObject;
-import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeFactory;
+import org.knime.core.node.NodeDialogPane;
+import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeView;
 
 /**
- * Workflow writer node.
  *
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
- * @deprecated Replaced by {@link WorkflowWriter2NodeFactory}.
  */
-@Deprecated
-public final class WorkflowWriterNodeFactory
-    extends PortObjectWriterNodeFactory<WorkflowWriterNodeModel, WorkflowWriterNodeDialog> {
+public class DeployWorkflow2NodeFactory extends NodeFactory<DeployWorkflowNodeModel> {
 
     @Override
-    protected WorkflowWriterNodeModel createNodeModel(final NodeCreationConfiguration creationConfig) {
-        return new WorkflowWriterNodeModel(creationConfig, false);
+    public DeployWorkflowNodeModel createNodeModel() {
+        return new DeployWorkflowNodeModel(true);
     }
 
     @Override
-    protected PortType getInputPortType() {
-        return WorkflowPortObject.TYPE;
+    protected int getNrNodeViews() {
+        return 0;
     }
 
     @Override
-    protected WorkflowWriterNodeDialog createDialog(final NodeCreationConfiguration creationConfig) {
-        return new WorkflowWriterNodeDialog(creationConfig, "workflow_writer");
+    public NodeView<DeployWorkflowNodeModel> createNodeView(final int viewIndex, final DeployWorkflowNodeModel nodeModel) {
+        return null;
+    }
+
+    @Override
+    protected boolean hasDialog() {
+        return true;
+    }
+
+    @Override
+    protected NodeDialogPane createNodeDialogPane() {
+        return new DeployWorkflowNodeDialog();
     }
 
 }

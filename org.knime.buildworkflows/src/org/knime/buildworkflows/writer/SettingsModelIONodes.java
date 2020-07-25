@@ -228,7 +228,7 @@ public class SettingsModelIONodes extends SettingsModel {
             return (IONodeConfig)Class.forName(nodeConfigClass).newInstance();
         } catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
             throw new IllegalStateException(
-                "Node config instance couldn't be created. Most likely and implementation error.");
+                "Node config instance couldn't be created. Most likely and implementation error.", e);
         }
     }
 

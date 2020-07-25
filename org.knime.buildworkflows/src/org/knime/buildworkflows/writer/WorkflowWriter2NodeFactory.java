@@ -57,15 +57,15 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeFa
  * Workflow writer node.
  *
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
- * @deprecated Replaced by {@link WorkflowWriter2NodeFactory}.
+ * @since 4.3
  */
-@Deprecated
-public final class WorkflowWriterNodeFactory
+// was really added in 4.2.1 (AP-14686)
+public final class WorkflowWriter2NodeFactory
     extends PortObjectWriterNodeFactory<WorkflowWriterNodeModel, WorkflowWriterNodeDialog> {
 
     @Override
     protected WorkflowWriterNodeModel createNodeModel(final NodeCreationConfiguration creationConfig) {
-        return new WorkflowWriterNodeModel(creationConfig, false);
+        return new WorkflowWriterNodeModel(creationConfig, true);
     }
 
     @Override

@@ -74,8 +74,9 @@ abstract class InputNodeConfig extends IONodeConfig {
      * {@inheritDoc}
      */
     @Override
-    protected final void saveActualNodeSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
-        saveActualNodeSettingsTo(settings, null);
+    protected final void saveActualNodeSettingsTo(final NodeSettingsWO settings, final boolean useV2SmartInOutNames)
+        throws InvalidSettingsException {
+        saveActualNodeSettingsTo(settings, null, useV2SmartInOutNames);
     }
 
     /**
@@ -84,9 +85,9 @@ abstract class InputNodeConfig extends IONodeConfig {
      * @param settings the object to store the settings into
      * @param inputData tabular input data possibly to be used to configure the input node, can be <code>null</code> if
      *            not available
-     *
+     * @param useV2SmartInOutNames
      * @throws InvalidSettingsException if the configuration failed
      */
-    protected abstract void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData)
-        throws InvalidSettingsException;
+    protected abstract void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData,
+        boolean useV2SmartInOutNames) throws InvalidSettingsException;
 }

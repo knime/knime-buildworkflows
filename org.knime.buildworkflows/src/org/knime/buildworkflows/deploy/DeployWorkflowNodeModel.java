@@ -141,8 +141,11 @@ final class DeployWorkflowNodeModel extends NodeModel {
 
     private final SettingsModelIONodes m_ioNodes = DeployWorkflowNodeDialog.createIONodesModel();
 
-    DeployWorkflowNodeModel() {
+    private final boolean m_useV2SmartInOutNames;
+
+    DeployWorkflowNodeModel(final boolean useV2SmartInOutNames) {
         super(new PortType[]{ConnectionInformationPortObject.TYPE, WorkflowPortObject.TYPE}, new PortType[0]);
+        m_useV2SmartInOutNames = useV2SmartInOutNames;
     }
 
     @Override
@@ -213,7 +216,7 @@ final class DeployWorkflowNodeModel extends NodeModel {
         exec.setProgress(.5, () -> "Saving workflow to disk.");
         final File tmpDir = FileUtil.createTempDir("deploy-workflow");
         final File localSource = WorkflowWriterNodeModel.write(tmpDir, workflowName, fragment, exec, m_ioNodes,
-            workflowPortObject, false, this::setWarningMessage);
+            m_useV2SmartInOutNames, workflowPortObject, false, this::setWarningMessage);
 
         exec.setProgress(.7, () -> "Deploying workflow onto KNIME Server.");
         deployWorkflow(user, password, endpoint, workflowPath, localSource);
