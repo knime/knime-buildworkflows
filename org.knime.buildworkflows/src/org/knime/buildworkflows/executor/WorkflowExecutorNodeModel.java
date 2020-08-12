@@ -65,6 +65,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -116,6 +117,7 @@ import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPor
 import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPortObjectOutNodeFactory;
 import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPortObjectOutNodeModel;
 import org.knime.core.util.Pair;
+import org.knime.core.util.ThreadPool;
 
 /**
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
@@ -480,10 +482,36 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
                 (VirtualParallelizedChunkPortObjectOutNodeModel)nnc.getNodeModel();
             m_portObjectIds = new ArrayList<>();
             m_portObjects = new ArrayList<>();
-            m_wfm.executeUpToHere(m_virtualEndID);
-            waitWhileInExecution(m_wfm, exec);
 
-            if(exception.get() != null) {
+            // code copied from SubNodeContainer#executeWorkflowAndWait
+            final Runnable inBackgroundRunner = () -> {
+                m_wfm.executeUpToHere(m_virtualEndID);
+                try {
+                    waitWhileInExecution(m_wfm, exec);
+                } catch (InterruptedException | CanceledExecutionException e) { // NOSONAR
+                    m_wfm.cancelExecution(m_thisNode);
+                    Thread.currentThread().interrupt();
+                }
+            };
+            final ThreadPool currentPool = ThreadPool.currentPool();
+            if (currentPool != null) {
+                // ordinary workflow execution
+                try {
+                    currentPool.runInvisible(() -> {
+                        inBackgroundRunner.run();
+                        return null;
+                    });
+                } catch (ExecutionException ee) {
+                    exception.compareAndSet(null, ee);
+                    getLogger().error(ee.getCause().getClass().getSimpleName()
+                        + " while waiting for to-be-executed workflow to complete", ee);
+                }
+            } else {
+                // streaming execution
+                inBackgroundRunner.run();
+            }
+
+            if (exception.get() != null) {
                 throw exception.get();
             }
             return Pair.create(copyPortObjects(outNM.getOutObjects()), getFlowVariablesFromNC(nnc).collect(toList()));
