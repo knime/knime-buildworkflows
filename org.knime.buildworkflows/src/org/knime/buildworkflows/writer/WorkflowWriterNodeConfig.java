@@ -56,6 +56,7 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
+import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.FileOverwritePolicy;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeConfig;
 
@@ -97,7 +98,8 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
      */
     WorkflowWriterNodeConfig(final NodeCreationConfiguration creationConfig) {
         super(creationConfig, WorkflowWriterNodeDialog.SELECTION_MODE, FileOverwritePolicy.APPEND,
-            EnumSet.of(FileOverwritePolicy.APPEND));
+            EnumSet.of(FileOverwritePolicy.APPEND),
+            EnumSet.of(FSCategory.LOCAL, FSCategory.MOUNTPOINT, FSCategory.RELATIVE));
     }
 
     SettingsModelString getExistsOption() {
