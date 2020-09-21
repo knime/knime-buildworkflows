@@ -178,8 +178,8 @@ final class DeployWorkflowNodeModel extends NodeModel {
         final WorkflowPortObjectSpec workflowPortObjectSpec = workflowPortObject.getSpec();
         final WorkflowFragment fragment = workflowPortObjectSpec.getWorkflowFragment();
 
-        final URI endpoint =
-            new URI(conInf.getProtocol(), conInf.getHost(), DeployWorkflowNodeDialog.REST_ENDPOINT, null);
+        final URI endpoint = new URI(conInf.getProtocol(), null, conInf.getHost(), conInf.getPort(),
+            DeployWorkflowNodeDialog.REST_ENDPOINT, null, null);
         final String path = m_workflowGrp.getStringValue().trim();
         final String workflowGrp =
             path.endsWith(DeployWorkflowNodeDialog.PATH_SEPARATOR) ? path.substring(0, path.length() - 1) : path;
