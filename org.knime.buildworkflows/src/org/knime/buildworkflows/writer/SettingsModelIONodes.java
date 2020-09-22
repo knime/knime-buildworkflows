@@ -296,10 +296,11 @@ public class SettingsModelIONodes extends SettingsModel {
                     changed = true;
                 }
             } else {
-                if (m_inputNodeConfigs != null && !m_inputNodeConfigs.isEmpty()) {
-                    m_inputNodeConfigs.clear();
+                if (m_inputNodeConfigs != null) {
                     changed = true;
                 }
+                // set to null such that m_inputNodeConfigs will be initialized with defaults in initWithDefaults
+                m_inputNodeConfigs = null;
             }
 
             //load actual output configs
@@ -324,10 +325,11 @@ public class SettingsModelIONodes extends SettingsModel {
                     changed = true;
                 }
             } else {
-                if (m_outputNodeConfigs != null && !m_outputNodeConfigs.isEmpty()) {
-                    m_outputNodeConfigs.clear();
+                if (m_outputNodeConfigs != null) {
                     changed = true;
                 }
+                // set to null such that m_outputNodeConfigs will be initialized with defaults in initWithDefaults
+                m_outputNodeConfigs = null;
             }
         }
         if (changed) {
