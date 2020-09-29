@@ -5,8 +5,8 @@ library "knime-pipeline@$BN"
 
 properties([
 	pipelineTriggers([
-		upstream('knime-workbench/' + env.BRANCH_NAME.replaceAll('/', '%2F')),
-		upstream('knime-json/' + env.BRANCH_NAME.replaceAll('/', '%2F'))
+		upstream("knime-workbench/${env.BRANCH_NAME.replaceAll('/', '%2F')}" +
+			", knime-json/${env.BRANCH_NAME.replaceAll('/', '%2F')}")
 	]),
 	parameters(workflowTests.getConfigurationsAsParameters()),
 	buildDiscarder(logRotator(numToKeepStr: '5')),
