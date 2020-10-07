@@ -50,7 +50,6 @@ package org.knime.buildworkflows.writer;
 
 import java.awt.Component;
 import java.awt.Dimension;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -92,30 +91,6 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDi
  */
 final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<WorkflowWriterNodeConfig> {
 
-    private enum DeploymentOption {
-            WRITE("Write workflow", "Write workflow and refresh KNIME Explorer"),
-            OPEN("Write workflow and open in explorer",
-                "Write workflow, refresh KNIME Explorer, and open the workflow after write."),
-            EXPORT("Export workflow as knwf archive", "Export workflow as a workflow archive (.knwf)?");
-
-        private final JRadioButton m_button;
-
-        private DeploymentOption(final String name, final String tooltip) {
-            m_button = new JRadioButton(name);
-            m_button.setToolTipText(tooltip);
-            m_button.setActionCommand(name());
-            m_button.setSelected(isDefault());
-        }
-
-        JRadioButton getButton() {
-            return m_button;
-        }
-
-        boolean isDefault() {
-            return this == DEPLOYMENT_OPTION_DEF;
-        }
-    }
-
     enum ExistsOption implements ButtonGroupEnumInterface {
             FAIL("Fail"), OVERWRITE("Overwrite");
 
@@ -145,8 +120,6 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
             return this == EXISTS_OPTION_DEF;
         }
     }
-
-    private static final DeploymentOption DEPLOYMENT_OPTION_DEF = DeploymentOption.WRITE;
 
     static final ExistsOption EXISTS_OPTION_DEF = ExistsOption.FAIL;
 
@@ -184,6 +157,12 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
 
     private final int m_workflowInputPortIndex;
 
+    private final JRadioButton m_writeButton;
+
+    private final JRadioButton m_openButton;
+
+    private final JRadioButton m_exportButton;
+
     // lazily initialized
     private ChangeListener m_workflowNameChangeListener;
 
@@ -201,21 +180,34 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
             m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getLabel()));
 
         final ButtonGroup group = new ButtonGroup();
-        Arrays.stream(DeploymentOption.values()).map(DeploymentOption::getButton).forEach(group::add);
-        addAdditionalPanel(group("Deployment Options",
-            Arrays.stream(DeploymentOption.values()).map(DeploymentOption::getButton).toArray(JRadioButton[]::new)));
+
+        m_writeButton = new JRadioButton("Write workflow");
+        m_writeButton.setToolTipText("Write workflow and refresh KNIME Explorer");
+        m_writeButton.setActionCommand("WRITE");
+        group.add(m_writeButton);
+
+        m_openButton = new JRadioButton("Write workflow and open in explorer");
+        m_openButton.setToolTipText("Write workflow, refresh KNIME Explorer, and open the workflow after write.");
+        m_openButton.setActionCommand("OPEN");
+        group.add(m_openButton);
+
+        m_exportButton = new JRadioButton("Export workflow as knwf archive");
+        m_exportButton.setToolTipText("Export workflow as a workflow archive (.knwf)?");
+        m_exportButton.setActionCommand("EXPORT");
+        group.add(m_exportButton);
+
+        addAdditionalPanel(group("Deployment Options", m_writeButton, m_openButton, m_exportButton));
 
         final SettingsModelWriterFileChooser fc = config.getFileChooserModel();
         final ChangeListener cl = e -> {
             if (Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT)
                 .noneMatch(c -> c == fc.getLocation().getFSCategory())) {
-                if (DeploymentOption.OPEN.getButton().isSelected()) {
-                    Arrays.stream(DeploymentOption.values()).filter(DeploymentOption::isDefault)
-                        .map(DeploymentOption::getButton).findFirst().ifPresent(b -> b.setSelected(true));
+                if (m_openButton.isSelected()) {
+                    m_writeButton.setSelected(true);
                 }
-                DeploymentOption.OPEN.getButton().setEnabled(false);
+                m_openButton.setEnabled(false);
             } else {
-                DeploymentOption.OPEN.getButton().setEnabled(true);
+                m_openButton.setEnabled(true);
             }
         };
         fc.addChangeListener(cl);
@@ -234,9 +226,8 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         super.saveSettingsTo(settings);
         m_useCustomName.saveSettingsTo(settings);
         m_customName.saveSettingsTo(settings);
-        settings.addBoolean(getConfig().isOpenAfterWrite().getConfigName(),
-            DeploymentOption.OPEN.getButton().isSelected());
-        settings.addBoolean(getConfig().isArchive().getConfigName(), DeploymentOption.EXPORT.getButton().isSelected());
+        settings.addBoolean(getConfig().isOpenAfterWrite().getConfigName(), m_openButton.isSelected());
+        settings.addBoolean(getConfig().isArchive().getConfigName(), m_exportButton.isSelected());
         m_existsOption.saveSettingsTo(settings);
         m_ioNodes.saveSettingsTo(settings);
     }
@@ -254,11 +245,9 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
             String.format("Default workflow name: %s", WorkflowWriterNodeModel.determineWorkflowName(portObjectSpec)));
         m_useCustomName.loadSettingsFrom(settings, specs);
         m_customName.loadSettingsFrom(settings, specs);
-        DeploymentOption.WRITE.getButton().setSelected(true);
-        DeploymentOption.OPEN.getButton()
-            .setSelected(settings.getBoolean(getConfig().isOpenAfterWrite().getConfigName(), false));
-        DeploymentOption.EXPORT.getButton()
-            .setSelected(settings.getBoolean(getConfig().isArchive().getConfigName(), false));
+        m_writeButton.setSelected(true);
+        m_openButton.setSelected(settings.getBoolean(getConfig().isOpenAfterWrite().getConfigName(), false));
+        m_exportButton.setSelected(settings.getBoolean(getConfig().isArchive().getConfigName(), false));
         m_existsOption.loadSettingsFrom(settings, specs);
         m_ioNodes.loadSettingsFrom(settings, specs);
 
