@@ -5,3 +5,4 @@ target/
 *.jar
 */.polyglot.build.properties 
 **/.flattened-pom.xml
+**/CHANGELOG.md
