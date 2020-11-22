@@ -82,5 +82,25 @@
 			<layout>p2</layout>
 			<url>${knime.com.shared.p2}</url>
 		</repository>
+		<repository>
+			<id>p2-knime-server-client</id>
+			<layout>p2</layout>
+			<url>${knime.server.client.p2}</url>
+		</repository>
+		<repository>
+			<id>p2-knime-js-core</id>
+			<layout>p2</layout>
+			<url>${knime.js.core.p2}</url>
+		</repository>
+		<repository>
+			<id>p2-knime-js-base</id>
+			<layout>p2</layout>
+			<url>${knime.js.base.p2}</url>
+		</repository>
+		<repository>
+			<id>p2-knime-svg</id>
+			<layout>p2</layout>
+			<url>${knime.svg.p2}</url>
+		</repository>
 	</repositories>
 </project>

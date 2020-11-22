@@ -82,7 +82,6 @@ import org.knime.core.node.defaultnodesettings.DialogComponentString;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.util.ButtonGroupEnumInterface;
 import org.knime.core.node.workflow.VariableType.StringType;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.filehandling.core.defaultnodesettings.status.DefaultStatusMessage;
@@ -94,36 +93,6 @@ import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
  */
 @Deprecated
 final class DeployWorkflowNodeDialog extends NodeDialogPane {
-
-    enum ExistsOption implements ButtonGroupEnumInterface {
-            FAIL("Fail"), OVERWRITE("Overwrite");
-
-        private final String m_name;
-
-        private ExistsOption(final String name) {
-            m_name = name;
-        }
-
-        @Override
-        public String getText() {
-            return m_name;
-        }
-
-        @Override
-        public String getActionCommand() {
-            return name();
-        }
-
-        @Override
-        public String getToolTip() {
-            return "";
-        }
-
-        @Override
-        public boolean isDefault() {
-            return this == EXISTS_OPTION_DEF;
-        }
-    }
 
     private static Component group(final String label, final Component... components) {
         final JPanel panel = new JPanel();
@@ -166,10 +135,8 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
     }
 
     static final SettingsModelString createExistsOptionModel() {
-        return new SettingsModelString("exists", EXISTS_OPTION_DEF.getActionCommand());
+        return new SettingsModelString("exists", ExistsOption.getDefault().getActionCommand());
     }
-
-    private static final ExistsOption EXISTS_OPTION_DEF = ExistsOption.FAIL;
 
     static final SettingsModelBoolean createCreateSnapshotModel() {
         return new SettingsModelBoolean("create-snapshot", false);

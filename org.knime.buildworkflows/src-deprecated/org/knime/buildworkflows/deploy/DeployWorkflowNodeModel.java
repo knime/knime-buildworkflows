@@ -62,7 +62,6 @@ import javax.ws.rs.core.Response;
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformation;
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformationPortObject;
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformationPortObjectSpec;
-import org.knime.buildworkflows.deploy.DeployWorkflowNodeDialog.ExistsOption;
 import org.knime.buildworkflows.writer.SettingsModelIONodes;
 import org.knime.buildworkflows.writer.WorkflowWriterNodeModel;
 import org.knime.core.node.CanceledExecutionException;
