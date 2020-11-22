@@ -44,6 +44,7 @@
     <node
           after="org.knime.buildworkflows.writer.WorkflowWriter2NodeFactory"
           category-path="/labs/captureworkflows"
+          deprecated="true"
           factory-class="org.knime.buildworkflows.deploy.DeployWorkflow2NodeFactory">
     </node>
     <node

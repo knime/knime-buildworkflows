@@ -92,6 +92,7 @@ import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
 /**
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
  */
+@Deprecated
 final class DeployWorkflowNodeDialog extends NodeDialogPane {
 
     enum ExistsOption implements ButtonGroupEnumInterface {

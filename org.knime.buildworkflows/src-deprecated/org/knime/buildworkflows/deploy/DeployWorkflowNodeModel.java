@@ -94,6 +94,7 @@ import com.knime.enterprise.utility.WrongTypeException;
 /**
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
  */
+@Deprecated
 final class DeployWorkflowNodeModel extends NodeModel {
 
     static <E extends Exception> ConnectionInformation validateAndGetConnectionInformation(final PortObjectSpec spec,
