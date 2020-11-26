@@ -269,4 +269,8 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         toggleWorkflowName();
     }
 
+    @Override
+    public void onClose() {
+        m_fileChooser.onClose();
+    }
 }
