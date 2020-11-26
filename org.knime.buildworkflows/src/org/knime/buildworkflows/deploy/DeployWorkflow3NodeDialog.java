@@ -50,6 +50,8 @@ package org.knime.buildworkflows.deploy;
 
 import java.awt.Component;
 import java.awt.GridBagLayout;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -109,8 +111,10 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         m_cfg = new DeployWorkflow3Config(portsConfig);
 
         SettingsModelWriterFileChooser writerModel = m_cfg.getFileChooserModel();
-        final FlowVariableModel writeFvm =
-            createFlowVariableModel(writerModel.getKeysForFSLocation(), FSLocationVariableType.INSTANCE);
+        final FlowVariableModel writeFvm = createFlowVariableModel(
+            Stream.concat(Stream.of(DeployWorkflow3Config.CFG_SUB_SETTINGS),
+                Arrays.stream(writerModel.getKeysForFSLocation())).toArray(String[]::new),
+            FSLocationVariableType.INSTANCE);
         m_fileChooser =
             new DialogComponentWriterFileChooser(writerModel, "workflow_writer", writeFvm, FilterMode.FOLDER);
 
