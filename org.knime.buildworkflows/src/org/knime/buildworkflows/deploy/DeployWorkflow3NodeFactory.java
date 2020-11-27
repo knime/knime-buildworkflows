@@ -48,13 +48,12 @@
  */
 package org.knime.buildworkflows.deploy;
 
-import java.util.Optional;
-
-import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.NodeDialogPane;
+import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeView;
-import org.knime.core.node.context.NodeCreationConfiguration;
+import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
+import org.knime.filehandling.core.defaultnodesettings.filesystemchooser.FixedPortsConfiguration.FixedPortsConfigurationBuilder;
 import org.knime.filehandling.core.port.FileSystemPortObject;
 
 /**
@@ -62,7 +61,7 @@ import org.knime.filehandling.core.port.FileSystemPortObject;
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */
-public class DeployWorkflow3NodeFactory extends ConfigurableNodeFactory<DeployWorkflow3NodeModel> {
+public class DeployWorkflow3NodeFactory extends NodeFactory<DeployWorkflow3NodeModel> {
 
     /** The file system ports group id. */
     static final String FS_CONNECT_GRP_ID = "File System Connection";
@@ -70,22 +69,23 @@ public class DeployWorkflow3NodeFactory extends ConfigurableNodeFactory<DeployWo
     /** The sheet ports group id. */
     static final String WORKFLOW_GRP_ID = "Workflow";
 
-    @Override
-    protected Optional<PortsConfigurationBuilder> createPortsConfigBuilder() {
-        final PortsConfigurationBuilder b = new PortsConfigurationBuilder();
+    private static final PortsConfiguration PORTS_CONFIG;
+
+    static {
+        final FixedPortsConfigurationBuilder b = new FixedPortsConfigurationBuilder();
         b.addFixedInputPortGroup(FS_CONNECT_GRP_ID, FileSystemPortObject.TYPE);
         b.addFixedInputPortGroup(WORKFLOW_GRP_ID, WorkflowPortObject.TYPE);
-        return Optional.of(b);
+        PORTS_CONFIG = b.build();
     }
 
     @Override
-    protected DeployWorkflow3NodeModel createNodeModel(final NodeCreationConfiguration creationConfig) {
-        return new DeployWorkflow3NodeModel(creationConfig.getPortConfig().orElseThrow(IllegalStateException::new));
+    public DeployWorkflow3NodeModel createNodeModel() {
+        return new DeployWorkflow3NodeModel(PORTS_CONFIG);
     }
 
     @Override
-    protected NodeDialogPane createNodeDialogPane(final NodeCreationConfiguration creationConfig) {
-        return new DeployWorkflow3NodeDialog(creationConfig.getPortConfig().orElseThrow(IllegalStateException::new));
+    protected NodeDialogPane createNodeDialogPane() {
+        return new DeployWorkflow3NodeDialog(PORTS_CONFIG);
     }
 
     @Override
