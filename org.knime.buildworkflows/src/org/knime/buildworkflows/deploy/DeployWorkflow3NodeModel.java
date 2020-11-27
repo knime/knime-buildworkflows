@@ -225,8 +225,8 @@ final class DeployWorkflow3NodeModel extends NodeModel {
     }
 
     private String getWorkflowName(final WorkflowPortObjectSpec spec) {
-        if (m_cfg.useCostumWorkflowName()) {
-            return m_cfg.getCostumWorkflowNameModel().getStringValue();
+        if (m_cfg.useCustomWorkflowName()) {
+            return m_cfg.getCustomWorkflowNameModel().getStringValue();
         } else {
             return getDefaultWorkflowName(spec);
         }

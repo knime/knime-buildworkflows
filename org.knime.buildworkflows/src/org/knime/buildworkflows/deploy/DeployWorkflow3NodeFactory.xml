@@ -32,7 +32,7 @@
 				</ul>
 			</option>
 			<option name="Use default workflow name">
-				If selected the default workflow name, as shown, used.
+				If selected the default workflow name, as shown, is used.
 			</option>
 			<option name="Use custom workflow name">
 				If selected the specified custom workflow name is used.

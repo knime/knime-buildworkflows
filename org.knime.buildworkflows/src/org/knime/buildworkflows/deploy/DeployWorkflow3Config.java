@@ -74,15 +74,15 @@ final class DeployWorkflow3Config {
     /** Config for all configuration entries that show up in the settings tab. */
     static final String CFG_SUB_SETTINGS = "settings";
 
-    private static final boolean DEFAULT_USE_COSTUM_WORKFLOW_NAME = false;
+    private static final boolean DEFAULT_USE_CUSTOM_WORKFLOW_NAME = false;
 
     private static final String CFG_FOLDER = "workflow_group_selection";
 
     private static final String CFG_WORKFLOW_EXISTS = "if_workflow_exists";
 
-    private static final String CFG_USE_COSTUM_NAME = "use_costum_workflow_name";
+    private static final String CFG_USE_CUSTOM_NAME = "use_custom_workflow_name";
 
-    private static final String CFG_CUSTOM_WORKFLOW_NAME = "costum_workflow_name";
+    private static final String CFG_CUSTOM_WORKFLOW_NAME = "custom_workflow_name";
 
     private static final String CFG_CREATE_SNAPSHOT = "create_snapshot";
 
@@ -94,9 +94,9 @@ final class DeployWorkflow3Config {
 
     private final SettingsModelString m_workflowExists;
 
-    private boolean m_useCostumWorkflowName;
+    private boolean m_useCustomWorkflowName;
 
-    private final SettingsModelString m_costumWorkflowName;
+    private final SettingsModelString m_customWorkflowName;
 
     private final SettingsModelBoolean m_createSnapshot;
 
@@ -109,8 +109,8 @@ final class DeployWorkflow3Config {
             new SettingsModelWriterFileChooser(CFG_FOLDER, portsConfig, DeployWorkflow3NodeFactory.FS_CONNECT_GRP_ID,
                 FilterMode.FOLDER, FileOverwritePolicy.APPEND, EnumSet.of(FileOverwritePolicy.APPEND));
         m_workflowExists = new SettingsModelString(CFG_WORKFLOW_EXISTS, ExistsOption.getDefault().getActionCommand());
-        m_useCostumWorkflowName = DEFAULT_USE_COSTUM_WORKFLOW_NAME;
-        m_costumWorkflowName = new SettingsModelString(CFG_CUSTOM_WORKFLOW_NAME, "") {
+        m_useCustomWorkflowName = DEFAULT_USE_CUSTOM_WORKFLOW_NAME;
+        m_customWorkflowName = new SettingsModelString(CFG_CUSTOM_WORKFLOW_NAME, "") {
 
             @Override
             protected void validateSettingsForModel(final NodeSettingsRO settings) throws InvalidSettingsException {
@@ -125,7 +125,7 @@ final class DeployWorkflow3Config {
                 }
             }
         };
-        m_costumWorkflowName.setEnabled(m_useCostumWorkflowName);
+        m_customWorkflowName.setEnabled(m_useCustomWorkflowName);
 
         m_createSnapshot = new SettingsModelBoolean(CFG_CREATE_SNAPSHOT, false);
         m_snapshotName = new SettingsModelString(CFG_SNAPSHOT_MESSAGE, "") {
@@ -152,8 +152,8 @@ final class DeployWorkflow3Config {
         return m_workflowExists;
     }
 
-    SettingsModelString getCostumWorkflowNameModel() {
-        return m_costumWorkflowName;
+    SettingsModelString getCustomWorkflowNameModel() {
+        return m_customWorkflowName;
     }
 
     SettingsModelBoolean createSnapshotModel() {
@@ -168,16 +168,16 @@ final class DeployWorkflow3Config {
         return m_ioNodes;
     }
 
-    boolean useCostumWorkflowName() {
-        return m_useCostumWorkflowName;
+    boolean useCustomWorkflowName() {
+        return m_useCustomWorkflowName;
     }
 
     void saveSettingsInModel(final NodeSettingsWO settings) {
         final NodeSettingsWO subSettings = settings.addNodeSettings(CFG_SUB_SETTINGS);
         m_fileChooser.saveSettingsTo(subSettings);
         m_workflowExists.saveSettingsTo(subSettings);
-        saveUseCostumWorkflowName(subSettings);
-        m_costumWorkflowName.saveSettingsTo(subSettings);
+        saveUseCustomWorkflowName(subSettings);
+        m_customWorkflowName.saveSettingsTo(subSettings);
         m_createSnapshot.saveSettingsTo(subSettings);
         m_snapshotName.saveSettingsTo(subSettings);
         m_ioNodes.saveSettingsTo(settings);
@@ -187,8 +187,8 @@ final class DeployWorkflow3Config {
         final NodeSettingsRO subSettings = settings.getNodeSettings(CFG_SUB_SETTINGS);
         m_fileChooser.validateSettings(subSettings);
         m_workflowExists.validateSettings(subSettings);
-        subSettings.containsKey(CFG_USE_COSTUM_NAME);
-        m_costumWorkflowName.validateSettings(subSettings);
+        subSettings.containsKey(CFG_USE_CUSTOM_NAME);
+        m_customWorkflowName.validateSettings(subSettings);
         m_createSnapshot.validateSettings(subSettings);
         m_snapshotName.validateSettings(subSettings);
         m_ioNodes.validateSettings(settings);
@@ -198,24 +198,24 @@ final class DeployWorkflow3Config {
         final NodeSettingsRO subSettings = settings.getNodeSettings(CFG_SUB_SETTINGS);
         m_fileChooser.loadSettingsFrom(subSettings);
         m_workflowExists.loadSettingsFrom(subSettings);
-        m_useCostumWorkflowName = subSettings.getBoolean(CFG_USE_COSTUM_NAME);
-        m_costumWorkflowName.loadSettingsFrom(subSettings);
+        m_useCustomWorkflowName = subSettings.getBoolean(CFG_USE_CUSTOM_NAME);
+        m_customWorkflowName.loadSettingsFrom(subSettings);
         m_createSnapshot.loadSettingsFrom(subSettings);
         m_snapshotName.loadSettingsFrom(subSettings);
         m_ioNodes.loadSettingsFrom(settings);
     }
 
-    void loadUseCostumWorkflowNameInDialog(final NodeSettingsRO settings) {
-        m_useCostumWorkflowName = settings.getBoolean(CFG_USE_COSTUM_NAME, DEFAULT_USE_COSTUM_WORKFLOW_NAME);
+    void loadUseCustomWorkflowNameInDialog(final NodeSettingsRO settings) {
+        m_useCustomWorkflowName = settings.getBoolean(CFG_USE_CUSTOM_NAME, DEFAULT_USE_CUSTOM_WORKFLOW_NAME);
     }
 
-    void saveUseCostumWorkflowNameInDialog(final NodeSettingsWO settings, final boolean useCostumWorkflowName) {
-        m_useCostumWorkflowName = useCostumWorkflowName;
-        saveUseCostumWorkflowName(settings);
+    void saveUseCustomWorkflowNameInDialog(final NodeSettingsWO settings, final boolean useCustomWorkflowName) {
+        m_useCustomWorkflowName = useCustomWorkflowName;
+        saveUseCustomWorkflowName(settings);
     }
 
-    private void saveUseCostumWorkflowName(final NodeSettingsWO settings) {
-        settings.addBoolean(CFG_USE_COSTUM_NAME, useCostumWorkflowName());
+    private void saveUseCustomWorkflowName(final NodeSettingsWO settings) {
+        settings.addBoolean(CFG_USE_CUSTOM_NAME, useCustomWorkflowName());
     }
 
     ExistsOption getExistsOption() {

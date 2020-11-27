@@ -58,6 +58,7 @@ import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.filehandling.core.port.FileSystemPortObject;
 
 /**
+ * Node factory of the "Deploy Workflow to Server" node.
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */

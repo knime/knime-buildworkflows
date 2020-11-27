@@ -80,6 +80,7 @@ import org.knime.filehandling.core.defaultnodesettings.filtermode.SettingsModelF
 import org.knime.filehandling.core.util.GBCBuilder;
 
 /**
+ * Dialog of the "Deploy Workflow to Server" node.
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */
@@ -93,11 +94,11 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
 
     private final JRadioButton m_defaultWorkflowRadio;
 
-    private final JRadioButton m_costumWorkflowRadio;
+    private final JRadioButton m_customWorkflowRadio;
 
     private final JLabel m_defaultWorkflowName;
 
-    private final DialogComponentString m_costumWorkflowName;
+    private final DialogComponentString m_customWorkflowName;
 
     private final DialogComponentBoolean m_createSnapshot;
 
@@ -124,15 +125,15 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         m_defaultWorkflowName = new JLabel("");
 
         m_defaultWorkflowRadio = new JRadioButton("Use default workflow name");
-        m_costumWorkflowRadio = new JRadioButton("Use costum workflow name");
+        m_customWorkflowRadio = new JRadioButton("Use custom workflow name");
         final ButtonGroup btnGroup = new ButtonGroup();
         btnGroup.add(m_defaultWorkflowRadio);
-        btnGroup.add(m_costumWorkflowRadio);
+        btnGroup.add(m_customWorkflowRadio);
 
-        m_costumWorkflowName = new DialogComponentString(m_cfg.getCostumWorkflowNameModel(), "");
+        m_customWorkflowName = new DialogComponentString(m_cfg.getCustomWorkflowNameModel(), "");
 
         SettingsModelBoolean createSnapshotModel = m_cfg.createSnapshotModel();
-        m_createSnapshot = new DialogComponentBoolean(createSnapshotModel, "Create snapeshot");
+        m_createSnapshot = new DialogComponentBoolean(createSnapshotModel, "Create snapshot");
         m_snapshotName = new DialogComponentString(m_cfg.getSnapshotNameModel(), "Snapshot comment");
         // the port always exists and is unique therefore this cannot cause a NPE
         m_workflowInputPortIndex =
@@ -141,7 +142,7 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
 
         // add listener
         m_defaultWorkflowRadio.addActionListener(l -> toggleWorkflowName());
-        m_costumWorkflowRadio.addActionListener(l -> toggleWorkflowName());
+        m_customWorkflowRadio.addActionListener(l -> toggleWorkflowName());
         createSnapshotModel.addChangeListener(l -> toggleSnapshotName());
 
         addTab("Settings", createSettingsTab());
@@ -149,7 +150,7 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
     }
 
     private void toggleWorkflowName() {
-        m_costumWorkflowName.getModel().setEnabled(m_costumWorkflowRadio.isSelected());
+        m_customWorkflowName.getModel().setEnabled(m_customWorkflowRadio.isSelected());
     }
 
     private void toggleSnapshotName() {
@@ -201,10 +202,10 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         p.add(m_defaultWorkflowName, gbc.build());
 
         gbc.resetX().incY().insetLeft(0);
-        p.add(m_costumWorkflowRadio, gbc.build());
+        p.add(m_customWorkflowRadio, gbc.build());
 
         gbc.incX();
-        p.add(m_costumWorkflowName.getComponentPanel(), gbc.build());
+        p.add(m_customWorkflowName.getComponentPanel(), gbc.build());
 
         gbc.resetX().incY().weight(1, 1).setWidth(2).insetTop(-10).fillBoth();
         p.add(new JPanel(), gbc.build());
@@ -234,8 +235,8 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         final NodeSettingsWO subSettings = settings.addNodeSettings(DeployWorkflow3Config.CFG_SUB_SETTINGS);
         m_fileChooser.saveSettingsTo(subSettings);
         m_workflowExists.saveSettingsTo(subSettings);
-        m_cfg.saveUseCostumWorkflowNameInDialog(subSettings, m_costumWorkflowRadio.isSelected());
-        m_costumWorkflowName.saveSettingsTo(subSettings);
+        m_cfg.saveUseCustomWorkflowNameInDialog(subSettings, m_customWorkflowRadio.isSelected());
+        m_customWorkflowName.saveSettingsTo(subSettings);
         m_createSnapshot.saveSettingsTo(subSettings);
         m_snapshotName.saveSettingsTo(subSettings);
         m_ioNodes.saveSettingsTo(settings);
@@ -252,8 +253,8 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         }
         m_fileChooser.loadSettingsFrom(subSettings, specs);
         m_workflowExists.loadSettingsFrom(subSettings, specs);
-        m_cfg.loadUseCostumWorkflowNameInDialog(subSettings);
-        m_costumWorkflowName.loadSettingsFrom(subSettings, specs);
+        m_cfg.loadUseCustomWorkflowNameInDialog(subSettings);
+        m_customWorkflowName.loadSettingsFrom(subSettings, specs);
         m_createSnapshot.loadSettingsFrom(subSettings, specs);
         m_snapshotName.loadSettingsFrom(subSettings, specs);
         m_ioNodes.loadSettingsFrom(settings, specs);
@@ -262,8 +263,8 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         m_defaultWorkflowName.setText(
             DeployWorkflow3NodeModel.getDefaultWorkflowName((WorkflowPortObjectSpec)specs[m_workflowInputPortIndex]));
         // enable / disable models
-        m_defaultWorkflowRadio.setSelected(!m_cfg.useCostumWorkflowName());
-        m_costumWorkflowRadio.setSelected(m_cfg.useCostumWorkflowName());
+        m_defaultWorkflowRadio.setSelected(!m_cfg.useCustomWorkflowName());
+        m_customWorkflowRadio.setSelected(m_cfg.useCustomWorkflowName());
         toggleSnapshotName();
         toggleWorkflowName();
     }
