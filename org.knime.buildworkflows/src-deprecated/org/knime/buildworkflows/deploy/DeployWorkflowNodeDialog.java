@@ -156,7 +156,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         new RemoteFileChooserPanel(getPanel(), "Workflow Group", false, "deploymentTargetHistory",
             RemoteFileChooser.SELECT_DIR, createFlowVariableModel(WORKFLOW_GRP_CFG, StringType.INSTANCE), null);
 
-    private final StatusView m_workflowGrpStatus = new StatusView(400);
+    private final StatusView m_workflowGrpStatus = new StatusView();
 
     private final DialogComponentBoolean m_createParent =
         new DialogComponentBoolean(createCreateParentModel(), "Create missing folders");
@@ -169,7 +169,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
     private final DialogComponentString m_customName =
         new DialogComponentString(createCustomNameModel(), "Custom workflow name: ", true, 20);
 
-    private final StatusView m_workflowNameStatus = new StatusView(400);
+    private final StatusView m_workflowNameStatus = new StatusView();
 
     private final DialogComponentButtonGroup m_existsOption =
         new DialogComponentButtonGroup(createExistsOptionModel(), "If exists", false, ExistsOption.values());

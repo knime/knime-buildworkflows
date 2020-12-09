@@ -149,7 +149,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
 
     private final DialogComponentString m_customName;
 
-    private final StatusView m_workflowNameStatus = new StatusView(400);
+    private final StatusView m_workflowNameStatus = new StatusView();
 
     private final DialogComponentButtonGroup m_existsOption;
 
