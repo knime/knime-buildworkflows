@@ -46,7 +46,7 @@
  * History
  *   Nov 22, 2020 (Mark Ortmann, KNIME GmbH, Berlin, Germany): created
  */
-package org.knime.buildworkflows.deploy;
+package org.knime.buildworkflows;
 
 import org.knime.core.node.util.ButtonGroupEnumInterface;
 
@@ -55,7 +55,7 @@ import org.knime.core.node.util.ButtonGroupEnumInterface;
  *
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
  */
-enum ExistsOption implements ButtonGroupEnumInterface {
+public enum ExistsOption implements ButtonGroupEnumInterface {
 
         /** Fail if workflow already exists. */
         FAIL("Fail"),
@@ -94,7 +94,7 @@ enum ExistsOption implements ButtonGroupEnumInterface {
      *
      * @return the default {@link ExistsOption}
      */
-    static ExistsOption getDefault() {
+    public static ExistsOption getDefault() {
         return FAIL;
 
     }

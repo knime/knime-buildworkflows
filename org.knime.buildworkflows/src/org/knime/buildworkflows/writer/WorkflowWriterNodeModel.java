@@ -69,7 +69,7 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.knime.buildworkflows.writer.WorkflowWriterNodeDialog.ExistsOption;
+import org.knime.buildworkflows.ExistsOption;
 import org.knime.core.data.container.DataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;

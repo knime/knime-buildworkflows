@@ -67,6 +67,7 @@ import javax.swing.text.JTextComponent;
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformation;
 import org.knime.base.filehandling.remote.dialog.RemoteFileChooser;
 import org.knime.base.filehandling.remote.dialog.RemoteFileChooserPanel;
+import org.knime.buildworkflows.ExistsOption;
 import org.knime.buildworkflows.writer.DialogComponentIONodes;
 import org.knime.buildworkflows.writer.SettingsModelIONodes;
 import org.knime.buildworkflows.writer.WorkflowWriterNodeModel;

@@ -61,6 +61,7 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.event.ChangeListener;
 
+import org.knime.buildworkflows.ExistsOption;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
@@ -73,7 +74,6 @@ import org.knime.core.node.defaultnodesettings.DialogComponentString;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.util.ButtonGroupEnumInterface;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
@@ -91,37 +91,7 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDi
  */
 final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<WorkflowWriterNodeConfig> {
 
-    enum ExistsOption implements ButtonGroupEnumInterface {
-            FAIL("Fail"), OVERWRITE("Overwrite");
-
-        private final String m_name;
-
-        private ExistsOption(final String name) {
-            m_name = name;
-        }
-
-        @Override
-        public String getText() {
-            return m_name;
-        }
-
-        @Override
-        public String getActionCommand() {
-            return name();
-        }
-
-        @Override
-        public String getToolTip() {
-            return "";
-        }
-
-        @Override
-        public boolean isDefault() {
-            return this == EXISTS_OPTION_DEF;
-        }
-    }
-
-    static final ExistsOption EXISTS_OPTION_DEF = ExistsOption.FAIL;
+    static final ExistsOption EXISTS_OPTION_DEF = ExistsOption.getDefault();
 
     private static JPanel group(final String label, final Component... components) {
         final JPanel panel = new JPanel();
@@ -171,7 +141,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         final WorkflowWriterNodeConfig config = getConfig();
 
         m_existsOption =
-                new DialogComponentButtonGroup(config.getExistsOption(), "If exists", false, ExistsOption.values());
+            new DialogComponentButtonGroup(config.getExistsOption(), "If exists", false, ExistsOption.values());
         m_originalName = new DialogComponentLabel(" ");
         m_useCustomName = new DialogComponentBoolean(config.isUseCustomName(), "Use custom workflow name");
         m_customName = new DialogComponentString(config.getCustomName(), "Custom workflow name: ", true, 30);
@@ -199,26 +169,29 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         addAdditionalPanel(group("Deployment Options", m_writeButton, m_openButton, m_exportButton));
 
         final SettingsModelWriterFileChooser fc = config.getFileChooserModel();
-        final ChangeListener cl = e -> {
-            if (Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT)
-                .noneMatch(c -> c == fc.getLocation().getFSCategory())) {
-                if (m_openButton.isSelected()) {
-                    m_writeButton.setSelected(true);
-                }
-                m_openButton.setEnabled(false);
-            } else {
-                m_openButton.setEnabled(true);
-            }
-        };
+        final ChangeListener cl = e -> toggleOpenButton(fc);
         fc.addChangeListener(cl);
 
         config.isUseCustomName()
             .addChangeListener(e -> config.getCustomName().setEnabled(config.isUseCustomName().getBooleanValue()));
 
-        m_workflowInputPortIndex =
-            creationConfig.getPortConfig().get().getInputPortLocation().get(getPortObjectInputGrpName())[0];
+        // the portsconfig cannot be null, otherwise we have a problem in the framework
+        m_workflowInputPortIndex = creationConfig.getPortConfig().orElseThrow(IllegalStateException::new)
+            .getInputPortLocation().get(getPortObjectInputGrpName())[0];
         m_ioNodes = new DialogComponentIONodes(getConfig().getIONodes(), m_workflowInputPortIndex);
         addTab("Inputs and outputs", m_ioNodes.getComponentPanel());
+    }
+
+    private void toggleOpenButton(final SettingsModelWriterFileChooser fc) {
+        if (Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT)
+            .noneMatch(c -> c == fc.getLocation().getFSCategory())) {
+            if (m_openButton.isSelected()) {
+                m_writeButton.setSelected(true);
+            }
+            m_openButton.setEnabled(false);
+        } else {
+            m_openButton.setEnabled(true);
+        }
     }
 
     @Override

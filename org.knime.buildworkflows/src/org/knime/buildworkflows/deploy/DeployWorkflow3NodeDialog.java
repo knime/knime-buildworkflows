@@ -59,6 +59,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 
+import org.knime.buildworkflows.ExistsOption;
 import org.knime.buildworkflows.writer.DialogComponentIONodes;
 import org.knime.core.node.FlowVariableModel;
 import org.knime.core.node.InvalidSettingsException;
@@ -248,7 +249,7 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         NodeSettingsRO subSettings;
         try {
             subSettings = settings.getNodeSettings(DeployWorkflow3Config.CFG_SUB_SETTINGS);
-        } catch (InvalidSettingsException e) {
+        } catch (InvalidSettingsException e) { // NOSONAR loading defaults is always done without error reporting
             subSettings = settings;
         }
         m_fileChooser.loadSettingsFrom(subSettings, specs);

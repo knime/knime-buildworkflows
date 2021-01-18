@@ -51,6 +51,7 @@ package org.knime.buildworkflows.deploy;
 import java.util.EnumSet;
 import java.util.regex.Matcher;
 
+import org.knime.buildworkflows.ExistsOption;
 import org.knime.buildworkflows.writer.SettingsModelIONodes;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
