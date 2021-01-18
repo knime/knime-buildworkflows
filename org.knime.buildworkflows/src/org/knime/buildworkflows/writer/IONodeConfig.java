@@ -68,6 +68,7 @@ import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTable;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
@@ -93,6 +94,8 @@ import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 abstract class IONodeConfig {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(IONodeConfig.class);
 
     /**
      * Helper to add, connect and configure input or output nodes.
@@ -281,7 +284,7 @@ abstract class IONodeConfig {
         try {
             validateSettings();
             m_status.clearStatus();
-        } catch (InvalidSettingsException e) {
+        } catch (InvalidSettingsException e) { // NOSONAR -- swallow exception, handled in UI
             m_status.setStatus(new DefaultStatusMessage(StatusMessage.MessageType.ERROR, e.getMessage()));
         }
     }

@@ -75,7 +75,7 @@ import org.knime.core.util.Pair;
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 @SuppressWarnings("serial")
-class WorkflowConnectPanel extends JPanel {
+final class WorkflowConnectPanel extends JPanel {
 
     private static final String NONE_SELECTION = "<NONE>";
 
