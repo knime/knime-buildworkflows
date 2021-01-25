@@ -10,7 +10,12 @@
 	</shortDescription>
 	<fullDescription>
 		<intro>
-			This node deploys a workflow from a port object onto a KNIME Server.
+            <p><i>This node supports the 
+            </i><a href="https://docs.knime.com/latest/analytics_platform_file_handling_guide/index.html#path"><i>path flow variable.</i></a>
+            <i> For further information about file handling in general see the 
+            </i><a href="https://docs.knime.com/latest/analytics_platform_file_handling_guide/index.html"><i>File Handling Guide.</i></a><br/></p>
+            
+			<p>This node deploys a workflow from a port object onto a KNIME Server.</p>
 		</intro>
 		<tab name="Settings">
 		    <option name="Folder">

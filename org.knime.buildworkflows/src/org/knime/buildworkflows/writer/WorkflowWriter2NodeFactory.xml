@@ -9,6 +9,11 @@
 	</shortDescription>
 	<fullDescription>
 		<intro>
+            <p><i>This node supports the 
+            </i><a href="https://docs.knime.com/latest/analytics_platform_file_handling_guide/index.html#path"><i>path flow variable.</i></a>
+            <i> For further information about file handling in general see the 
+            </i><a href="https://docs.knime.com/latest/analytics_platform_file_handling_guide/index.html"><i>File Handling Guide.</i></a><br/></p>
+            
 			This node writes a workflow from a port object into a folder or an exported KNIME workflow (.knwf) archive.
 		</intro>
 		<tab name="Settings">
@@ -61,6 +66,9 @@
 					    (Re)execute the connector node to enable browsing.
 					</li>
 				</ul>
+                <i>The location can be exposed as or automatically set via a 
+                </i><a href="https://docs.knime.com/latest/analytics_platform_file_handling_guide/index.html#path">
+                <i>path flow variable.</i></a>
 			</option>
 			<option name="Create missing folders">
 			    Select if the folders of the selected output location should be created if they do not already exist.
