@@ -65,16 +65,21 @@ import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.exec.dataexchange.PortObjectIDSettings;
+import org.knime.core.node.exec.dataexchange.PortObjectIDSettings.ReferenceType;
 import org.knime.core.node.exec.dataexchange.PortObjectRepository;
+import org.knime.core.node.exec.dataexchange.in.PortObjectInNodeModel;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.PortTypeRegistry;
 import org.knime.core.node.workflow.ConnectionContainer;
+import org.knime.core.node.workflow.CredentialsStore;
 import org.knime.core.node.workflow.FlowVariable;
 import org.knime.core.node.workflow.FlowVariable.Scope;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
+import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.VariableTypeRegistry;
@@ -135,10 +140,12 @@ final class WorkflowExecutable {
             m_wfm.setUIInformation(startUI);
         }
 
+        WorkflowManager fragmentWorkflow = wf.loadWorkflow();
+        updateCredentialsStore(hostNode.getParent().getProjectWFM(), m_wfm.getCredentialsStore(), wf, fragmentWorkflow);
+
         // copy workflow fragment into metanode
-        WorkflowManager wfm = wf.loadWorkflow();
-        NodeID[] ids = wfm.getNodeContainers().stream().map(NodeContainer::getID).toArray(NodeID[]::new);
-        m_wfm.copyFromAndPasteHere(wfm, WorkflowCopyContent.builder().setNodeIDs(ids).build());
+        NodeID[] ids = fragmentWorkflow.getNodeContainers().stream().map(NodeContainer::getID).toArray(NodeID[]::new);
+        m_wfm.copyFromAndPasteHere(fragmentWorkflow, WorkflowCopyContent.builder().setNodeIDs(ids).build());
         wf.disposeWorkflow();
 
         addVirtualIONodes(wf);
@@ -352,5 +359,26 @@ final class WorkflowExecutable {
             getFlowVariablesFromNC(nc).forEach(res::add); // NOSONAR
         }
         return res;
+    }
+
+    private static void updateCredentialsStore(final WorkflowManager projectWfm, final CredentialsStore storeToUpdate,
+        final WorkflowFragment wf, final WorkflowManager fragmentWorkflow) {
+        // add all credential variables coming in via 'static' inputs to the workflow's credentials store
+        // because the flow variables themselves will loose any set passwords after they have been copied into
+        // the respective port-object reference reader node
+        getReferencedNodeIDs(wf, fragmentWorkflow)//
+            .map(id -> projectWfm.findNodeContainer(id.prependParent(projectWfm.getID())))//
+            .flatMap(WorkflowExecutable::getFlowVariablesFromNC)//
+            .filter(f -> f.getType() == FlowVariable.Type.CREDENTIALS)//
+            .filter(f -> !storeToUpdate.contains(f.getName())).forEach(storeToUpdate::addFromFlowVariable);
+    }
+
+    private static Stream<NodeIDSuffix> getReferencedNodeIDs(final WorkflowFragment wf,
+        final WorkflowManager fragmentWorkflow) {
+        return wf.getPortObjectReferenceReaderNodes().stream()//
+            .map(id -> fragmentWorkflow.getNodeContainer(id.prependParent(fragmentWorkflow.getID())))//
+            .map(nc -> ((PortObjectInNodeModel)((NativeNodeContainer)nc).getNodeModel()).getInputNodeSettingsCopy())//
+            .filter(s -> s.getReferenceType() == ReferenceType.NODE)//
+            .map(PortObjectIDSettings::getNodeIDSuffix);
     }
 }
