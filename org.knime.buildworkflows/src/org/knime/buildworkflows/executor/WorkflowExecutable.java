@@ -48,14 +48,11 @@
  */
 package org.knime.buildworkflows.executor;
 
-import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toList;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -198,42 +195,16 @@ final class WorkflowExecutable {
      * Executes the workflow segment.
      *
      * @param inputData the input data to be used for execution
-     * @param outputData the list to add the new output port objects to, i.e. list will be modified!
-     * @param outputPortObjectIDs the list to add the port object ids (as they are registered with the
-     *            {@link PortObjectRepository}), i.e. list will be modified!
      * @param exec for cancellation
      * @return the resulting port objects and flow variables
      */
-    Pair<PortObject[], List<FlowVariable>> executeWorkflow(final PortObject[] inputData,
-        final List<PortObject> outputData, final List<UUID> outputPortObjectIDs, final ExecutionContext exec)
+    Pair<PortObject[], List<FlowVariable>> executeWorkflow(final PortObject[] inputData, final ExecutionContext exec)
         throws Exception { // NOSONAR
         NativeNodeContainer virtualInNode = ((NativeNodeContainer)m_wfm.getNodeContainer(m_virtualStartID));
         VirtualParallelizedChunkPortObjectInNodeModel inNM =
             (VirtualParallelizedChunkPortObjectInNodeModel)virtualInNode.getNodeModel();
-        AtomicReference<Exception> exception = new AtomicReference<>();
 
-        FlowVirtualScopeContext virtualScope =
-            virtualInNode.getOutgoingFlowObjectStack().peek(FlowVirtualScopeContext.class);
-
-        // Sets the port object id call back on the virtual scope.
-        // The call back is triggered (possibly multiple times) during the execution of this workflow (segment),
-        // e.g., if there is a 'Capture Workflow End' node whose scope has 'static' input directly connected into
-        // the scope. Those 'static inputs' are made available via this call back (via the the PortObjectRepository)
-        // such that this node can, retrieve, persist and later restore them for downstream nodes (that make use of
-        // the potentially output workflow port object by this workflow execution, such as the Workflow Writer).
-        virtualScope.setPortObjectIDCallback(fct -> {
-            try {
-                UUID id = fct.apply(exec);
-                outputPortObjectIDs.add(id);
-                outputData.add(PortObjectRepository.get(id).get());
-            } catch (CompletionException e) { // NOSONAR
-                exception.set((Exception)e.getCause());
-            }
-        });
-
-        // set the file store handler to use in the virtual scope:
-        // all contained nodes need to use the file store handler of this workflow executor node
-        virtualScope.setNodeContainer(m_hostNode);
+        FlowVirtualScopeContext.registerHostNodeForPortObjectPersistence(m_hostNode, virtualInNode, exec);
 
         inNM.setVirtualNodeInput(new VirtualParallelizedChunkNodeInput(inputData,
             collectOutputFlowVariablesFromUpstreamNodes(m_hostNode), 0));
@@ -241,6 +212,7 @@ final class WorkflowExecutable {
         VirtualParallelizedChunkPortObjectOutNodeModel outNM =
             (VirtualParallelizedChunkPortObjectOutNodeModel)nnc.getNodeModel();
 
+        AtomicReference<Exception> exception = new AtomicReference<>();
         executeAndWait(exec, exception);
 
         if (exception.get() != null) {
@@ -248,9 +220,9 @@ final class WorkflowExecutable {
         }
 
         PortObject[] portObjectCopies = copyPortObjects(outNM.getOutObjects(), exec);
-        if (portObjectCopies != null) {
-            removeSuperfluousFileStores(Stream.concat(stream(portObjectCopies), outputData.stream()));
-        }
+        // if (portObjectCopies != null) {
+        //     removeSuperfluousFileStores(Stream.concat(stream(portObjectCopies), outputData.stream()));
+        // }
         return Pair.create(portObjectCopies, getFlowVariablesFromNC(nnc).collect(toList()));
     }
 
@@ -338,12 +310,12 @@ final class WorkflowExecutable {
      * Remove file stores that aren't needed anymore because they aren't part of any of the port objects
      * (either as file store cell or file store port object).
      */
-    private static void removeSuperfluousFileStores(final Stream<PortObject> portObjects) {
+    //private static void removeSuperfluousFileStores(final Stream<PortObject> portObjects) {
         // TODO
         // see ticket https://knime-com.atlassian.net/browse/AP-14414
         // m_thisNode.getNode().getFileStoreHandler();
         // ...
-    }
+    //}
 
     /*
      * Essentially only take the flow variables coming in via the 2nd to nth input port (and ignore flow var (0th)

@@ -50,35 +50,17 @@ package org.knime.buildworkflows.executor;
 
 import static java.util.stream.Collectors.toList;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
-import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
-import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeModel;
-import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.ports.PortsConfiguration;
-import org.knime.core.node.exec.dataexchange.PortObjectRepository;
 import org.knime.core.node.port.PortObject;
-import org.knime.core.node.port.PortObjectHolder;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.util.CheckUtils;
@@ -88,26 +70,19 @@ import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.VariableType;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.core.node.workflow.virtual.AbstractVirtualWorkflowNodeModel;
 import org.knime.core.util.Pair;
 
 /**
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
+final class WorkflowExecutorNodeModel extends AbstractVirtualWorkflowNodeModel {
 
     static final String CFG_DEBUG = "debug";
-
-    private static final String CFG_PORT_OBJECT_IDS = "port_object_ids";
-
-    private static final String INTERNALS_FILE_PORT_OBJECT_IDS = "port_object_ids.xml.gz";
 
     private WorkflowExecutable m_executable;
 
     private boolean m_debug = false;
-
-    List<UUID> m_portObjectIds;
-
-    List<PortObject> m_portObjects;
 
     WorkflowExecutorNodeModel(final PortsConfiguration portsConf) {
         super(portsConf.getInputPorts(), portsConf.getOutputPorts());
@@ -130,10 +105,8 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
         boolean success = false;
         try {
             exec.setMessage("Executing workflow segment '" + wpo.getSpec().getWorkflowName() + "'");
-            m_portObjects = new ArrayList<>();
-            m_portObjectIds = new ArrayList<>();
-            Pair<PortObject[], List<FlowVariable>> output = we.executeWorkflow(
-                Arrays.copyOfRange(inObjects, 1, inObjects.length), m_portObjects, m_portObjectIds, exec);
+            Pair<PortObject[], List<FlowVariable>> output =
+                we.executeWorkflow(Arrays.copyOfRange(inObjects, 1, inObjects.length), exec);
             if (output.getFirst() == null || Arrays.stream(output.getFirst()).anyMatch(Objects::isNull)) {
                 NodeContainer nc = NodeContext.getContext().getNodeContainer();
                 String message = "Execution didn't finish successfully";
@@ -239,39 +212,6 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
     }
 
     @Override
-    protected void loadInternals(final File nodeInternDir, final ExecutionMonitor exec)
-        throws IOException, CanceledExecutionException {
-        File f = new File(nodeInternDir, INTERNALS_FILE_PORT_OBJECT_IDS);
-        if (f.exists()) {
-            try (InputStream in = new GZIPInputStream(new BufferedInputStream(new FileInputStream(f)))) {
-                NodeSettingsRO settings = NodeSettings.loadFromXML(in);
-                if (settings.containsKey(CFG_PORT_OBJECT_IDS)) {
-                    m_portObjectIds = Arrays.stream(settings.getStringArray(CFG_PORT_OBJECT_IDS)).map(UUID::fromString)
-                        .collect(Collectors.toList());
-                    addToPortObjectRepository();
-                }
-            } catch (InvalidSettingsException ise) {
-                throw new IOException("Unable to read port object ids", ise);
-            }
-        }
-    }
-
-    @Override
-    protected void saveInternals(final File nodeInternDir, final ExecutionMonitor exec)
-        throws IOException, CanceledExecutionException {
-        if (m_portObjectIds != null) {
-            NodeSettings settings = new NodeSettings(CFG_PORT_OBJECT_IDS);
-            String[] ids =
-                m_portObjectIds.stream().map(UUID::toString).toArray(i -> new String[m_portObjectIds.size()]);
-            settings.addStringArray(CFG_PORT_OBJECT_IDS, ids);
-            try (GZIPOutputStream gzs = new GZIPOutputStream(
-                new BufferedOutputStream(new FileOutputStream(new File(nodeInternDir, INTERNALS_FILE_PORT_OBJECT_IDS))))) {
-                settings.saveToXML(gzs);
-            }
-        }
-    }
-
-    @Override
     protected void saveSettingsTo(final NodeSettingsWO settings) {
         settings.addBoolean(CFG_DEBUG, m_debug);
     }
@@ -300,38 +240,7 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
         if (disposeWorkflowExecutable) {
             disposeWorkflowExecutable();
         }
-        if (m_portObjectIds != null) {
-            m_portObjectIds.forEach(PortObjectRepository::remove);
-            m_portObjects.forEach(PortObjectRepository::removeIDFor);
-            m_portObjectIds = null;
-            m_portObjects = null;
-        }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setInternalPortObjects(final PortObject[] portObjects) {
-        m_portObjects = Arrays.asList(portObjects);
-        addToPortObjectRepository();
-    }
-
-    private void addToPortObjectRepository() {
-        if (m_portObjects != null && m_portObjectIds != null) {
-            assert m_portObjects.size() == m_portObjectIds.size();
-            for (int i = 0; i < m_portObjects.size(); i++) {
-                PortObjectRepository.add(m_portObjectIds.get(i), m_portObjects.get(i));
-            }
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public PortObject[] getInternalPortObjects() {
-        return m_portObjects.toArray(new PortObject[m_portObjects.size()]);
-    }
 
 }
