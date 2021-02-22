@@ -247,7 +247,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         final WorkflowManager wfm = fragment.loadWorkflow();
         wfm.setName(workflowName);
         try {
-            addReferenceReaderNodes(fragment, wfm, tmpDataDir, exec);
+            writeReferenceReaderNodeData(fragment, wfm, tmpDataDir, exec);
             addIONodes(wfm, ioNodes, useV2SmartInOutNames, workflowPortObject, exec, warningMessageConsumer);
 
             wfm.save(tmpWorkflowDir, exec.createSubProgress(.34), false);
@@ -264,10 +264,10 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         return localSource;
     }
 
-    private static void addReferenceReaderNodes(final WorkflowFragment fragment, final WorkflowManager wfm,
-        final File tmpDataDir, final ExecutionContext exec)
+    private static void writeReferenceReaderNodeData(final WorkflowFragment fragment,
+        final WorkflowManager wfm, final File tmpDataDir, final ExecutionContext exec)
         throws IOException, CanceledExecutionException, URISyntaxException, InvalidSettingsException {
-        // create reference reader nodes and store their data in temp directory
+        // reconfigure reference reader nodes and store their data in temp directory
         exec.setMessage(() -> "Introducing reference reader nodes.");
         final Set<NodeIDSuffix> portObjectReaderSufIds = fragment.getPortObjectReferenceReaderNodes();
         for (NodeIDSuffix portObjectReaderSufId : portObjectReaderSufIds) {
@@ -280,9 +280,16 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
             final PortObjectInNodeModel portObjectReader = (PortObjectInNodeModel)portObjectReaderNM;
             final Optional<PortObject> poOpt = portObjectReader.getPortObject();
             assert poOpt.isPresent();
-            final PortObject po = poOpt.get();
+            PortObject po = poOpt.get();
 
-            final String poFileName = portObjectReaderSufId.toString().replace(":", "_");
+            if (po instanceof WorkflowPortObject) {
+                // also write the data for potential reference reader nodes within a referenced workflow segment
+                // AP-16062
+                po = writeReferenceReaderDataForWorkflowPort((WorkflowPortObject)po, tmpDataDir, exec);
+            }
+
+            final String poFileName =
+                portObjectReaderSufId.toString().replace(":", "_") + "_" + System.identityHashCode(po);
             final URI poFileRelativeURI = new URI("knime://knime.workflow/data/" + poFileName);
             final File tmpPoFile = new File(tmpDataDir, poFileName);
             final PortObjectIDSettings poSettings = portObjectReader.getInputNodeSettingsCopy();
@@ -300,6 +307,24 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
             final NodeSettingsWO modelSettings = settings.addNodeSettings("model");
             poSettings.saveSettings(modelSettings);
             portObjectReaderNC.getParent().loadNodeSettings(portObjectReaderId, settings);
+        }
+    }
+
+    private static PortObject writeReferenceReaderDataForWorkflowPort(final WorkflowPortObject wpo, final File dataDir,
+        final ExecutionContext exec)
+        throws IOException, CanceledExecutionException, URISyntaxException, InvalidSettingsException {
+        WorkflowPortObjectSpec spec = wpo.getSpec();
+        WorkflowFragment fragment = spec.getWorkflowFragment();
+        WorkflowManager wfm = fragment.loadWorkflow();
+        WorkflowFragment newFragment = new WorkflowFragment(wfm, fragment.getConnectedInputs(),
+            fragment.getConnectedOutputs(), fragment.getPortObjectReferenceReaderNodes());
+        try {
+            writeReferenceReaderNodeData(fragment, wfm, dataDir, exec);
+            return new WorkflowPortObject(new WorkflowPortObjectSpec(newFragment, spec.getWorkflowName(),
+                spec.getInputIDs(), spec.getOutputIDs()));
+        } finally {
+            newFragment.serializeAndDisposeWorkflow();
+            fragment.disposeWorkflow();
         }
     }
 
