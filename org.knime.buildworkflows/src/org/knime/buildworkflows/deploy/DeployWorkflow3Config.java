@@ -48,7 +48,6 @@
  */
 package org.knime.buildworkflows.deploy;
 
-import java.util.EnumSet;
 import java.util.regex.Matcher;
 
 import org.knime.buildworkflows.ExistsOption;
@@ -61,6 +60,7 @@ import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.util.FileUtil;
+import org.knime.filehandling.core.defaultnodesettings.EnumConfig;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.FileOverwritePolicy;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
 import org.knime.filehandling.core.defaultnodesettings.filtermode.SettingsModelFilterMode.FilterMode;
@@ -106,9 +106,9 @@ final class DeployWorkflow3Config {
     private final SettingsModelIONodes m_ioNodes;
 
     DeployWorkflow3Config(final PortsConfiguration portsConfig) {
-        m_fileChooser =
-            new SettingsModelWriterFileChooser(CFG_FOLDER, portsConfig, DeployWorkflow3NodeFactory.FS_CONNECT_GRP_ID,
-                FilterMode.FOLDER, FileOverwritePolicy.APPEND, EnumSet.of(FileOverwritePolicy.APPEND));
+        m_fileChooser = new SettingsModelWriterFileChooser(CFG_FOLDER, portsConfig,
+            DeployWorkflow3NodeFactory.FS_CONNECT_GRP_ID, EnumConfig.create(FilterMode.FOLDER),
+            EnumConfig.create(FileOverwritePolicy.APPEND));
         m_workflowExists = new SettingsModelString(CFG_WORKFLOW_EXISTS, ExistsOption.getDefault().getActionCommand());
         m_useCustomWorkflowName = DEFAULT_USE_CUSTOM_WORKFLOW_NAME;
         m_customWorkflowName = new SettingsModelString(CFG_CUSTOM_WORKFLOW_NAME, "") {

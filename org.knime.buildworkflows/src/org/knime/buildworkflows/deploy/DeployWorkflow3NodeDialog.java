@@ -77,7 +77,6 @@ import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.filehandling.core.data.location.variable.FSLocationVariableType;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.DialogComponentWriterFileChooser;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
-import org.knime.filehandling.core.defaultnodesettings.filtermode.SettingsModelFilterMode.FilterMode;
 import org.knime.filehandling.core.util.GBCBuilder;
 
 /**
@@ -118,7 +117,7 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
                 Arrays.stream(writerModel.getKeysForFSLocation())).toArray(String[]::new),
             FSLocationVariableType.INSTANCE);
         m_fileChooser =
-            new DialogComponentWriterFileChooser(writerModel, "workflow_writer", writeFvm, FilterMode.FOLDER);
+            new DialogComponentWriterFileChooser(writerModel, "workflow_writer", writeFvm);
 
         m_workflowExists =
             new DialogComponentButtonGroup(m_cfg.getWorkflowExistsModel(), null, false, ExistsOption.values());

@@ -48,8 +48,6 @@
  */
 package org.knime.buildworkflows.writer;
 
-import java.util.EnumSet;
-
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
@@ -58,6 +56,7 @@ import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.FileOverwritePolicy;
+import org.knime.filehandling.core.node.portobject.SelectionMode;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeConfig;
 
 /**
@@ -65,6 +64,8 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeCo
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
  */
 final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
+
+    private static final SelectionMode SELECTION_MODE = SelectionMode.FOLDER;
 
     private static final String CFG_EXISTS_OPTION = "exists";
 
@@ -97,9 +98,9 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
      * @param creationConfig {@link NodeCreationConfiguration} of the corresponding KNIME node
      */
     WorkflowWriterNodeConfig(final NodeCreationConfiguration creationConfig) {
-        super(creationConfig, WorkflowWriterNodeDialog.SELECTION_MODE, FileOverwritePolicy.APPEND,
-            EnumSet.of(FileOverwritePolicy.APPEND),
-            EnumSet.of(FSCategory.LOCAL, FSCategory.MOUNTPOINT, FSCategory.RELATIVE));
+        super(builder(creationConfig).withSelectionMode(SELECTION_MODE)
+            .withFileOverwritePolicies(FileOverwritePolicy.APPEND)
+            .withConvenienceFS(FSCategory.LOCAL, FSCategory.MOUNTPOINT, FSCategory.RELATIVE));
     }
 
     SettingsModelString getExistsOption() {

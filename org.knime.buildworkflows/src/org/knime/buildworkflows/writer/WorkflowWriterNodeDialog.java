@@ -80,7 +80,6 @@ import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.Settin
 import org.knime.filehandling.core.defaultnodesettings.status.DefaultStatusMessage;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
-import org.knime.filehandling.core.node.portobject.SelectionMode;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDialog;
 
 /**
@@ -111,8 +110,6 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         return box;
     }
 
-    static final SelectionMode SELECTION_MODE = SelectionMode.FOLDER;
-
     private final DialogComponentLabel m_originalName;
 
     private final DialogComponentBoolean m_useCustomName;
@@ -137,7 +134,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
     private ChangeListener m_workflowNameChangeListener;
 
     WorkflowWriterNodeDialog(final NodeCreationConfiguration creationConfig, final String fileChooserHistoryId) {
-        super(new WorkflowWriterNodeConfig(creationConfig), fileChooserHistoryId, SELECTION_MODE);
+        super(new WorkflowWriterNodeConfig(creationConfig), fileChooserHistoryId);
         final WorkflowWriterNodeConfig config = getConfig();
 
         m_existsOption =
