@@ -82,14 +82,14 @@ import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.capture.WorkflowFragment;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.core.node.workflow.capture.WorkflowSegment;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
+import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 
 /**
- * The node model of the Capture Workflow End node that marks the end of a captured workflow fragment.
+ * The node model of the Capture Workflow End node that marks the end of a captured workflow segment.
  *
  * @author Adrian Nembach, KNIME GmbH, Konstanz, Germany
  */
@@ -113,7 +113,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
 
     private final SettingsModelInteger m_maxNumRows = createMaxNumOfRowsModel();
 
-    private WorkflowFragment m_lastFragment;
+    private WorkflowSegment m_lastSegment;
 
     private final List<String> m_inputIDs = new ArrayList<>();
 
@@ -135,16 +135,16 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
 
         final NodeContainer container = NodeContext.getContext().getNodeContainer();
         final WorkflowManager manager = container.getParent();
-        WorkflowFragment wff;
+        WorkflowSegment wfs;
         try {
-            wff = manager.createCaptureOperationFor(container.getID()).capture();
+            wfs = manager.createCaptureOperationFor(container.getID()).capture();
         } catch (Exception e) {
             throw new IllegalStateException("Capturing the workflow failed: " + e.getMessage(), e);
         }
-        removeFragment();
-        m_lastFragment = wff;
+        removeSegment();
+        m_lastSegment = wfs;
         final WorkflowPortObjectSpec spec =
-            new WorkflowPortObjectSpec(wff, getCustomWorkflowName(), m_inputIDs, m_outputIDs);
+            new WorkflowPortObjectSpec(wfs, getCustomWorkflowName(), m_inputIDs, m_outputIDs);
         return Stream.concat(Arrays.stream(inSpecs), Stream.of(spec)).toArray(PortObjectSpec[]::new);
     }
 
@@ -156,10 +156,10 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         checkForCaptureNodeStart();
         Map<String, DataTable> inputData = null;
         if (m_addInputData.getBooleanValue()) {
-            inputData = getInputData(m_lastFragment.getConnectedInputs(), m_inputIDs, m_maxNumRows.getIntValue(), exec);
+            inputData = getInputData(m_lastSegment.getConnectedInputs(), m_inputIDs, m_maxNumRows.getIntValue(), exec);
         }
         final WorkflowPortObject po = new WorkflowPortObject(
-            new WorkflowPortObjectSpec(m_lastFragment, getCustomWorkflowName(), m_inputIDs, m_outputIDs), inputData);
+            new WorkflowPortObjectSpec(m_lastSegment, getCustomWorkflowName(), m_inputIDs, m_outputIDs), inputData);
         return Stream.concat(Arrays.stream(inObjects), Stream.of(po)).toArray(PortObject[]::new);
     }
 
@@ -208,10 +208,10 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         }
     }
 
-    private void removeFragment() {
-        if (m_lastFragment != null) {
-            m_lastFragment.disposeWorkflow();
-            m_lastFragment = null;
+    private void removeSegment() {
+        if (m_lastSegment != null) {
+            m_lastSegment.disposeWorkflow();
+            m_lastSegment = null;
         }
     }
 
@@ -322,7 +322,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
      */
     @Override
     protected void reset() {
-        removeFragment();
+        removeSegment();
     }
 
     /**
@@ -330,7 +330,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
      */
     @Override
     protected void onDispose() {
-        removeFragment();
+        removeSegment();
     }
 
 }

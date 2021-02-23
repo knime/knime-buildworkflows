@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <knimeNode icon="./capture_start.png" type="ScopeStart" xmlns="http://knime.org/node/v4.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://knime.org/node/v4.1 http://knime.org/node/v4.1.xsd">
     <name>Capture Workflow Start</name>
-    <shortDescription>Marks the start of a to be captured workflow fragment.</shortDescription>
+    <shortDescription>Marks the start of a to be captured workflow segment.</shortDescription>
 	<fullDescription>
 		<intro>
-			Marks the start of a to be captured workflow fragment. The
+			Marks the start of a to be captured workflow segment. The
 			entire
 			workflow within the scope of a 'Capture Workfow Start'- and
 			'Capture
@@ -25,10 +25,10 @@
 	</fullDescription>
     <ports>
         <dynInPort insert-before="0" name="Captured workflow inputs" group-identifier="Captured workflow inputs">
-        	The dynamic inputs of the workflow fragment starting with this node.
+        	The dynamic inputs of the workflow segment starting with this node.
         </dynInPort>
         
         <dynOutPort insert-before="0" name="Captured workflow inputs" group-identifier="Captured workflow inputs">
-        The dynamic inputs of the workflow fragment starting with this node.</dynOutPort>
+        The dynamic inputs of the workflow segment starting with this node.</dynOutPort>
 	</ports>
 </knimeNode>

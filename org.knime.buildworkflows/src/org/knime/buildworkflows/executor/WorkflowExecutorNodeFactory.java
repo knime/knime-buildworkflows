@@ -58,7 +58,7 @@ import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 
 /**
- * The workflow executor node to execute workflow fragments 'in place', i.e. within the workflow where the fragments
+ * The workflow executor node to execute workflow segments 'in place', i.e. within the workflow where the segment
  * have been captured.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany

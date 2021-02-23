@@ -77,7 +77,7 @@ import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
-import org.knime.core.node.workflow.capture.WorkflowFragment;
+import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.util.FileUtil;
@@ -177,7 +177,7 @@ final class DeployWorkflowNodeModel extends NodeModel {
         final String password = conInf.getPassword();
         final WorkflowPortObject workflowPortObject = (WorkflowPortObject)inObjects[1];
         final WorkflowPortObjectSpec workflowPortObjectSpec = workflowPortObject.getSpec();
-        final WorkflowFragment fragment = workflowPortObjectSpec.getWorkflowFragment();
+        final WorkflowSegment segment = workflowPortObjectSpec.getWorkflowSegment();
 
         final URI endpoint = new URI(conInf.getProtocol(), null, conInf.getHost(), conInf.getPort(),
             DeployWorkflowNodeDialog.REST_ENDPOINT, null, null);
@@ -216,7 +216,7 @@ final class DeployWorkflowNodeModel extends NodeModel {
 
         exec.setProgress(.5, () -> "Saving workflow to disk.");
         final File tmpDir = FileUtil.createTempDir("deploy-workflow");
-        final File localSource = WorkflowWriterNodeModel.write(tmpDir, workflowName, fragment, exec, m_ioNodes,
+        final File localSource = WorkflowWriterNodeModel.write(tmpDir, workflowName, segment, exec, m_ioNodes,
             m_useV2SmartInOutNames, workflowPortObject, false, this::setWarningMessage);
 
         exec.setProgress(.7, () -> "Deploying workflow onto KNIME Server.");

@@ -60,13 +60,13 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.util.CheckUtils;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
 import org.knime.core.util.Pair;
 
 /**
- * Represents the connections between two workflow fragments (i.e. connections between the outputs of the first and
- * inputs of the second workflow fragment). The inputs and outputs are referenced by their id.
+ * Represents the connections between two workflow segments (i.e. connections between the outputs of the first and
+ * inputs of the second workflow segments). The inputs and outputs are referenced by their id.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */

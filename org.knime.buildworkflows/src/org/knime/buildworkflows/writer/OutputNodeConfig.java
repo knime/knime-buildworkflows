@@ -50,7 +50,7 @@ package org.knime.buildworkflows.writer;
 
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
+import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 
 /**
  * Represents the (likely reduced) configuration (and more) of an output node to be added programmatically to a

@@ -75,9 +75,9 @@ import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.PortTypeRegistry;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
 
 /**
  * Workflow executor's dialog.
@@ -122,7 +122,7 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
 
         JPanel debug = new JPanel();
         setBorder(debug, "Debugging");
-        m_debug = new JCheckBox("Show executing workflow fragment", false);
+        m_debug = new JCheckBox("Show executing workflow segment", false);
         debug.add(m_debug);
         options.add(debug);
     }
@@ -174,9 +174,9 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
             m_portAdjustmentLabel.setText("Node ports match the workflow inputs and outputs.");
             m_button.setEnabled(false);
         } catch (InvalidSettingsException e) {
-            String inputs = spec.getWorkflowFragment().getConnectedInputs().stream()
+            String inputs = spec.getWorkflowSegment().getConnectedInputs().stream()
                 .map(i -> i.getType().get().getName()).collect(Collectors.joining(", "));
-            String outputs = spec.getWorkflowFragment().getConnectedOutputs().stream()
+            String outputs = spec.getWorkflowSegment().getConnectedOutputs().stream()
                 .map(i -> i.getType().get().getName()).collect(Collectors.joining(", "));
             String txt = "<html>The node ports are not in line with the workflow inputs and outputs."
                 + "<br/>Expected inputs: "

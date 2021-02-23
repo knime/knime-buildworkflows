@@ -85,10 +85,10 @@ import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.VariableTypeRegistry;
 import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.capture.WorkflowFragment;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
+import org.knime.core.node.workflow.capture.WorkflowSegment;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
+import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 import org.knime.core.node.workflow.virtual.parchunk.FlowVirtualScopeContext;
 import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkNodeInput;
 import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPortObjectInNodeFactory;
@@ -99,7 +99,7 @@ import org.knime.core.util.Pair;
 import org.knime.core.util.ThreadPool;
 
 /**
- * Represents an executable {@link WorkflowFragment}. The execution is done by embedding the workflow fragment as a
+ * Represents an executable {@link WorkflowSegment}. The execution is done by embedding the workflow segment as a
  * metanode into the currently opened worflow.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
@@ -115,15 +115,15 @@ final class WorkflowExecutable {
     private NodeID m_virtualEndID;
 
     /**
-     * @param wf the workflow fragment to execute
+     * @param wf the workflow segment to execute
      * @param workflowName the name of the metanode to be created (which will only be visible if 'debug' is
      *            <code>true</code>)
-     * @param hostNode the node which is responsible for the execution of the workflow fragment (which provides the
+     * @param hostNode the node which is responsible for the execution of the workflow segment (which provides the
      *            input and receives the output data, supplies the file store, etc.)
-     * @param debug if <code>true</code> the metanode the workflow fragment is executed in, will be visible (for
+     * @param debug if <code>true</code> the metanode the workflow segment is executed in, will be visible (for
      *            debugging purposes), if <code>false</code> it's hidden
      */
-    WorkflowExecutable(final WorkflowFragment wf, final String workflowName, final NodeContainer hostNode,
+    WorkflowExecutable(final WorkflowSegment wf, final String workflowName, final NodeContainer hostNode,
         final boolean debug) {
         m_hostNode = (NativeNodeContainer)hostNode;
         m_wfm = hostNode.getParent().createAndAddSubWorkflow(new PortType[0], new PortType[0],
@@ -140,18 +140,18 @@ final class WorkflowExecutable {
             m_wfm.setUIInformation(startUI);
         }
 
-        WorkflowManager fragmentWorkflow = wf.loadWorkflow();
-        updateCredentialsStore(hostNode.getParent().getProjectWFM(), m_wfm.getCredentialsStore(), wf, fragmentWorkflow);
+        WorkflowManager segmentWorkflow = wf.loadWorkflow();
+        updateCredentialsStore(hostNode.getParent().getProjectWFM(), m_wfm.getCredentialsStore(), wf, segmentWorkflow);
 
-        // copy workflow fragment into metanode
-        NodeID[] ids = fragmentWorkflow.getNodeContainers().stream().map(NodeContainer::getID).toArray(NodeID[]::new);
-        m_wfm.copyFromAndPasteHere(fragmentWorkflow, WorkflowCopyContent.builder().setNodeIDs(ids).build());
+        // copy workflow segment into metanode
+        NodeID[] ids = segmentWorkflow.getNodeContainers().stream().map(NodeContainer::getID).toArray(NodeID[]::new);
+        m_wfm.copyFromAndPasteHere(segmentWorkflow, WorkflowCopyContent.builder().setNodeIDs(ids).build());
         wf.disposeWorkflow();
 
         addVirtualIONodes(wf);
     }
 
-    private void addVirtualIONodes(final WorkflowFragment wf) {
+    private void addVirtualIONodes(final WorkflowSegment wf) {
 
         //add virtual in node
         List<Input> inputs = wf.getConnectedInputs();
@@ -195,7 +195,7 @@ final class WorkflowExecutable {
     }
 
     /**
-     * Executes the workflow fragment.
+     * Executes the workflow segment.
      *
      * @param inputData the input data to be used for execution
      * @param outputData the list to add the new output port objects to, i.e. list will be modified!
@@ -216,7 +216,7 @@ final class WorkflowExecutable {
             virtualInNode.getOutgoingFlowObjectStack().peek(FlowVirtualScopeContext.class);
 
         // Sets the port object id call back on the virtual scope.
-        // The call back is triggered (possibly multiple times) during the execution of this workflow (fragment),
+        // The call back is triggered (possibly multiple times) during the execution of this workflow (segment),
         // e.g., if there is a 'Capture Workflow End' node whose scope has 'static' input directly connected into
         // the scope. Those 'static inputs' are made available via this call back (via the the PortObjectRepository)
         // such that this node can, retrieve, persist and later restore them for downstream nodes (that make use of
@@ -362,21 +362,21 @@ final class WorkflowExecutable {
     }
 
     private static void updateCredentialsStore(final WorkflowManager projectWfm, final CredentialsStore storeToUpdate,
-        final WorkflowFragment wf, final WorkflowManager fragmentWorkflow) {
+        final WorkflowSegment wf, final WorkflowManager segmentWorkflow) {
         // add all credential variables coming in via 'static' inputs to the workflow's credentials store
         // because the flow variables themselves will loose any set passwords after they have been copied into
         // the respective port-object reference reader node
-        getReferencedNodeIDs(wf, fragmentWorkflow)//
+        getReferencedNodeIDs(wf, segmentWorkflow)//
             .map(id -> projectWfm.findNodeContainer(id.prependParent(projectWfm.getID())))//
             .flatMap(WorkflowExecutable::getFlowVariablesFromNC)//
             .filter(f -> f.getType() == FlowVariable.Type.CREDENTIALS)//
             .filter(f -> !storeToUpdate.contains(f.getName())).forEach(storeToUpdate::addFromFlowVariable);
     }
 
-    private static Stream<NodeIDSuffix> getReferencedNodeIDs(final WorkflowFragment wf,
-        final WorkflowManager fragmentWorkflow) {
+    private static Stream<NodeIDSuffix> getReferencedNodeIDs(final WorkflowSegment wf,
+        final WorkflowManager segmentWorkflow) {
         return wf.getPortObjectReferenceReaderNodes().stream()//
-            .map(id -> fragmentWorkflow.getNodeContainer(id.prependParent(fragmentWorkflow.getID())))//
+            .map(id -> segmentWorkflow.getNodeContainer(id.prependParent(segmentWorkflow.getID())))//
             .map(nc -> ((PortObjectInNodeModel)((NativeNodeContainer)nc).getNodeModel()).getInputNodeSettingsCopy())//
             .filter(s -> s.getReferenceType() == ReferenceType.NODE)//
             .map(PortObjectIDSettings::getNodeIDSuffix);

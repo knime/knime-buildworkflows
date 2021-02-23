@@ -91,12 +91,12 @@ import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.capture.WorkflowFragment;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.core.node.workflow.capture.WorkflowSegment;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
+import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
 import org.knime.filehandling.core.connections.FSFiles;
@@ -147,7 +147,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
 
         final WorkflowPortObject workflowPortObject = (WorkflowPortObject)object;
         final WorkflowPortObjectSpec workflowPortObjectSpec = workflowPortObject.getSpec();
-        final WorkflowFragment fragment = workflowPortObjectSpec.getWorkflowFragment();
+        final WorkflowSegment segment = workflowPortObjectSpec.getWorkflowSegment();
         final boolean archive = config.isArchive().getBooleanValue();
         final boolean openAfterWrite = config.isOpenAfterWrite().getBooleanValue();
         final boolean overwrite =
@@ -196,7 +196,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         // create temporary local directory
         exec.setProgress(.33, () -> "Saving workflow to disk.");
         final File tmpDir = FileUtil.createTempDir("workflow-writer");
-        final File localSource = write(tmpDir, workflowName, fragment, exec, config.getIONodes(),
+        final File localSource = write(tmpDir, workflowName, segment, exec, config.getIONodes(),
             m_useV2SmartInOutNames, workflowPortObject, archive, this::setWarningMessage);
 
         final Path localSourcePath = localSource.toPath();
@@ -235,7 +235,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         FileUtil.deleteRecursively(tmpDir);
     }
 
-    public static File write(final File tmpDir, final String workflowName, final WorkflowFragment fragment,
+    public static File write(final File tmpDir, final String workflowName, final WorkflowSegment segment,
         final ExecutionContext exec, final SettingsModelIONodes ioNodes, final boolean useV2SmartInOutNames,
         final WorkflowPortObject workflowPortObject, final boolean archive,
         final Consumer<String> warningMessageConsumer) throws Exception {
@@ -244,15 +244,15 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         final File tmpDataDir = new File(tmpWorkflowDir, "data");
         tmpDataDir.mkdir();
 
-        final WorkflowManager wfm = fragment.loadWorkflow();
+        final WorkflowManager wfm = segment.loadWorkflow();
         wfm.setName(workflowName);
         try {
-            writeReferenceReaderNodeData(fragment, wfm, tmpDataDir, exec);
+            writeReferenceReaderNodeData(segment, wfm, tmpDataDir, exec);
             addIONodes(wfm, ioNodes, useV2SmartInOutNames, workflowPortObject, exec, warningMessageConsumer);
 
             wfm.save(tmpWorkflowDir, exec.createSubProgress(.34), false);
         } finally {
-            fragment.disposeWorkflow();
+            segment.disposeWorkflow();
         }
 
         // zip temporary directory if applicable
@@ -264,12 +264,12 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         return localSource;
     }
 
-    private static void writeReferenceReaderNodeData(final WorkflowFragment fragment,
+    private static void writeReferenceReaderNodeData(final WorkflowSegment segment,
         final WorkflowManager wfm, final File tmpDataDir, final ExecutionContext exec)
         throws IOException, CanceledExecutionException, URISyntaxException, InvalidSettingsException {
         // reconfigure reference reader nodes and store their data in temp directory
         exec.setMessage(() -> "Introducing reference reader nodes.");
-        final Set<NodeIDSuffix> portObjectReaderSufIds = fragment.getPortObjectReferenceReaderNodes();
+        final Set<NodeIDSuffix> portObjectReaderSufIds = segment.getPortObjectReferenceReaderNodes();
         for (NodeIDSuffix portObjectReaderSufId : portObjectReaderSufIds) {
 
             final NodeID portObjectReaderId = portObjectReaderSufId.prependParent(wfm.getID());
@@ -314,17 +314,17 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         final ExecutionContext exec)
         throws IOException, CanceledExecutionException, URISyntaxException, InvalidSettingsException {
         WorkflowPortObjectSpec spec = wpo.getSpec();
-        WorkflowFragment fragment = spec.getWorkflowFragment();
-        WorkflowManager wfm = fragment.loadWorkflow();
-        WorkflowFragment newFragment = new WorkflowFragment(wfm, fragment.getConnectedInputs(),
-            fragment.getConnectedOutputs(), fragment.getPortObjectReferenceReaderNodes());
+        WorkflowSegment segment = spec.getWorkflowSegment();
+        WorkflowManager wfm = segment.loadWorkflow();
+        WorkflowSegment newSegment = new WorkflowSegment(wfm, segment.getConnectedInputs(),
+            segment.getConnectedOutputs(), segment.getPortObjectReferenceReaderNodes());
         try {
-            writeReferenceReaderNodeData(fragment, wfm, dataDir, exec);
-            return new WorkflowPortObject(new WorkflowPortObjectSpec(newFragment, spec.getWorkflowName(),
+            writeReferenceReaderNodeData(segment, wfm, dataDir, exec);
+            return new WorkflowPortObject(new WorkflowPortObjectSpec(newSegment, spec.getWorkflowName(),
                 spec.getInputIDs(), spec.getOutputIDs()));
         } finally {
-            newFragment.serializeAndDisposeWorkflow();
-            fragment.disposeWorkflow();
+            newSegment.serializeAndDisposeWorkflow();
+            segment.disposeWorkflow();
         }
     }
 

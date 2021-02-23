@@ -53,7 +53,7 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
+import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 
 /**
  * Represents the (likely reduced) configuration of an input node to be added to a workflow programmatically.

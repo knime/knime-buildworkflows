@@ -21,7 +21,7 @@
 		The input and output ports of the node must match the inputs and outputs of the workflow
 		(not taking 0th flow variable ports and the workflow in-port into account).
 	</option>
-	<option name="Debugging: Show executing workflow fragment">If enabled the executing workflow will be
+	<option name="Debugging: Show executing workflow segment">If enabled the executing workflow will be
 		visible as part of a metanode next to this node. By stepping into the metanode the ongoing execution
 		can be inspected. If the workflow fails to execute and this option is enabled, the metanode will
 		remain in order to be able to identify the problem.
@@ -31,7 +31,7 @@
 	</fullDescription>
 	<ports>
 		<inPort index="0" name="Workflow">
-			The workflow fragment to be executed.
+			The workflow segment to be executed.
 		</inPort>
 		<dynInPort insert-before="1" name="Workflow inputs"
 			group-identifier="Inputs">

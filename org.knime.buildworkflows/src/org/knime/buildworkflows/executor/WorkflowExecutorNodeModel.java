@@ -129,7 +129,7 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
         m_executable = we;
         boolean success = false;
         try {
-            exec.setMessage("Executing workflow fragment '" + wpo.getSpec().getWorkflowName() + "'");
+            exec.setMessage("Executing workflow segment '" + wpo.getSpec().getWorkflowName() + "'");
             m_portObjects = new ArrayList<>();
             m_portObjectIds = new ArrayList<>();
             Pair<PortObject[], List<FlowVariable>> output = we.executeWorkflow(
@@ -170,7 +170,7 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         CheckUtils.checkArgumentNotNull(nc, "Not a local workflow");
         checkPortCompatibility(spec, nc);
-        m_executable = new WorkflowExecutable(spec.getWorkflowFragment(), spec.getWorkflowName(), nc, m_debug);
+        m_executable = new WorkflowExecutable(spec.getWorkflowSegment(), spec.getWorkflowName(), nc, m_debug);
         return m_executable;
     }
 
@@ -208,7 +208,7 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
     }
 
     private static List<PortType> workflowInputTypes(final WorkflowPortObjectSpec spec) {
-        return spec.getWorkflowFragment().getConnectedInputs().stream().map(i -> i.getType().get()).collect(toList());
+        return spec.getWorkflowSegment().getConnectedInputs().stream().map(i -> i.getType().get()).collect(toList());
     }
 
     private static List<PortType> nodeOutputTypes(final NodeContainer nc) {
@@ -216,7 +216,7 @@ class WorkflowExecutorNodeModel extends NodeModel implements PortObjectHolder {
     }
 
     private static List<PortType> workflowOutputTypes(final WorkflowPortObjectSpec spec) {
-        return spec.getWorkflowFragment().getConnectedOutputs().stream().map(i -> i.getType().get()).collect(toList());
+        return spec.getWorkflowSegment().getConnectedOutputs().stream().map(i -> i.getType().get()).collect(toList());
     }
 
     /**

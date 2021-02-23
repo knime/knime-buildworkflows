@@ -64,7 +64,7 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.CaptureWorkflowStartNode;
 
 /**
- * The node model for the Capture Workflow Start node that marks the start of a workflow fragment.
+ * The node model for the Capture Workflow Start node that marks the start of a workflow segment.
  *
  * @author Adrian Nembach, KNIME GmbH, Konstanz, Germany
  */

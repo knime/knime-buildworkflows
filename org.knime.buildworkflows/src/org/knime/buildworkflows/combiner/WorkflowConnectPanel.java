@@ -65,12 +65,12 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
 import org.knime.core.util.Pair;
 
 /**
- * UI to choose/'draw' connections between the output and input of a workflow fragment.
+ * UI to choose/'draw' connections between the output and input of a workflow segment.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
@@ -87,8 +87,8 @@ final class WorkflowConnectPanel extends JPanel {
     /**
      * Creates a new connection panel.
      *
-     * @param outputsWF1 the outputs of the first workflow fragment (to be connected to the inports of the second workflow)
-     * @param inputsWF2 the inputs of the second workflow fragment
+     * @param outputsWF1 the outputs of the first workflow segment (to be connected to the inports of the second workflow)
+     * @param inputsWF2 the inputs of the second workflow segment
      * @param connectionMap the original connection map to initialize the selected connections
      * @param title a custom title for the panel (titled border)
      * @param outPortNames optional custom names for the output ports

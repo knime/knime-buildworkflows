@@ -166,7 +166,7 @@ final class DeployWorkflow3NodeModel extends NodeModel {
             exec.setProgress(.5, () -> "Saving workflow to disk.");
             final File tmpDir = FileUtil.createTempDir("deploy-workflow");
             final File localSource =
-                WorkflowWriterNodeModel.write(tmpDir, workflowName, workflowPortObject.getSpec().getWorkflowFragment(),
+                WorkflowWriterNodeModel.write(tmpDir, workflowName, workflowPortObject.getSpec().getWorkflowSegment(),
                     exec, m_cfg.getIOModel(), true, workflowPortObject, false, this::setWarningMessage);
 
             exec.setProgress(.7, () -> "Deploying workflow onto KNIME Server.");

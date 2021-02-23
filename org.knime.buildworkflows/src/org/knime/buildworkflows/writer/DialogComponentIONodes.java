@@ -60,7 +60,7 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.defaultnodesettings.DialogComponent;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.workflow.capture.WorkflowFragment.IOInfo;
+import org.knime.core.node.workflow.capture.WorkflowSegment.IOInfo;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 
 /**

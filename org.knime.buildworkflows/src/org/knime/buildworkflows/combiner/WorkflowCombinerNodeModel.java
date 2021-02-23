@@ -82,12 +82,12 @@ import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.node.workflow.WorkflowLock;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.capture.WorkflowFragment;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Input;
-import org.knime.core.node.workflow.capture.WorkflowFragment.Output;
-import org.knime.core.node.workflow.capture.WorkflowFragment.PortID;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.core.node.workflow.capture.WorkflowSegment;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
+import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 import org.knime.core.util.Pair;
 
 /**
@@ -122,12 +122,12 @@ final class WorkflowCombinerNodeModel extends NodeModel {
     }
 
     /**
-     * Checks whether two workflow fragments can be connected.
+     * Checks whether two workflow segments can be connected.
      *
-     * @param pred the predecessor workflow fragment
-     * @param succ the successor workflow fragment
-     * @param connectionIdx the index of the workflow fragment connection
-     * @throws InvalidSettingsException if the workflow fragments couldn't be connected completely
+     * @param pred the predecessor workflow segment
+     * @param succ the successor workflow segment
+     * @param connectionIdx the index of the workflow segment connection
+     * @throws InvalidSettingsException if the workflow segment couldn't be connected completely
      */
     private void canConnect(final WorkflowPortObjectSpec pred, final WorkflowPortObjectSpec succ,
         final int connectionIdx) throws InvalidSettingsException {
@@ -147,33 +147,33 @@ final class WorkflowCombinerNodeModel extends NodeModel {
         // store the id so we can remove that node in case something goes wrong or we reset/dispose the node
         m_wfmID = wfm.getID();
 
-        //transfer the editor settings from the first fragment
+        //transfer the editor settings from the first segment
         //the loaded workflow will be disposed in the copy-method below
-        wfm.setEditorUIInformation(inWorkflowSpecs[0].getWorkflowFragment().loadWorkflow().getEditorUIInformation());
+        wfm.setEditorUIInformation(inWorkflowSpecs[0].getWorkflowSegment().loadWorkflow().getEditorUIInformation());
 
         try {
-            // copy and paste all fragments to the new wfm
-            final WorkflowFragmentMeta[] inWorkflowFragments = Arrays.stream(inWorkflowSpecs)
-                .map(s -> copy(wfm, s)).toArray(WorkflowFragmentMeta[]::new);
+            // copy and paste all segments to the new wfm
+            final WorkflowSegmentMeta[] inWorkflowSegments = Arrays.stream(inWorkflowSpecs)
+                .map(s -> copy(wfm, s)).toArray(WorkflowSegmentMeta[]::new);
 
             final Set<NodeIDSuffix> objectReferenceReaderNodes =
-                new HashSet<>(inWorkflowFragments[0].m_objectReferenceReaderNodes);
+                new HashSet<>(inWorkflowSegments[0].m_objectReferenceReaderNodes);
 
-            for (int i = 1; i < inWorkflowFragments.length; i++) {
-                connect(wfm, m_connectionMaps.getConnectionMap(i - 1), inWorkflowFragments[i - 1].m_outputs,
-                    inWorkflowFragments[i - 1].m_outIdMapping, inWorkflowFragments[i].m_inputs,
-                    inWorkflowFragments[i].m_inIdMapping);
-                objectReferenceReaderNodes.addAll(inWorkflowFragments[i].m_objectReferenceReaderNodes);
+            for (int i = 1; i < inWorkflowSegments.length; i++) {
+                connect(wfm, m_connectionMaps.getConnectionMap(i - 1), inWorkflowSegments[i - 1].m_outputs,
+                    inWorkflowSegments[i - 1].m_outIdMapping, inWorkflowSegments[i].m_inputs,
+                    inWorkflowSegments[i].m_inIdMapping);
+                objectReferenceReaderNodes.addAll(inWorkflowSegments[i].m_objectReferenceReaderNodes);
             }
 
             WorkflowPortObject firstWorkflowPortObject = (WorkflowPortObject)input[0];
-            Map<String, DataTable> inputData = inWorkflowFragments[0].m_inputs.entrySet().stream()
+            Map<String, DataTable> inputData = inWorkflowSegments[0].m_inputs.entrySet().stream()
                 .filter(e -> firstWorkflowPortObject.getInputDataFor(e.getKey()).isPresent()).collect(
                     Collectors.toMap(Entry::getKey, e -> firstWorkflowPortObject.getInputDataFor(e.getKey()).get()));
 
             String workflowName = inWorkflowSpecs[0].getWorkflowName(); //TODO make configurable
-            Pair<List<String>, List<Input>> newInputs = collectAndMapAllRemainingInputPorts(inWorkflowFragments);
-            Pair<List<String>, List<Output>> newOutputs = collectAndMapAllRemainingOutputPorts(inWorkflowFragments);
+            Pair<List<String>, List<Input>> newInputs = collectAndMapAllRemainingInputPorts(inWorkflowSegments);
+            Pair<List<String>, List<Output>> newOutputs = collectAndMapAllRemainingOutputPorts(inWorkflowSegments);
             List<String> duplicates = getDuplicates(newInputs.getFirst());
             if (!duplicates.isEmpty()) {
                 throw new IllegalStateException(
@@ -185,7 +185,7 @@ final class WorkflowCombinerNodeModel extends NodeModel {
                     "Duplicate output IDs: " + duplicates.stream().collect(Collectors.joining(",")));
             }
             return new PortObject[]{new WorkflowPortObject(
-                new WorkflowPortObjectSpec(new WorkflowFragment(wfm, newInputs.getSecond(), newOutputs.getSecond(),
+                new WorkflowPortObjectSpec(new WorkflowSegment(wfm, newInputs.getSecond(), newOutputs.getSecond(),
                     objectReferenceReaderNodes), workflowName, newInputs.getFirst(), newOutputs.getFirst()),
                 inputData)};
         } catch (final Exception e) {
@@ -242,14 +242,14 @@ final class WorkflowCombinerNodeModel extends NodeModel {
         return Optional.of(res);
     }
 
-    private static WorkflowFragmentMeta copy(final WorkflowManager wfm, final WorkflowPortObjectSpec toCopy) {
-        // copy and paste the workflow fragment into the new wfm
+    private static WorkflowSegmentMeta copy(final WorkflowManager wfm, final WorkflowPortObjectSpec toCopy) {
+        // copy and paste the workflow segment into the new wfm
         // calculate the mapping between the toCopy node ids and the new node ids
         final HashMap<NodeIDSuffix, NodeIDSuffix> inIdMapping = new HashMap<>();
         final HashMap<NodeIDSuffix, NodeIDSuffix> outIdMapping = new HashMap<>();
         final HashSet<NodeIDSuffix> objectReferenceReaderNodes = new HashSet<>();
 
-        WorkflowFragment wfToCopy = toCopy.getWorkflowFragment();
+        WorkflowSegment wfToCopy = toCopy.getWorkflowSegment();
         final WorkflowManager toCopyWFM = wfToCopy.loadWorkflow();
         try (WorkflowLock lock = wfm.lock()) {
             int[] wfmBoundingBox = NodeUIInformation.getBoundingBoxOf(wfm.getNodeContainers());
@@ -293,8 +293,8 @@ final class WorkflowCombinerNodeModel extends NodeModel {
             wfToCopy.disposeWorkflow();
         }
 
-        // return the new fragment metadata
-        WorkflowFragmentMeta res = new WorkflowFragmentMeta();
+        // return the new segment metadata
+        WorkflowSegmentMeta res = new WorkflowSegmentMeta();
         res.m_inputs = new LinkedHashMap<>(toCopy.getInputs());
         res.m_inIdMapping = inIdMapping;
         res.m_outputs = new LinkedHashMap<>(toCopy.getOutputs());
@@ -345,10 +345,10 @@ final class WorkflowCombinerNodeModel extends NodeModel {
     }
 
     private static Pair<List<String>, List<Input>>
-        collectAndMapAllRemainingInputPorts(final WorkflowFragmentMeta[] fragments) {
+        collectAndMapAllRemainingInputPorts(final WorkflowSegmentMeta[] segments) {
         List<Input> inputs = new ArrayList<>();
         List<String> inputIDs = new ArrayList<>();
-        for (WorkflowFragmentMeta f : fragments) {
+        for (WorkflowSegmentMeta f : segments) {
             for (Entry<String, Input> input : f.m_inputs.entrySet()) {
                 inputIDs.add(input.getKey());
                 inputs.add(getMappedInput(input.getValue(), f.m_inIdMapping));
@@ -358,13 +358,13 @@ final class WorkflowCombinerNodeModel extends NodeModel {
     }
 
     private static Pair<List<String>, List<Output>>
-        collectAndMapAllRemainingOutputPorts(final WorkflowFragmentMeta[] fragments) {
+        collectAndMapAllRemainingOutputPorts(final WorkflowSegmentMeta[] segments) {
         List<Output> outputs = new ArrayList<>();
         List<String> outputIDs = new ArrayList<>();
-        for (int i = fragments.length - 1; i >= 0; i--) {
-            for (Entry<String, Output> output : fragments[i].m_outputs.entrySet()) {
+        for (int i = segments.length - 1; i >= 0; i--) {
+            for (Entry<String, Output> output : segments[i].m_outputs.entrySet()) {
                 outputIDs.add(output.getKey());
-                outputs.add(getMappedOutput(output.getValue(), fragments[i].m_outIdMapping));
+                outputs.add(getMappedOutput(output.getValue(), segments[i].m_outIdMapping));
             }
         }
         return Pair.create(outputIDs, outputs);
@@ -439,9 +439,9 @@ final class WorkflowCombinerNodeModel extends NodeModel {
     }
 
     /**
-     * Internal helper class to be able to summarize and return the metadata of a workflow fragment.
+     * Internal helper class to be able to summarize and return the metadata of a workflow segment.
      */
-    private static class WorkflowFragmentMeta {
+    private static class WorkflowSegmentMeta {
 
         Map<String, Input> m_inputs;
 
