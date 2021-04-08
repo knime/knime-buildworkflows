@@ -79,8 +79,10 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.CaptureWorkflowEndNode;
 import org.knime.core.node.workflow.CaptureWorkflowStartNode;
 import org.knime.core.node.workflow.ConnectionContainer;
+import org.knime.core.node.workflow.FlowVariable;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
+import org.knime.core.node.workflow.VariableType;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
@@ -103,6 +105,10 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         return new SettingsModelBoolean("add_input_data", false);
     }
 
+    static SettingsModelBoolean createExportVariablesModel() {
+        return new SettingsModelBoolean("export_variables", true);
+    }
+
     static SettingsModelIntegerBounded createMaxNumOfRowsModel() {
         return new SettingsModelIntegerBounded("max_num_rows", 10, 1, Integer.MAX_VALUE);
     }
@@ -112,6 +118,8 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
     private final SettingsModelBoolean m_addInputData = createAddInputDataModel();
 
     private final SettingsModelInteger m_maxNumRows = createMaxNumOfRowsModel();
+
+    private final SettingsModelBoolean m_exportVariables = createExportVariablesModel();
 
     private WorkflowSegment m_lastSegment;
 
@@ -160,6 +168,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         }
         final WorkflowPortObject po = new WorkflowPortObject(
             new WorkflowPortObjectSpec(m_lastSegment, getCustomWorkflowName(), m_inputIDs, m_outputIDs), inputData);
+        exportVariables();
         return Stream.concat(Arrays.stream(inObjects), Stream.of(po)).toArray(PortObject[]::new);
     }
 
@@ -216,6 +225,20 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
     }
 
     /**
+     * Calls {@link #pushFlowVariable(String, VariableType, Object)} for variables defined within
+     * the scope IFF the corresponding configuration is set.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked", "java:S3740"})
+    private void exportVariables() {
+        if (m_exportVariables.getBooleanValue()) {
+            for (FlowVariable v : getVariablesDefinedInScope()) {
+                VariableType t = v.getVariableType();
+                pushFlowVariable(v.getName(), t, v.getValue(t));
+            }
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -243,6 +266,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         }
         m_addInputData.saveSettingsTo(settings);
         m_maxNumRows.saveSettingsTo(settings);
+        m_exportVariables.saveSettingsTo(settings);
         saveInputOutputIDs(settings, m_inputIDs, m_outputIDs);
     }
 
@@ -271,6 +295,10 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
     protected void validateSettings(final NodeSettingsRO settings) throws InvalidSettingsException {
         m_addInputData.validateSettings(settings);
         m_maxNumRows.validateSettings(settings);
+        // added in 4.4 (but if present it needs to be "valid")
+        if (settings.containsKey(m_exportVariables.getConfigName())) {
+            m_exportVariables.validateSettings(settings);
+        }
     }
 
     /**
@@ -283,6 +311,13 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         }
         m_addInputData.loadSettingsFrom(settings);
         m_maxNumRows.loadSettingsFrom(settings);
+        // setting was added in 4.4 (AP-16448)
+        if (settings.containsKey(m_exportVariables.getConfigName())) {
+            m_exportVariables.loadSettingsFrom(settings);
+        } else {
+            // was 'false' in prior versions
+            m_exportVariables.setBooleanValue(false);
+        }
         m_inputIDs.clear();
         m_outputIDs.clear();
         loadAndFillInputOutputIDs(settings, m_inputIDs, m_outputIDs);

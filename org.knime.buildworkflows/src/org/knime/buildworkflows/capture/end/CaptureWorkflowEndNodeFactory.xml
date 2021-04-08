@@ -33,6 +33,12 @@
 				example
 				input data table at each workflow table input port.
 			</option>
+			<option name="Propagate Variables">If selected, variables defined (or modified) within the 
+				<i>Capture</i> block are propagated downstream of the <i>Capture Workflow End</i> node.
+				In most cases users will want to check this box (which is also the default). Previous 
+				versions of KNIME did not have this option and variables were always limited in scope and 
+				not visible downstream.
+			</option>
 		</tab>
 		<tab name="Input and Output IDs">
 			<option name="Input port IDs">Customization of the unique identifiers for each

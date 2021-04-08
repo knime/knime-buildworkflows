@@ -69,7 +69,6 @@ import javax.swing.JPanel;
 
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeDialogPane;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
@@ -88,7 +87,7 @@ import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
+final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
 
     private static Component group(final String label, final Component... components) {
         final JPanel panel = new JPanel();
@@ -108,8 +107,6 @@ class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         return box;
     }
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(CaptureWorkflowEndNodeDialog.class);
-
     private final DialogComponentString m_customName =
         new DialogComponentString(CaptureWorkflowEndNodeModel.createCustomWorkflowNameModel(), "");
 
@@ -118,6 +115,9 @@ class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
 
     private final DialogComponentBoolean m_addInputDataModel =
         new DialogComponentBoolean(CaptureWorkflowEndNodeModel.createAddInputDataModel(), "Store input tables");
+
+    private final DialogComponentBoolean m_exportAllVariablesModel =
+            new DialogComponentBoolean(CaptureWorkflowEndNodeModel.createExportVariablesModel(), "Propagate variables");
 
     private final JPanel m_ioIds;
 
@@ -131,12 +131,12 @@ class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         options
             .add(group("Input data", m_addInputDataModel.getComponentPanel(), m_maxNumOfRowsModel.getComponentPanel()));
 
+        options.add(group("Variables", m_exportAllVariablesModel.getComponentPanel()));
+
         addTab("Settings", options);
 
-        m_addInputDataModel.getModel().addChangeListener(l -> {
-            m_maxNumOfRowsModel.getModel()
-                .setEnabled(((SettingsModelBoolean)m_addInputDataModel.getModel()).getBooleanValue());
-        });
+        m_addInputDataModel.getModel().addChangeListener(l -> m_maxNumOfRowsModel.getModel()
+            .setEnabled(((SettingsModelBoolean)m_addInputDataModel.getModel()).getBooleanValue()));
 
         m_ioIds = new JPanel(new BorderLayout());
         addTab("Input and Output IDs", m_ioIds);
@@ -148,6 +148,7 @@ class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         m_customName.loadSettingsFrom(settings, specs);
         m_maxNumOfRowsModel.loadSettingsFrom(settings, specs);
         m_addInputDataModel.loadSettingsFrom(settings, specs);
+        m_exportAllVariablesModel.loadSettingsFrom(settings, specs);
 
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         if (nc == null) {
@@ -162,7 +163,7 @@ class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         try {
             loadAndFillInputOutputIDs(settings, customInputIDs, customOutputIDs);
         } catch (InvalidSettingsException e) {
-            LOGGER.warn("Settings couldn't be load for dialog. Ignored.", e);
+            getLogger().warn("Settings couldn't be load for dialog. Ignored.", e);
         }
 
         WorkflowCaptureOperation captureOp;
@@ -189,6 +190,7 @@ class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         m_customName.saveSettingsTo(settings);
         m_maxNumOfRowsModel.saveSettingsTo(settings);
         m_addInputDataModel.saveSettingsTo(settings);
+        m_exportAllVariablesModel.saveSettingsTo(settings);
 
         List<String> inputIDs = m_idsPanel.getInputIDs();
         List<String> outputIDs = m_idsPanel.getOutputIDs();
