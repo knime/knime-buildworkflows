@@ -67,6 +67,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 
+import org.knime.buildworkflows.util.ValidatedWorkflowNameField;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeSettingsRO;
@@ -74,7 +75,6 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
 import org.knime.core.node.defaultnodesettings.DialogComponentNumber;
-import org.knime.core.node.defaultnodesettings.DialogComponentString;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.NodeContainer;
@@ -107,8 +107,8 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         return box;
     }
 
-    private final DialogComponentString m_customName =
-        new DialogComponentString(CaptureWorkflowEndNodeModel.createCustomWorkflowNameModel(), "");
+    private final ValidatedWorkflowNameField m_customName =
+        new ValidatedWorkflowNameField(CaptureWorkflowEndNodeModel.createCustomWorkflowNameModel());
 
     private final DialogComponentNumber m_maxNumOfRowsModel = new DialogComponentNumber(
         CaptureWorkflowEndNodeModel.createMaxNumOfRowsModel(), "Maximum numbers of rows to store", 1);
@@ -127,7 +127,7 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         JPanel options = new JPanel();
         options.setLayout(new BoxLayout(options, BoxLayout.PAGE_AXIS));
 
-        options.add(group("Custom workflow name", m_customName.getComponentPanel()));
+        options.add(group("Custom workflow name", m_customName));
         options
             .add(group("Input data", m_addInputDataModel.getComponentPanel(), m_maxNumOfRowsModel.getComponentPanel()));
 
@@ -145,7 +145,7 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
     @Override
     protected void loadSettingsFrom(final NodeSettingsRO settings, final PortObjectSpec[] specs)
         throws NotConfigurableException {
-        m_customName.loadSettingsFrom(settings, specs);
+        m_customName.loadSettingsFrom(settings);
         m_maxNumOfRowsModel.loadSettingsFrom(settings, specs);
         m_addInputDataModel.loadSettingsFrom(settings, specs);
         m_exportAllVariablesModel.loadSettingsFrom(settings, specs);
