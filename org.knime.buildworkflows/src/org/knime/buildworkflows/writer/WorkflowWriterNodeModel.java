@@ -164,11 +164,8 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
                     "Default workflow name is null or empty. Consider using a custom workflow name.");
             }
             workflowName = determineWorkflowName(workflowPortObjectSpec);
-            if (!originalName.equals(workflowName)) {
-                setWarningMessage(String.format(
-                    "Default workflow name \"%s\" contains illegal characters and has been escaped to \"%s\".",
-                    originalName, workflowName));
-            }
+            // Custom workflow names provided by upstream nodes are assumed to be correct, so no warning
+            // needs to be given here. The name is still escaped of any invalid characters.
         }
 
         // create directory at output path, if applicable (parent path was already checked in super class)
