@@ -59,5 +59,11 @@
           category-path="/labs/captureworkflows"
           factory-class="org.knime.buildworkflows.executor.WorkflowExecutorNodeFactory">
     </node>
+    <node
+          category-path="/labs/captureworkflows"
+          deprecated="false"
+          factory-class="org.knime.buildworkflows.reader.WorkflowReaderNodeFactory"
+          hidden="false">
+    </node>
  </extension>
 </fragment>
