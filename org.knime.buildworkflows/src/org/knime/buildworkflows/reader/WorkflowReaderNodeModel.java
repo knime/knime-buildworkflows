@@ -104,7 +104,7 @@ import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
 import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
 import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
-import org.knime.core.node.workflow.virtual.AbstractVirtualWorkflowNodeModel;
+import org.knime.core.node.workflow.virtual.AbstractPortObjectRepositoryNodeModel;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.LockFailedException;
 import org.knime.filehandling.core.connections.FSFiles;
@@ -119,7 +119,7 @@ import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage.Mess
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-final class WorkflowReaderNodeModel extends AbstractVirtualWorkflowNodeModel {
+final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeModel {
 
     private final WorkflowReaderNodeConfig m_config;
 
