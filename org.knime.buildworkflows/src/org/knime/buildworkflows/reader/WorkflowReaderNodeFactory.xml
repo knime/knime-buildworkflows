@@ -53,7 +53,7 @@
 				Select a file system to read the workflow from. If the selected file
 				system is
 				<i>not</i>
-				a KNIME file system, tworkflows are represented by '.knwf' files.
+				a KNIME file system, the workflows are represented by '.knwf' files.
 				<br />
 				<ul>
 	                <li><i>Local File System:</i> Allows you to select a workflow ('.knwf'-file) from your
@@ -105,7 +105,7 @@
                 <i>path flow variable.</i></a>
 			</option>
 			<option name="Workflow name">
-				An optional custom name for the workflow. If not specified, the original name will be kep.
+				An optional custom name for the workflow. If not specified, the original name will be kept.
 			</option>
 			<option name="Remove input and output nodes">If checked, all <i>Container Input *</i> and <i>Container Output *</i>
 				nodes are removed and implicitly represented. This allows one to, e.g., combine the resulting workflow segment with other 

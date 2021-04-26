@@ -56,7 +56,6 @@ import java.util.regex.Matcher;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
@@ -134,8 +133,6 @@ public final class ValidatedWorkflowNameField extends JPanel {
             m_label = Optional.empty();
         }
 
-        this.setBorder(new EmptyBorder(0, 10, 0, 0)); // left padding
-
         this.setLayout(new GridBagLayout());
         m_gbc = initGridBagConstraints();
 
@@ -146,7 +143,6 @@ public final class ValidatedWorkflowNameField extends JPanel {
 
         // Add label component if given.
         m_label.ifPresent(label -> {
-            label.setBorder(new EmptyBorder(0, 0, 0, 5));
             this.add(label, m_gbc);
             m_gbc.gridx++;
         });
