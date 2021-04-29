@@ -72,6 +72,7 @@ import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
 import org.knime.core.node.defaultnodesettings.DialogComponentButtonGroup;
 import org.knime.core.node.defaultnodesettings.DialogComponentLabel;
 import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
+import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.filehandling.core.connections.FSCategory;
@@ -144,7 +145,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
                 "Custom workflow name: ", false);
         m_customName.setToolTipText("Name of the workflow directory or file to be written");
         addAdditionalPanel(group("Workflow", m_existsOption.getComponentPanel(), m_originalName.getComponentPanel(),
-            m_useCustomName.getComponentPanel(), m_customName, m_workflowNameStatus.getLabel()));
+            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getLabel()));
 
         final ButtonGroup group = new ButtonGroup();
 
@@ -215,7 +216,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
             String.format("Default workflow name: %s", WorkflowWriterNodeModel.determineWorkflowName(portObjectSpec)));
 
         m_useCustomName.loadSettingsFrom(settings, specs);
-        m_customName.loadSettingsFrom(settings);
+        m_customName.loadSettingsFrom(settings, specs);
         m_writeButton.setSelected(true);
         m_openButton.setSelected(settings.getBoolean(getConfig().isOpenAfterWrite().getConfigName(), false));
         m_exportButton.setSelected(settings.getBoolean(getConfig().isArchive().getConfigName(), false));
@@ -235,7 +236,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
     private void updateWorkflowNameStatus(final WorkflowPortObjectSpec portObjectSpec) {
         final Optional<String> err = WorkflowWriterNodeModel.validateWorkflowName(portObjectSpec,
             ((SettingsModelBoolean)m_useCustomName.getModel()).getBooleanValue(),
-            m_customName.getModel().getStringValue());
+                ((SettingsModelString)m_customName.getModel()).getStringValue());
         if (err.isPresent()) {
             m_workflowNameStatus.setStatus(new DefaultStatusMessage(StatusMessage.MessageType.ERROR, err.get()));
         } else {

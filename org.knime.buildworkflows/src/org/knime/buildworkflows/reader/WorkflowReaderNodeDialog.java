@@ -104,7 +104,7 @@ final class WorkflowReaderNodeDialog extends NodeDialogPane {
 
         JPanel p1 = createWorkflowChooserPanel();
         JPanel p2 =
-            group("Read options", m_workflowName, m_removeIONodes.getComponentPanel(), ioPrefixes);
+            group("Read options", m_workflowName.getComponentPanel(), m_removeIONodes.getComponentPanel(), ioPrefixes);
 
         final JPanel panel = new JPanel(new GridBagLayout());
         final GridBagConstraints gbc = createAndInitGBC();
@@ -150,7 +150,7 @@ final class WorkflowReaderNodeDialog extends NodeDialogPane {
     protected void loadSettingsFrom(final NodeSettingsRO settings, final PortObjectSpec[] specs)
         throws NotConfigurableException {
         m_workflowChooser.loadSettingsFrom(settings, specs);
-        m_workflowName.loadSettingsFrom(settings);
+        m_workflowName.loadSettingsFrom(settings, specs);
         m_removeIONodes.loadSettingsFrom(settings, specs);
         m_inputIdPrefix.loadSettingsFrom(settings, specs);
         m_outputIdPrefix.loadSettingsFrom(settings, specs);

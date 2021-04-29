@@ -60,9 +60,10 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeSettingsRO;
-import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.NotConfigurableException;
+import org.knime.core.node.defaultnodesettings.DialogComponent;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
+import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.util.FileUtil;
 
 /**
@@ -72,7 +73,7 @@ import org.knime.core.util.FileUtil;
  * @author Benjamin Moser
  */
 @SuppressWarnings("java:S1948")
-public final class ValidatedWorkflowNameField extends JPanel {
+public final class ValidatedWorkflowNameField extends DialogComponent {
 
     private final Optional<JLabel> m_label;
 
@@ -84,28 +85,28 @@ public final class ValidatedWorkflowNameField extends JPanel {
 
     private final GridBagConstraints m_gbc;
 
-    private final SettingsModelString m_model;
-
-    /**
-     * Present iff the current input is invalid. Contains an appropriate error message if so. Updated with each change
-     * to the input field.
-     */
-    private Optional<String> m_errorMsg;
-
-    private final DocumentListener m_inputListener = new DocumentListener() {
+    private final DocumentListener m_inputListener = new DocumentListener() { // NOSONAR
         @Override
         public void insertUpdate(final DocumentEvent e) {
-            onInputChange();
+            update();
         }
 
         @Override
         public void removeUpdate(final DocumentEvent e) {
-            onInputChange();
+            update();
         }
 
         @Override
         public void changedUpdate(final DocumentEvent e) {
-            onInputChange();
+            update();
+        }
+
+        private void update() {
+            try {
+                updateModel();
+            } catch (InvalidSettingsException invalidSettingsException) { // NOSONAR
+            }
+
         }
     };
 
@@ -125,67 +126,59 @@ public final class ValidatedWorkflowNameField extends JPanel {
      */
     public ValidatedWorkflowNameField(final SettingsModelString model, final String labelText,
         final boolean allowEmpty) {
+        super(model);
+        JPanel container = getComponentPanel();
         m_allowEmpty = allowEmpty;
-        m_model = model;
         if (labelText != null) {
             m_label = Optional.of(new JLabel(labelText));
         } else {
             m_label = Optional.empty();
         }
 
-        this.setLayout(new GridBagLayout());
+        container.setLayout(new GridBagLayout());
+
         m_gbc = initGridBagConstraints();
 
-        m_input = new JTextField(m_model.getStringValue());
+        m_input = new JTextField(model.getStringValue());
         m_input.setColumns(15);
         m_input.getDocument().addDocumentListener(m_inputListener);
 
-
         // Add label component if given.
         m_label.ifPresent(label -> {
-            this.add(label, m_gbc);
+            container.add(label, m_gbc);
             m_gbc.gridx++;
         });
 
         // Prepare warning message component.
-        this.add(m_input, m_gbc);
+        container.add(m_input, m_gbc);
         m_warningLabel = new JLabel();
         m_warningLabel.setPreferredSize(new Dimension(350, 15));
         m_warningLabel.setForeground(Color.RED);
         m_gbc.gridy++;
-        this.add(m_warningLabel, m_gbc);
+        container.add(m_warningLabel, m_gbc);
 
-        this.setMaximumSize(new Dimension(Integer.MAX_VALUE, (int)this.getPreferredSize().getHeight()));
+        container.setMaximumSize(new Dimension(Integer.MAX_VALUE, (int)container.getPreferredSize().getHeight()));
         // The ordering here is important.
         m_warningLabel.setVisible(false);
 
-        m_model.addChangeListener(e -> updateEnabledState());
+        model.addChangeListener(e -> setEnabledComponents(model.isEnabled()));
+
+        updateComponent();
     }
 
-    /**
-     * Toggle presentational state of inputs to reflect enabled/disabled state of models.
-     */
-    private void updateEnabledState() {
-        if (m_model.isEnabled()) {
-            m_input.setEnabled(true);
-            m_label.ifPresent(label -> label.setForeground(Color.BLACK));
-            onInputChange(); // trigger validation
-        } else {
-            m_input.setEnabled(false);
-            m_label.ifPresent(label -> label.setForeground(Color.LIGHT_GRAY));
-            clearError(); // do not show error in any case
-        }
-    }
-
-    private void onInputChange() {
-        m_errorMsg = validateCustomWorkflowName(m_input.getText(), m_allowEmpty);
-        if (m_errorMsg.isPresent()) {
-            setError(m_errorMsg.get());
+    private void liveValidateInput() throws InvalidSettingsException {
+        Optional<String> errorMsg = validateCustomWorkflowName(m_input.getText(), m_allowEmpty);
+        if (errorMsg.isPresent()) {
+            setError(errorMsg.get());
+            throw new InvalidSettingsException(errorMsg.get());  // NOSONAR
         } else {
             clearError();
-            // actually update model contents
-            m_model.setStringValue(m_input.getText());
         }
+    }
+
+    private void updateModel() throws InvalidSettingsException {
+        liveValidateInput();
+        ((SettingsModelString)getModel()).setStringValue(m_input.getText());
     }
 
     private static Optional<String> validateCustomWorkflowName(final String name, final boolean allowEmpty) {
@@ -218,37 +211,50 @@ public final class ValidatedWorkflowNameField extends JPanel {
         return gbc;
     }
 
-    /**
-     * Save state of model to the given settings.
-     *
-     * @param settings
-     * @throws InvalidSettingsException
-     */
-    public void saveSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
-        if (m_model.isEnabled() && m_errorMsg.isPresent()) {
-            throw new InvalidSettingsException(m_errorMsg.get());
-        }
-        m_model.saveSettingsTo(settings);
-    }
-
-    /**
-     * Load state of model from the given settings.
-     *
-     * @param settings
-     */
-    public void loadSettingsFrom(final NodeSettingsRO settings) {
-        try {
-            m_model.loadSettingsFrom(settings);
-            updateEnabledState();
-        } catch (InvalidSettingsException e) { // NOSONAR
-            m_model.setStringValue("");
+    @Override
+    protected void validateSettingsBeforeSave() throws InvalidSettingsException {
+        if (getModel().isEnabled()) {
+            updateModel();
         }
     }
 
-    /**
-     * @return The model representing the input state.
-     */
-    public SettingsModelString getModel() {
-        return m_model;
+    @Override
+    protected void checkConfigurabilityBeforeLoad(final PortObjectSpec[] specs) throws NotConfigurableException {
+        // noop
+    }
+
+    @Override
+    protected void setEnabledComponents(final boolean enabled) {
+        if (enabled) {
+            m_input.setEnabled(true);
+            m_label.ifPresent(label -> label.setForeground(Color.BLACK));
+            try {
+                // trigger validation but do not update model
+                liveValidateInput();
+            } catch (InvalidSettingsException e) {  // NOSONAR
+            }
+        } else {
+            m_input.setEnabled(false);
+            m_label.ifPresent(label -> label.setForeground(Color.LIGHT_GRAY));
+            clearError();  // do not show error in any case
+        }
+    }
+
+    @Override
+    public void setToolTipText(final String text) {
+        m_label.ifPresent(c -> c.setToolTipText(text));
+        m_warningLabel.setToolTipText(text);
+        m_input.setToolTipText(text);
+    }
+
+
+    @Override
+    protected void updateComponent() {
+        clearError();
+        final String modelValue = ((SettingsModelString)getModel()).getStringValue();
+        if (!m_input.getText().equals(modelValue)) {
+            m_input.setText(modelValue);
+        }
+        setEnabledComponents(getModel().isEnabled());
     }
 }

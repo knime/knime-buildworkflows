@@ -127,7 +127,7 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         JPanel options = new JPanel();
         options.setLayout(new BoxLayout(options, BoxLayout.PAGE_AXIS));
 
-        options.add(group("Custom workflow name", m_customName));
+        options.add(group("Custom workflow name", m_customName.getComponentPanel()));
         options
             .add(group("Input data", m_addInputDataModel.getComponentPanel(), m_maxNumOfRowsModel.getComponentPanel()));
 
@@ -145,7 +145,7 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
     @Override
     protected void loadSettingsFrom(final NodeSettingsRO settings, final PortObjectSpec[] specs)
         throws NotConfigurableException {
-        m_customName.loadSettingsFrom(settings);
+        m_customName.loadSettingsFrom(settings, specs);
         m_maxNumOfRowsModel.loadSettingsFrom(settings, specs);
         m_addInputDataModel.loadSettingsFrom(settings, specs);
         m_exportAllVariablesModel.loadSettingsFrom(settings, specs);
