@@ -148,7 +148,7 @@ final class WorkflowConnectPanel extends JPanel {
             gbc.gridx = 2;
             selection.add(new JLabel("to"), gbc);
             gbc.gridx = 3;
-            selection.add(new JLabel("Input " + input.getKey()), gbc);
+            selection.add(new JLabel("Input \"" + input.getKey() + "\""), gbc);
         }
 
         add(selection, BorderLayout.WEST);
