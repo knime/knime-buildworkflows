@@ -48,14 +48,15 @@
  */
 package org.knime.buildworkflows.executor;
 
-import static java.util.stream.Collectors.toList;
-
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
@@ -216,7 +217,7 @@ final class WorkflowExecutable {
         // if (portObjectCopies != null) {
         //     removeSuperfluousFileStores(Stream.concat(stream(portObjectCopies), outputData.stream()));
         // }
-        return Pair.create(portObjectCopies, getFlowVariablesFromNC(nnc).collect(toList()));
+        return Pair.create(portObjectCopies, getFlowVariablesFromNC(nnc));
     }
 
     private void executeAndWait(final ExecutionContext exec, final AtomicReference<Exception> exception) {
@@ -269,7 +270,7 @@ final class WorkflowExecutable {
         }
     }
 
-    private static Stream<FlowVariable> getFlowVariablesFromNC(final NodeContainer nc) {
+    private static List<FlowVariable> getFlowVariablesFromNC(final NodeContainer nc) {
         if (nc instanceof SingleNodeContainer) {
             Stream<FlowVariable> res;
             if (nc instanceof NativeNodeContainer) {
@@ -279,9 +280,9 @@ final class WorkflowExecutable {
                 res = ((SingleNodeContainer)nc).createOutFlowObjectStack().getAllAvailableFlowVariables().values()
                     .stream();
             }
-            return res.filter(fv -> fv.getScope() == Scope.Flow);
+            return res.filter(fv -> fv.getScope() == Scope.Flow).collect(Collectors.toList());
         } else {
-            return Stream.empty();
+            return Collections.emptyList();
         }
     }
 
@@ -321,7 +322,12 @@ final class WorkflowExecutable {
         for (int i = 2; i < thisNode.getNrInPorts(); i++) {
             ConnectionContainer cc = wfm.getIncomingConnectionFor(thisNode.getID(), i);
             NodeContainer nc = wfm.getNodeContainer(cc.getSource());
-            getFlowVariablesFromNC(nc).forEach(res::add); // NOSONAR
+            List<FlowVariable> vars = getFlowVariablesFromNC(nc);
+            // reverse the order of the flow variables
+            ListIterator<FlowVariable> reverseIter = vars.listIterator(vars.size());
+            while (reverseIter.hasPrevious()) {
+                res.add(reverseIter.previous());
+            }
         }
         return res;
     }

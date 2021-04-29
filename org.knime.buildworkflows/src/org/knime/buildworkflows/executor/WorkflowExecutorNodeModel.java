@@ -52,6 +52,7 @@ import static java.util.stream.Collectors.toList;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
@@ -116,9 +117,13 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
                 throw new IllegalStateException(message);
             }
 
-            //push flow variables
-            for (FlowVariable fv : output.getSecond()) {
-                pushFlowVariableInternal(fv);
+            // Push flow variables.
+            // Since we push onto a stack, to preserve the order,
+            // we have to push in reverse order.
+            List<FlowVariable> vars = output.getSecond();
+            ListIterator<FlowVariable> reverseIter = vars.listIterator(vars.size());
+            while (reverseIter.hasPrevious()) {
+                pushFlowVariableInternal(reverseIter.previous());
             }
 
             success = true;
