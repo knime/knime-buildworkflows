@@ -68,9 +68,9 @@ final class WorkflowReaderNodeConfig {
 
     private final SettingsModelBoolean m_removeIONodes = new SettingsModelBoolean("remove-io-nodes", false);
 
-    private final SettingsModelString m_inputIdPrefix = new SettingsModelString("input-id-prefix", "input ");
+    private final SettingsModelString m_inputIdPrefix = new SettingsModelString("input-id-prefix", "input");
 
-    private final SettingsModelString m_outputIdPrefix = new SettingsModelString("output-id-prefix", "output ");
+    private final SettingsModelString m_outputIdPrefix = new SettingsModelString("output-id-prefix", "output");
 
     private final SettingsModelWorkflowChooser m_workflowChooser;
 
