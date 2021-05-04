@@ -248,7 +248,6 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
     }
 
     private static File unzipToLocalDir(final InputStream in) throws IOException {
-        // TODO delete tmpDir?
         File tmpDir = null;
         try (ZipInputStream zip = new ZipInputStream(in)) {
             tmpDir = FileUtil.createTempDir("workflow_reader");
@@ -317,9 +316,14 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
                             + poSettings.getReferenceType());
                 }
                 URI uri = poSettings.getUri();
-                URI absoluteDataPath = new File(wfFile, uri.toString().replace("knime://knime.workflow", "")).toURI();
+                File absoluteDataFile =
+                    new File(wfFile, uri.toString().replace("knime://knime.workflow", ""));
+                if (!absoluteDataFile.getCanonicalPath().startsWith(wfFile.getCanonicalPath())) {
+                    throw new IllegalStateException(
+                        "Trying to read in a data file outside of the workflow directory. Not allowed!");
+                }
                 PortObject po;
-                try (InputStream in = absoluteDataPath.toURL().openStream()) {
+                try (InputStream in = absoluteDataFile.toURI().toURL().openStream()) {
                     po = readPortObject(exec, in, poSettings.isTable());
                 }
                 UUID id = UUID.randomUUID();
