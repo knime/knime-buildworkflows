@@ -190,10 +190,13 @@ final class WorkflowExecutable {
      *
      * @param inputData the input data to be used for execution
      * @param exec for cancellation
+     * @param preserveFlowVarOrdering If true, the ordering of flow variables supplied to the executed workflow fragment
+     *            and exported downstream by this node will be the same as the original stack. This is for backwards
+     *            compatibility, before 4.4 the order used to be reversed.
      * @return the resulting port objects and flow variables
      */
-    Pair<PortObject[], List<FlowVariable>> executeWorkflow(final PortObject[] inputData, final ExecutionContext exec)
-        throws Exception { // NOSONAR
+    Pair<PortObject[], List<FlowVariable>> executeWorkflow(final PortObject[] inputData, final ExecutionContext exec,
+        final boolean preserveFlowVarOrdering) throws Exception { // NOSONAR
         NativeNodeContainer virtualInNode = ((NativeNodeContainer)m_wfm.getNodeContainer(m_virtualStartID));
         VirtualParallelizedChunkPortObjectInNodeModel inNM =
             (VirtualParallelizedChunkPortObjectInNodeModel)virtualInNode.getNodeModel();
@@ -201,7 +204,7 @@ final class WorkflowExecutable {
         FlowVirtualScopeContext.registerHostNodeForPortObjectPersistence(m_hostNode, virtualInNode, exec);
 
         inNM.setVirtualNodeInput(new VirtualParallelizedChunkNodeInput(inputData,
-            collectOutputFlowVariablesFromUpstreamNodes(m_hostNode), 0));
+            collectOutputFlowVariablesFromUpstreamNodes(m_hostNode, preserveFlowVarOrdering), 0));
         NativeNodeContainer nnc = (NativeNodeContainer)m_wfm.getNodeContainer(m_virtualEndID);
         VirtualParallelizedChunkPortObjectOutNodeModel outNM =
             (VirtualParallelizedChunkPortObjectOutNodeModel)nnc.getNodeModel();
@@ -315,7 +318,8 @@ final class WorkflowExecutable {
      * Essentially only take the flow variables coming in via the 2nd to nth input port (and ignore flow var (0th)
      * and workflow (1st) port). Otherwise those will always take precedence what we don't want.
      */
-    private static List<FlowVariable> collectOutputFlowVariablesFromUpstreamNodes(final NodeContainer thisNode) {
+    private static List<FlowVariable> collectOutputFlowVariablesFromUpstreamNodes(final NodeContainer thisNode,
+        final boolean preserveFlowVarOrdering) {
         // skip flow var (0th) and workflow (1st) input port
         WorkflowManager wfm = thisNode.getParent();
         List<FlowVariable> res = new ArrayList<>();
@@ -323,10 +327,14 @@ final class WorkflowExecutable {
             ConnectionContainer cc = wfm.getIncomingConnectionFor(thisNode.getID(), i);
             NodeContainer nc = wfm.getNodeContainer(cc.getSource());
             List<FlowVariable> vars = getFlowVariablesFromNC(nc);
-            // reverse the order of the flow variables
-            ListIterator<FlowVariable> reverseIter = vars.listIterator(vars.size());
-            while (reverseIter.hasPrevious()) {
-                res.add(reverseIter.previous());
+            if (preserveFlowVarOrdering) {
+                // reverse the order of the flow variables in order to preserve the original order
+                ListIterator<FlowVariable> reverseIter = vars.listIterator(vars.size());
+                while (reverseIter.hasPrevious()) {
+                    res.add(reverseIter.previous());
+                }
+            } else {
+                res.addAll(vars);
             }
         }
         return res;
