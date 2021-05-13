@@ -195,10 +195,14 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
     private void setError(final String text) {
         m_warningLabel.setText(text);
         m_warningLabel.setVisible(true);
+        if (m_input.getText().trim().isEmpty()) {
+            m_input.setBackground(Color.RED);
+        }
     }
 
     private void clearError() {
         m_warningLabel.setVisible(false);
+        m_input.setBackground(DEFAULT_BG);
     }
 
     private static GridBagConstraints initGridBagConstraints() {
