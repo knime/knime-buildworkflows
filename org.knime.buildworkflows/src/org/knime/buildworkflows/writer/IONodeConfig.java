@@ -146,7 +146,7 @@ abstract class IONodeConfig {
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.gridx = 0;
             gbc.gridy = 0;
-            gbc.anchor = GridBagConstraints.FIRST_LINE_START;
+            gbc.anchor = GridBagConstraints.BASELINE_LEADING;
 
             final JPanel param = new JPanel(new GridBagLayout());
             param.add(new JLabel("Parameter name "), gbc);
