@@ -53,9 +53,11 @@ import java.awt.Insets;
 import java.util.Optional;
 import java.util.regex.Matcher;
 
+import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
@@ -74,6 +76,14 @@ import org.knime.core.util.FileUtil;
  */
 @SuppressWarnings("java:S1948")
 public final class ValidatedWorkflowNameField extends DialogComponent {
+
+    private final static Border DEFAULT_BORDER = new JTextField().getBorder();
+
+    private final static Insets DEFAULT_INSETS = DEFAULT_BORDER.getBorderInsets(new JTextField());
+
+    private final static Border ERROR_BORDER =
+        BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.RED), BorderFactory
+            .createEmptyBorder(DEFAULT_INSETS.top, DEFAULT_INSETS.left, DEFAULT_INSETS.bottom, DEFAULT_INSETS.right));
 
     private final Optional<JLabel> m_label;
 
@@ -196,13 +206,13 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
         m_warningLabel.setText(text);
         m_warningLabel.setVisible(true);
         if (m_input.getText().trim().isEmpty()) {
-            m_input.setBackground(Color.RED);
+            m_input.setBorder(ERROR_BORDER);
         }
     }
 
     private void clearError() {
         m_warningLabel.setVisible(false);
-        m_input.setBackground(DEFAULT_BG);
+        m_input.setBorder(DEFAULT_BORDER);
     }
 
     private static GridBagConstraints initGridBagConstraints() {
