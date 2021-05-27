@@ -116,7 +116,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
 
     private final ValidatedWorkflowNameField m_customName;
 
-    private final StatusView m_workflowNameStatus = new StatusView();
+    private final StatusView m_workflowNameStatus = new StatusView(400);
 
     private final DialogComponentButtonGroup m_existsOption;
 
@@ -145,7 +145,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
                 "Custom workflow name: ", false);
         m_customName.setToolTipText("Name of the workflow directory or file to be written");
         addAdditionalPanel(group("Workflow", m_existsOption.getComponentPanel(), m_originalName.getComponentPanel(),
-            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getLabel()));
+            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getStatusPanel()));
 
         final ButtonGroup group = new ButtonGroup();
 

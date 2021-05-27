@@ -157,7 +157,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         new RemoteFileChooserPanel(getPanel(), "Workflow Group", false, "deploymentTargetHistory",
             RemoteFileChooser.SELECT_DIR, createFlowVariableModel(WORKFLOW_GRP_CFG, StringType.INSTANCE), null);
 
-    private final StatusView m_workflowGrpStatus = new StatusView();
+    private final StatusView m_workflowGrpStatus = new StatusView(400);
 
     private final DialogComponentBoolean m_createParent =
         new DialogComponentBoolean(createCreateParentModel(), "Create missing folders");
@@ -170,7 +170,7 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
     private final DialogComponentString m_customName =
         new DialogComponentString(createCustomNameModel(), "Custom workflow name: ", true, 20);
 
-    private final StatusView m_workflowNameStatus = new StatusView();
+    private final StatusView m_workflowNameStatus = new StatusView(400);
 
     private final DialogComponentButtonGroup m_existsOption =
         new DialogComponentButtonGroup(createExistsOptionModel(), "If exists", false, ExistsOption.values());
@@ -230,10 +230,10 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         folderBox.add(new JLabel("Folder: "));
         folderBox.add(m_workflowGrp.getPanel());
         optionsTab.add(group("Choose folder on KNIME Server", m_info.getComponentPanel(), folderBox,
-            m_createParent.getComponentPanel(), m_workflowGrpStatus.getLabel()));
+            m_createParent.getComponentPanel(), m_workflowGrpStatus.getStatusPanel()));
         optionsTab.add(Box.createVerticalStrut(20));
         optionsTab.add(group("Workflow", m_existsOption.getComponentPanel(), m_originalName.getComponentPanel(),
-            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getLabel()));
+            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getStatusPanel()));
         optionsTab.add(Box.createVerticalStrut(20));
         optionsTab.add(
             group("Deployment options", m_createSnapshot.getComponentPanel(), m_snapshotMessage.getComponentPanel()));
