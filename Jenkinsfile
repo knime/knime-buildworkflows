@@ -28,6 +28,7 @@ try {
 			            "knime-datageneration",
 			            "knime-ensembles",
 			            "knime-filehandling",
+			            "knime-kerberos",
 			            "knime-javasnippet",
 			            "knime-jep",
 			            "knime-js-base",
