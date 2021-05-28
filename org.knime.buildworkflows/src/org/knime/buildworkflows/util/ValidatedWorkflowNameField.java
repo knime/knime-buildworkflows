@@ -46,7 +46,6 @@
 package org.knime.buildworkflows.util;
 
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -54,6 +53,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -67,6 +67,9 @@ import org.knime.core.node.defaultnodesettings.DialogComponent;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.util.FileUtil;
+import org.knime.filehandling.core.defaultnodesettings.status.DefaultStatusMessage;
+import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage;
+import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
 
 /**
  * Component that provides a text field that is validated on each keystroke. If validation fails, the input field is
@@ -77,13 +80,13 @@ import org.knime.core.util.FileUtil;
 @SuppressWarnings("java:S1948")
 public final class ValidatedWorkflowNameField extends DialogComponent {
 
-    private final static Border DEFAULT_BORDER = new JTextField().getBorder();
+    private static final Border DEFAULT_BORDER = new JTextField().getBorder();
 
-    private final static Insets DEFAULT_INSETS = DEFAULT_BORDER.getBorderInsets(new JTextField());
+    private static final Insets DEFAULT_INSETS = DEFAULT_BORDER.getBorderInsets(new JTextField());
 
-    private final static Border ERROR_BORDER =
-        BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.RED), BorderFactory
-            .createEmptyBorder(DEFAULT_INSETS.top, DEFAULT_INSETS.left, DEFAULT_INSETS.bottom, DEFAULT_INSETS.right));
+    private static final Border ERROR_BORDER =
+        BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.RED), BorderFactory.createEmptyBorder(
+            DEFAULT_INSETS.top - 1, DEFAULT_INSETS.left - 1, DEFAULT_INSETS.bottom - 1, DEFAULT_INSETS.right - 1));
 
     private final Optional<JLabel> m_label;
 
@@ -91,7 +94,7 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
 
     private final JTextField m_input;
 
-    private final JLabel m_warningLabel;
+    private final StatusView m_status;
 
     private final GridBagConstraints m_gbc;
 
@@ -152,6 +155,7 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
         m_input = new JTextField(model.getStringValue());
         m_input.setColumns(15);
         m_input.getDocument().addDocumentListener(m_inputListener);
+        m_input.setBorder(DEFAULT_BORDER);
 
         // Add label component if given.
         m_label.ifPresent(label -> {
@@ -159,17 +163,17 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
             m_gbc.gridx++;
         });
 
-        // Prepare warning message component.
         container.add(m_input, m_gbc);
-        m_warningLabel = new JLabel();
-        m_warningLabel.setPreferredSize(new Dimension(350, 15));
-        m_warningLabel.setForeground(Color.RED);
-        m_gbc.gridy++;
-        container.add(m_warningLabel, m_gbc);
 
-        container.setMaximumSize(new Dimension(Integer.MAX_VALUE, (int)container.getPreferredSize().getHeight()));
-        // The ordering here is important.
-        m_warningLabel.setVisible(false);
+        // Prepare warning message component.
+        final JPanel status = new JPanel(new GridBagLayout());
+        m_status = new StatusView();
+        final JLabel statusLabel = m_status.getLabel();
+        status.add(statusLabel, m_gbc);
+        m_gbc.gridy++;
+        container.add(status, m_gbc);
+
+        container.add(Box.createVerticalGlue());
 
         model.addChangeListener(e -> setEnabledComponents(model.isEnabled()));
 
@@ -180,7 +184,7 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
         Optional<String> errorMsg = validateCustomWorkflowName(m_input.getText(), m_allowEmpty);
         if (errorMsg.isPresent()) {
             setError(errorMsg.get());
-            throw new InvalidSettingsException(errorMsg.get());  // NOSONAR
+            throw new InvalidSettingsException(errorMsg.get()); // NOSONAR
         } else {
             clearError();
         }
@@ -203,15 +207,12 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
     }
 
     private void setError(final String text) {
-        m_warningLabel.setText(text);
-        m_warningLabel.setVisible(true);
-        if (m_input.getText().trim().isEmpty()) {
-            m_input.setBorder(ERROR_BORDER);
-        }
+        m_input.setBorder(ERROR_BORDER);
+        m_status.setStatus(new DefaultStatusMessage(StatusMessage.MessageType.ERROR, text));
     }
 
     private void clearError() {
-        m_warningLabel.setVisible(false);
+        m_status.clearStatus();
         m_input.setBorder(DEFAULT_BORDER);
     }
 
@@ -245,22 +246,21 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
             try {
                 // trigger validation but do not update model
                 liveValidateInput();
-            } catch (InvalidSettingsException e) {  // NOSONAR
+            } catch (InvalidSettingsException e) { // NOSONAR
             }
         } else {
             m_input.setEnabled(false);
             m_label.ifPresent(label -> label.setForeground(Color.LIGHT_GRAY));
-            clearError();  // do not show error in any case
+            clearError(); // do not show error in any case
         }
     }
 
     @Override
     public void setToolTipText(final String text) {
         m_label.ifPresent(c -> c.setToolTipText(text));
-        m_warningLabel.setToolTipText(text);
         m_input.setToolTipText(text);
+        m_status.getLabel().setToolTipText(text);
     }
-
 
     @Override
     protected void updateComponent() {
