@@ -145,7 +145,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
                 "Custom workflow name: ", false);
         m_customName.setToolTipText("Name of the workflow directory or file to be written");
         addAdditionalPanel(group("Workflow", m_existsOption.getComponentPanel(), m_originalName.getComponentPanel(),
-            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getStatusPanel()));
+            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getPanel()));
 
         final ButtonGroup group = new ButtonGroup();
 

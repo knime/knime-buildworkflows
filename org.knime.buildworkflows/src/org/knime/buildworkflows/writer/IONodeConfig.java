@@ -160,7 +160,7 @@ abstract class IONodeConfig {
 
             final JPanel status = new JPanel(new GridBagLayout());
             m_status = new StatusView(400);
-            final JPanel statusLabel = m_status.getStatusPanel();
+            final JPanel statusLabel = m_status.getPanel();
             status.add(statusLabel, gbc);
             gbc.gridy++;
             m_panel.add(status, gbc);

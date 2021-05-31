@@ -230,10 +230,10 @@ final class DeployWorkflowNodeDialog extends NodeDialogPane {
         folderBox.add(new JLabel("Folder: "));
         folderBox.add(m_workflowGrp.getPanel());
         optionsTab.add(group("Choose folder on KNIME Server", m_info.getComponentPanel(), folderBox,
-            m_createParent.getComponentPanel(), m_workflowGrpStatus.getStatusPanel()));
+            m_createParent.getComponentPanel(), m_workflowGrpStatus.getPanel()));
         optionsTab.add(Box.createVerticalStrut(20));
         optionsTab.add(group("Workflow", m_existsOption.getComponentPanel(), m_originalName.getComponentPanel(),
-            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getStatusPanel()));
+            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getPanel()));
         optionsTab.add(Box.createVerticalStrut(20));
         optionsTab.add(
             group("Deployment options", m_createSnapshot.getComponentPanel(), m_snapshotMessage.getComponentPanel()));
