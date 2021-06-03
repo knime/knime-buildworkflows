@@ -201,10 +201,12 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
     private static Optional<String> validateCustomWorkflowName(final String name, final boolean allowEmpty) {
         if (!allowEmpty && name.trim().isEmpty()) {
             return Optional.of("Custom workflow name is empty.");
+
         }
         final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
         if (matcher.find()) {
-            return Optional.of(String.format("Illegal character at index %d.", matcher.start()));
+            return Optional
+                .of("<html>Name must not contain either of " + listChars(FileUtil.ILLEGAL_FILENAME_CHARS) + "</html>");
         }
         return Optional.empty();
     }
@@ -274,4 +276,33 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
         }
         setEnabledComponents(getModel().isEnabled());
     }
+
+    /**
+     * Given a String, list each character of that string in a human-readable, formatted string.
+     *
+     * @param chars A string containing the characters to be listed.
+     * @return A HTML-formatted string listing the given characters.
+     */
+    private static String listChars(final String chars) {
+        StringBuilder res = new StringBuilder();
+        for (int i = 0; i < chars.length(); i++) {
+            String curChar = chars.substring(i, i + 1);
+            // Printing `<` or `>` in JLabels that already use HTML formatting is problematic.
+            if (curChar.equals("<")) {
+                curChar = "&lt;";
+            }
+            if (curChar.equals(">")) {
+                curChar = "&gt;";
+            }
+            res.append("<code>" + curChar + "</code>");
+            if (i < chars.length() - 2) {
+                res.append(", ");
+            }
+            if (i == chars.length() - 2) {
+                res.append(" or ");
+            }
+        }
+        return res.toString();
+    }
+
 }
