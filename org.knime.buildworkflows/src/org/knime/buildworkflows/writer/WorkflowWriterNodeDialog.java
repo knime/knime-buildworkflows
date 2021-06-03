@@ -142,7 +142,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         m_originalName = new DialogComponentLabel(" ");
         m_useCustomName = new DialogComponentBoolean(config.isUseCustomName(), "Use custom workflow name");
         m_customName = new ValidatedWorkflowNameField(config.getCustomName(),
-                "Custom workflow name: ", false);
+                "Custom workflow name", false);
         m_customName.setToolTipText("Name of the workflow directory or file to be written");
         addAdditionalPanel(group("Workflow", m_existsOption.getComponentPanel(), m_originalName.getComponentPanel(),
             m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getPanel()));

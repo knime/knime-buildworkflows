@@ -159,7 +159,10 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
 
         // Add label component if given.
         m_label.ifPresent(label -> {
-            container.add(label, m_gbc);
+            JPanel labelContainer = new JPanel();
+            labelContainer.add(label);
+            labelContainer.add(Box.createHorizontalStrut(0));
+            container.add(labelContainer, m_gbc);
             m_gbc.gridx++;
         });
 
