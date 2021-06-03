@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -96,15 +97,16 @@ class InputOutputIDsPanel extends JPanel {
         GridBagConstraints c = new GridBagConstraints();
         c.gridwidth = 1;
         c.weightx = 1;
+        c.weighty = 0;
         c.anchor = GridBagConstraints.FIRST_LINE_START;
         List<JTextField> res = new ArrayList<>(ids.size());
         int i = 1;
         for (String id : ids) {
-            c.insets = new Insets(15, 0, 0, 0);
+            c.insets = new Insets(7, 0, 0, 0);
             c.gridy++;
             JLabel jLabel = new JLabel(label + " [" + i + "]");
             p.add(jLabel, c);
-            c.insets = new Insets(0, 0, 0, 0);
+            c.insets = new Insets(0, 0, 7, 0);
             JTextField text = new JTextField(12);
             text.setText(id);
             c.gridy++;
@@ -112,6 +114,9 @@ class InputOutputIDsPanel extends JPanel {
             res.add(text);
             i++;
         }
+        c.gridy++;
+        c.weighty = 1;
+        p.add(Box.createHorizontalGlue(), c);
         return res;
     }
 
