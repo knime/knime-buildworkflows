@@ -46,6 +46,7 @@
 package org.knime.buildworkflows.util;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -142,35 +143,39 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
 
         m_gbc = initGridBagConstraints();
 
-        m_input = new JTextField(model.getStringValue());
-        m_input.setColumns(15);
-        m_input.getDocument().addDocumentListener(m_inputListener);
-        m_input.setBorder(DEFAULT_BORDER);
-
         // Add label component if given.
         m_label.ifPresent(label -> {
             JPanel labelContainer = new JPanel();
             labelContainer.add(label);
             labelContainer.add(Box.createHorizontalStrut(0));
+            labelContainer.setAlignmentY(1);
+            m_gbc.weightx = 0;
             container.add(labelContainer, m_gbc);
             m_gbc.gridx++;
         });
 
+        // Add input field
+        m_gbc.weightx = 1; // 2nc col has weightx 1, others 0
+        m_input = new JTextField(model.getStringValue());
+        m_input.setColumns(15);
+        m_input.getDocument().addDocumentListener(m_inputListener);
+        m_input.setBorder(DEFAULT_BORDER);
+        m_input.setMinimumSize(m_input.getPreferredSize());
         container.add(m_input, m_gbc);
 
-        // Prepare warning message component.
-        final JPanel status = new JPanel(new GridBagLayout());
+        // Add status
+        m_gbc.insets = new Insets(0,0,0,0);
         m_status = new StatusView();
         final JLabel statusLabel = m_status.getLabel();
-        status.add(statusLabel, m_gbc);
+        statusLabel.setMinimumSize(new Dimension(220, 30));
         m_gbc.gridy++;
-        container.add(status, m_gbc);
-
-        container.add(Box.createVerticalGlue());
+        m_gbc.weighty = 1; // 2nd row has weighty 1, others 0
+        container.add(statusLabel, m_gbc);
 
         model.addChangeListener(e -> setEnabledComponents(model.isEnabled()));
 
         updateComponent();
+
     }
 
     private void liveValidateInput() {
@@ -194,16 +199,17 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
     }
 
     private void clearError() {
-        m_status.clearStatus();
         m_input.setBorder(DEFAULT_BORDER);
+        m_status.clearStatus();
     }
 
     private static GridBagConstraints initGridBagConstraints() {
         final GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = gbc.gridy = 0;
-        gbc.weightx = gbc.weighty = 1;
+        gbc.weightx = gbc.weighty = 0;
+        gbc.weighty = 0;
         gbc.fill = GridBagConstraints.VERTICAL;
-        gbc.anchor = GridBagConstraints.FIRST_LINE_START;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
         gbc.insets = new Insets(5, 0, 5, 0);
         return gbc;
     }
