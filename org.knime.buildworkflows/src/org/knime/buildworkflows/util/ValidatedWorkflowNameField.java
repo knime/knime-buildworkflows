@@ -46,7 +46,6 @@
 package org.knime.buildworkflows.util;
 
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -164,10 +163,9 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
         container.add(m_input, m_gbc);
 
         // Add status
-        m_gbc.insets = new Insets(0,0,0,0);
-        m_status = new StatusView();
-        final JLabel statusLabel = m_status.getLabel();
-        statusLabel.setMinimumSize(new Dimension(220, 30));
+        m_gbc.insets = new Insets(5,0,10,0);
+        m_status = new StatusView(280);
+        final JPanel statusLabel = m_status.getPanel();
         m_gbc.gridy++;
         m_gbc.weighty = 1; // 2nd row has weighty 1, others 0
         container.add(statusLabel, m_gbc);
@@ -243,7 +241,7 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
     public void setToolTipText(final String text) {
         m_label.ifPresent(c -> c.setToolTipText(text));
         m_input.setToolTipText(text);
-        m_status.getLabel().setToolTipText(text);
+        // m_status.getPanel().setToolTipText(text);
     }
 
     @Override

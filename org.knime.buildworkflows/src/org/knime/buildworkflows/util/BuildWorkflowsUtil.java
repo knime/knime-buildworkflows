@@ -109,14 +109,8 @@ public class BuildWorkflowsUtil {
         final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
         if (matcher.find()) {
             StringBuilder res = new StringBuilder();
-            if (doFormat) {
-                res.append("<html>");
-            }
             res.append("Custom workflow name must not contain either of ")
                 .append(listChars(FileUtil.ILLEGAL_FILENAME_CHARS, doFormat));
-            if (doFormat) {
-                res.append("</html>");
-            }
             return Optional.of(res.toString());
         }
         return Optional.empty();

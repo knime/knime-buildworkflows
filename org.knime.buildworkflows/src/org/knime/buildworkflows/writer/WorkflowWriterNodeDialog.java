@@ -50,7 +50,6 @@ package org.knime.buildworkflows.writer;
 
 import java.awt.Component;
 import java.awt.Dimension;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
@@ -71,15 +70,10 @@ import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
 import org.knime.core.node.defaultnodesettings.DialogComponentButtonGroup;
 import org.knime.core.node.defaultnodesettings.DialogComponentLabel;
-import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
-import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
-import org.knime.filehandling.core.defaultnodesettings.status.DefaultStatusMessage;
-import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage;
-import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDialog;
 
 /**
@@ -116,8 +110,6 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
 
     private final ValidatedWorkflowNameField m_customName;
 
-    private final StatusView m_workflowNameStatus = new StatusView(400);
-
     private final DialogComponentButtonGroup m_existsOption;
 
     private final DialogComponentIONodes m_ioNodes;
@@ -129,9 +121,6 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
     private final JRadioButton m_openButton;
 
     private final JRadioButton m_exportButton;
-
-    // lazily initialized
-    private ChangeListener m_workflowNameChangeListener;
 
     WorkflowWriterNodeDialog(final NodeCreationConfiguration creationConfig, final String fileChooserHistoryId) {
         super(new WorkflowWriterNodeConfig(creationConfig), fileChooserHistoryId);
@@ -145,7 +134,7 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
                 "Custom workflow name", false);
         m_customName.setToolTipText("Name of the workflow directory or file to be written");
         addAdditionalPanel(group("Workflow", m_existsOption.getComponentPanel(), m_originalName.getComponentPanel(),
-            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel(), m_workflowNameStatus.getPanel()));
+            m_useCustomName.getComponentPanel(), m_customName.getComponentPanel()));
 
         final ButtonGroup group = new ButtonGroup();
 
@@ -224,23 +213,5 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         m_ioNodes.loadSettingsFrom(settings, specs);
 
         config.getCustomName().setEnabled(config.isUseCustomName().getBooleanValue());
-        updateWorkflowNameStatus(portObjectSpec);
-
-        if (m_workflowNameChangeListener == null) {
-            m_workflowNameChangeListener = e -> updateWorkflowNameStatus(portObjectSpec);
-            m_useCustomName.getModel().addChangeListener(m_workflowNameChangeListener);
-            m_customName.getModel().addChangeListener(m_workflowNameChangeListener);
-        }
-    }
-
-    private void updateWorkflowNameStatus(final WorkflowPortObjectSpec portObjectSpec) {
-        final Optional<String> err = WorkflowWriterNodeModel.validateWorkflowName(portObjectSpec,
-            ((SettingsModelBoolean)m_useCustomName.getModel()).getBooleanValue(),
-                ((SettingsModelString)m_customName.getModel()).getStringValue());
-        if (err.isPresent()) {
-            m_workflowNameStatus.setStatus(new DefaultStatusMessage(StatusMessage.MessageType.ERROR, err.get()));
-        } else {
-            m_workflowNameStatus.clearStatus();
-        }
     }
 }
