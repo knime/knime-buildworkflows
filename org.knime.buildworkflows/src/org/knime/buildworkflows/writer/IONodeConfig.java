@@ -291,7 +291,7 @@ abstract class IONodeConfig {
 
     void validateSettings() throws InvalidSettingsException {
         String param = getParameterName();
-        CheckUtils.checkSetting(StringUtils.isNotEmpty(param), "parameter name must not be null or empty");
+        CheckUtils.checkSetting(StringUtils.isNotEmpty(param), "Parameter name must not be empty");
         CheckUtils.checkSetting(DialogNode.PARAMETER_NAME_PATTERN.matcher(param).matches(),
             "Parameter doesn't match pattern - must start with character, followed by other characters, digits, "
                 + "or single dashes or underscores:\n  Input: %s\n  Pattern: %s",
