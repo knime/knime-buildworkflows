@@ -65,11 +65,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.knime.buildworkflows.ExistsOption;
+import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.container.DataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
@@ -364,14 +364,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
     public static Optional<String> validateWorkflowName(final WorkflowPortObjectSpec portObjectSpec,
         final boolean useCustomName, final String customName) {
         if (useCustomName) {
-            if (customName.trim().isEmpty()) {
-                return Optional.of("Custom workflow name is empty.");
-            }
-            final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(customName);
-            if (matcher.find()) {
-                return Optional.of(String.format("Illegal character in custom workflow name \"%s\" at index %d.",
-                    customName, matcher.start()));
-            }
+            return BuildWorkflowsUtil.validateCustomWorkflowName(customName, false, false);
         } else if (determineWorkflowName(portObjectSpec).isEmpty()) {
             return Optional.of("Default workflow name is empty. Consider using a custom workflow name.");
         }

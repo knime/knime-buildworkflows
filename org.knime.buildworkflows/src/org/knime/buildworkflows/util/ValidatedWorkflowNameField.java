@@ -50,7 +50,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.util.Optional;
-import java.util.regex.Matcher;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -66,7 +65,6 @@ import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.defaultnodesettings.DialogComponent;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.util.FileUtil;
 import org.knime.filehandling.core.defaultnodesettings.status.DefaultStatusMessage;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
@@ -101,25 +99,17 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
     private final DocumentListener m_inputListener = new DocumentListener() { // NOSONAR
         @Override
         public void insertUpdate(final DocumentEvent e) {
-            update();
+            updateModel();
         }
 
         @Override
         public void removeUpdate(final DocumentEvent e) {
-            update();
+            updateModel();
         }
 
         @Override
         public void changedUpdate(final DocumentEvent e) {
-            update();
-        }
-
-        private void update() {
-            try {
-                updateModel();
-            } catch (InvalidSettingsException invalidSettingsException) { // NOSONAR
-            }
-
+            updateModel();
         }
     };
 
@@ -183,32 +173,19 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
         updateComponent();
     }
 
-    private void liveValidateInput() throws InvalidSettingsException {
-        Optional<String> errorMsg = validateCustomWorkflowName(m_input.getText(), m_allowEmpty);
+    private void liveValidateInput() {
+        Optional<String> errorMsg =
+            BuildWorkflowsUtil.validateCustomWorkflowName(m_input.getText(), m_allowEmpty, true);
         if (errorMsg.isPresent()) {
             setError(errorMsg.get());
-            throw new InvalidSettingsException(errorMsg.get()); // NOSONAR
         } else {
             clearError();
         }
     }
 
-    private void updateModel() throws InvalidSettingsException {
+    private void updateModel() {
         liveValidateInput();
         ((SettingsModelString)getModel()).setStringValue(m_input.getText());
-    }
-
-    private static Optional<String> validateCustomWorkflowName(final String name, final boolean allowEmpty) {
-        if (!allowEmpty && name.trim().isEmpty()) {
-            return Optional.of("Custom workflow name is empty.");
-
-        }
-        final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
-        if (matcher.find()) {
-            return Optional
-                .of("<html>Name must not contain either of " + listChars(FileUtil.ILLEGAL_FILENAME_CHARS) + "</html>");
-        }
-        return Optional.empty();
     }
 
     private void setError(final String text) {
@@ -248,11 +225,7 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
         if (enabled) {
             m_input.setEnabled(true);
             m_label.ifPresent(label -> label.setForeground(Color.BLACK));
-            try {
-                // trigger validation but do not update model
-                liveValidateInput();
-            } catch (InvalidSettingsException e) { // NOSONAR
-            }
+            liveValidateInput(); // trigger validation but do not update model
         } else {
             m_input.setEnabled(false);
             m_label.ifPresent(label -> label.setForeground(Color.LIGHT_GRAY));
@@ -276,33 +249,4 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
         }
         setEnabledComponents(getModel().isEnabled());
     }
-
-    /**
-     * Given a String, list each character of that string in a human-readable, formatted string.
-     *
-     * @param chars A string containing the characters to be listed.
-     * @return A HTML-formatted string listing the given characters.
-     */
-    private static String listChars(final String chars) {
-        StringBuilder res = new StringBuilder();
-        for (int i = 0; i < chars.length(); i++) {
-            String curChar = chars.substring(i, i + 1);
-            // Printing `<` or `>` in JLabels that already use HTML formatting is problematic.
-            if (curChar.equals("<")) {
-                curChar = "&lt;";
-            }
-            if (curChar.equals(">")) {
-                curChar = "&gt;";
-            }
-            res.append("<code>" + curChar + "</code>");
-            if (i < chars.length() - 2) {
-                res.append(", ");
-            }
-            if (i == chars.length() - 2) {
-                res.append(" or ");
-            }
-        }
-        return res.toString();
-    }
-
 }

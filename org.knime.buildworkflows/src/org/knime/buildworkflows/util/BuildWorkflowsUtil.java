@@ -48,6 +48,10 @@
  */
 package org.knime.buildworkflows.util;
 
+import java.util.Optional;
+import java.util.regex.Matcher;
+
+import org.knime.core.util.FileUtil;
 import org.knime.core.util.Pair;
 
 /**
@@ -88,4 +92,70 @@ public class BuildWorkflowsUtil {
         return Pair.create(x_pos, y_pos);
     }
 
+    /**
+     * Validate a custom workflow name and return an appropriate error message if invalid.
+     *
+     * @since 4.4
+     * @param name The workflow name to validate
+     * @param allowEmpty If the workflow name can be empty
+     * @param doFormat If the message should be HTML-formatted (e.g. for display in dialog)
+     * @return
+     */
+    public static Optional<String> validateCustomWorkflowName(final String name, final boolean allowEmpty,
+        final boolean doFormat) {
+        if (!allowEmpty && name.trim().isEmpty()) {
+            return Optional.of("Custom workflow name is empty");
+        }
+        final Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
+        if (matcher.find()) {
+            StringBuilder res = new StringBuilder();
+            if (doFormat) {
+                res.append("<html>");
+            }
+            res.append("Custom workflow name must not contain either of ")
+                .append(listChars(FileUtil.ILLEGAL_FILENAME_CHARS, doFormat));
+            if (doFormat) {
+                res.append("</html>");
+            }
+            return Optional.of(res.toString());
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Given a String, list each character of that string in a human-readable, formatted string.
+     *
+     * @since 4.4
+     * @param chars A string containing the characters to be listed.
+     * @return A HTML-formatted string listing the given characters.
+     */
+    private static String listChars(final String chars, final boolean doFormat) {
+        StringBuilder res = new StringBuilder();
+        for (int i = 0; i < chars.length(); i++) {
+            String curChar = chars.substring(i, i + 1);
+            if (doFormat) {
+                // Printing `<` or `>` in JLabels that already use HTML formatting is problematic.
+                if (curChar.equals("<")) {
+                    curChar = "&lt;";
+                }
+                if (curChar.equals(">")) {
+                    curChar = "&gt;";
+                }
+            }
+            if (doFormat) {
+                res.append("<code>");
+            }
+            res.append(curChar);
+            if (doFormat) {
+                res.append("</code>");
+            }
+            if (i < chars.length() - 2) {
+                res.append(", ");
+            }
+            if (i == chars.length() - 2) {
+                res.append(" or ");
+            }
+        }
+        return res.toString();
+    }
 }

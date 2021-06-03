@@ -55,8 +55,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTable;
 import org.knime.core.data.container.CloseableRowIterator;
 import org.knime.core.data.container.filter.TableFilter;
@@ -151,6 +153,14 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         }
         removeSegment();
         m_lastSegment = wfs;
+
+        if (getCustomWorkflowName() != null) {
+            Optional<String> err = BuildWorkflowsUtil.validateCustomWorkflowName(getCustomWorkflowName(), true, false);
+            if (err.isPresent()) {
+                throw new InvalidSettingsException(err.get());
+            }
+        }
+
         final WorkflowPortObjectSpec spec =
             new WorkflowPortObjectSpec(wfs, getCustomWorkflowName(), m_inputIDs, m_outputIDs);
         return Stream.concat(Arrays.stream(inSpecs), Stream.of(spec)).toArray(PortObjectSpec[]::new);
