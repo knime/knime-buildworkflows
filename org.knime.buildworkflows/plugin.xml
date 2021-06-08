@@ -5,62 +5,62 @@
 		<category
 			description="Nodes that capture and write workflows for continuous and Integrated Deployment."
 			icon="icons/capture.png" level-id="captureworkflows"
-			name="Integrated Deployment" path="/labs">
+			name="Integrated Deployment" path="/flowabstraction">
 		</category>
 	</extension>
  <extension
        point="org.knime.workbench.repository.nodes">
     <node
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           factory-class="org.knime.buildworkflows.capture.start.CaptureWorkflowStartNodeFactory">
     </node>
     <node
           after="org.knime.buildworkflows.capture.start.CaptureWorkflowStartNodeFactory"
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           factory-class="org.knime.buildworkflows.capture.end.CaptureWorkflowEndNodeFactory">
     </node>
     <node
           after="org.knime.buildworkflows.capture.end.CaptureWorkflowEndNodeFactory"
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           factory-class="org.knime.buildworkflows.combiner.WorkflowCombinerNodeFactory">
     </node>
     <node
           after="org.knime.buildworkflows.combiner.WorkflowCombinerNodeFactory"
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           deprecated="true"
           factory-class="org.knime.buildworkflows.writer.WorkflowWriterNodeFactory">
     </node>
     <node
           after="org.knime.buildworkflows.combiner.WorkflowCombinerNodeFactory"
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           factory-class="org.knime.buildworkflows.writer.WorkflowWriter2NodeFactory">
     </node>
     <node
           after="org.knime.buildworkflows.writer.WorkflowWriter2NodeFactory"
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           deprecated="true"
           factory-class="org.knime.buildworkflows.deploy.DeployWorkflowNodeFactory">
     </node>
     <node
           after="org.knime.buildworkflows.writer.WorkflowWriter2NodeFactory"
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           deprecated="true"
           factory-class="org.knime.buildworkflows.deploy.DeployWorkflow2NodeFactory">
     </node>
     <node
           after="org.knime.buildworkflows.writer.WorkflowWriter2NodeFactory"
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           deprecated="false"
           factory-class="org.knime.buildworkflows.deploy.DeployWorkflow3NodeFactory"
           hidden="false">
     </node>
     <node
           after="org.knime.buildworkflows.deploy.DeployWorkflow3NodeFactory"
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           factory-class="org.knime.buildworkflows.executor.WorkflowExecutorNodeFactory">
     </node>
     <node
-          category-path="/labs/captureworkflows"
+          category-path="/flowabstraction/captureworkflows"
           deprecated="false"
           factory-class="org.knime.buildworkflows.reader.WorkflowReaderNodeFactory"
           hidden="false">
