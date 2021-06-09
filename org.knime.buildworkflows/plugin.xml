@@ -65,5 +65,11 @@
           factory-class="org.knime.buildworkflows.reader.WorkflowReaderNodeFactory"
           hidden="false">
     </node>
+    <node
+       category-path="/flowabstraction/captureworkflows"
+       deprecated="false"
+       factory-class="org.knime.buildworkflows.summaryextractor.WorkflowSummaryExtractorNodeFactory"
+       hidden="false">
+ </node>
  </extension>
 </fragment>

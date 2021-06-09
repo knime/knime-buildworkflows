@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE knimeNode PUBLIC "-//UNIKN//DTD KNIME Node 2.0//EN" "http://www.knime.org/Node.dtd">
+<knimeNode type="Manipulator" icon="./workflow_summary_extractor.png">
+	<name>Workflow Summary Extractor</name>
+
+	<shortDescription>
+		Extracts a workflow summary from a workflow port object as a XML or JSON document.
+	</shortDescription>
+
+	<fullDescription>
+		<intro>
+			This node generates a workflow summary document in either XML or JSON
+			format and stores it in the output table.
+			The workflow summary document serves as a detailed structured description of
+			a workflow including it's structure, configuration,
+			port specifications, node &amp; workflow annotations, and more.
+		</intro>
+		<option name="Output format">
+			The output format in which to generate the summary. Valid values are
+			either <i>JSON</i> or <i>XML.</i>
+		</option>
+		<option name="Column name">
+			The name of the column the summary is saved in. (The name of the row
+			is always &#8220;summary&#8221;.)
+		</option>
+	</fullDescription>
+
+	<ports>
+		<inPort index="0" name="Workflow">The workflow to create the summary for</inPort>
+		<outPort index="0" name="Summary">
+				The table with a single cell containing the workflow summary
+		</outPort>
+	</ports>
+</knimeNode>
