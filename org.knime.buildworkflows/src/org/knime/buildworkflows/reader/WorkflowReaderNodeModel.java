@@ -162,7 +162,10 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         File wfFile = toLocalWorkflowDir(inputPath);
         exec.setProgress("Reading workflow");
         WorkflowManager wfm = readWorkflow(wfFile, exec);
-        wfm.resetAndConfigureAll();
+        if (wfm.canResetAll()) {
+            setWarningMessage("The read workflow contains executed nodes which have been reset");
+            wfm.resetAndConfigureAll();
+        }
 
         String customWorkflowName = m_config.getWorkflowName().getStringValue();
         if (!StringUtils.isBlank(customWorkflowName)) {
@@ -222,7 +225,9 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
             throw new IOException(
                 "Errors reading workflow: " + loadResult.getFilteredError("", LoadResultEntryType.Ok));
         } else {
-            if (loadResult.getType() != LoadResultEntryType.Ok) {
+            if (loadResult.getType() != LoadResultEntryType.Ok
+                // we accept data load errors since the workflow manager is reset anyway (i.e. loaded without data)
+                && loadResult.getType() != LoadResultEntryType.DataLoadError) {
                 WorkflowManager.EXTRACTED_WORKFLOW_ROOT.removeProject(m.getID());
                 NodeLogger.getLogger(WorkflowReaderNodeModel.class)
                     .error("Workflow couldn't be loaded.\n" + loadResult);
