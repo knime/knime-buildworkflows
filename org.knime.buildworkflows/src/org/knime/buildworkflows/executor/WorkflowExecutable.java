@@ -48,6 +48,8 @@
  */
 package org.knime.buildworkflows.executor;
 
+import static org.knime.buildworkflows.util.BuildWorkflowsUtil.loadWorkflow;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +57,7 @@ import java.util.ListIterator;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -107,16 +110,17 @@ final class WorkflowExecutable {
     private NodeID m_virtualEndID;
 
     /**
-     * @param wf the workflow segment to execute
+     * @param ws the workflow segment to execute
      * @param workflowName the name of the metanode to be created (which will only be visible if 'debug' is
      *            <code>true</code>)
      * @param hostNode the node which is responsible for the execution of the workflow segment (which provides the
      *            input and receives the output data, supplies the file store, etc.)
      * @param debug if <code>true</code> the metanode the workflow segment is executed in, will be visible (for
      *            debugging purposes), if <code>false</code> it's hidden
+     * @param warningConsumer callback for warning if there have while loading the workflow from the workflow segment
      */
-    WorkflowExecutable(final WorkflowSegment wf, final String workflowName, final NodeContainer hostNode,
-        final boolean debug) {
+    WorkflowExecutable(final WorkflowSegment ws, final String workflowName, final NodeContainer hostNode,
+        final boolean debug, final Consumer<String> warningConsumer) {
         m_hostNode = (NativeNodeContainer)hostNode;
         m_wfm = hostNode.getParent().createAndAddSubWorkflow(new PortType[0], new PortType[0],
             (debug ? "Debug: " : "") + workflowName);
@@ -133,12 +137,12 @@ final class WorkflowExecutable {
         }
 
         // copy workflow segment into metanode
-        WorkflowManager segmentWorkflow = wf.loadWorkflow();
+        WorkflowManager segmentWorkflow = loadWorkflow(ws, warningConsumer);
         NodeID[] ids = segmentWorkflow.getNodeContainers().stream().map(NodeContainer::getID).toArray(NodeID[]::new);
         m_wfm.copyFromAndPasteHere(segmentWorkflow, WorkflowCopyContent.builder().setNodeIDs(ids).build());
-        wf.disposeWorkflow();
+        ws.disposeWorkflow();
 
-        addVirtualIONodes(wf);
+        addVirtualIONodes(ws);
     }
 
     private void addVirtualIONodes(final WorkflowSegment wf) {

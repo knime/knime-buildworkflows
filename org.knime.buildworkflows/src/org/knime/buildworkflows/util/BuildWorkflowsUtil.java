@@ -49,8 +49,13 @@
 package org.knime.buildworkflows.util;
 
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 
+import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
+import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.Pair;
 
@@ -59,7 +64,7 @@ import org.knime.core.util.Pair;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-public class BuildWorkflowsUtil {
+public final class BuildWorkflowsUtil {
 
     // vertical distance between newly added input and output nodes
     private static final int NODE_DIST = 120;
@@ -152,4 +157,56 @@ public class BuildWorkflowsUtil {
         }
         return res.toString();
     }
+
+    /**
+     * Checks a {@link WorkflowLoadResult} and possibly turns it into a warning message or an exception.
+     *
+     * @param lr the load result to check
+     *
+     * @return a warning message if there are warnings, or else <code>null</code>
+     * @throws IllegalStateException thrown if there are loading errors
+     */
+    public static String checkLoadResult(final WorkflowLoadResult lr) {
+        switch (lr.getType()) {
+            case Warning:
+                return "Problem(s) while loading the workflow:\n" + lr;
+            case Error:
+                throw new IllegalStateException("Error(s) while loading the workflow: \n" + lr);
+            case Ok:
+            case DataLoadError: // ignore data load errors
+            default:
+                return null;
+
+        }
+    }
+
+    /**
+     * Helper method to load the workflow from a {@link WorkflowSegment}.
+     *
+     * @param ws the segment to load the workflow from
+     * @param warningConsumer called if there was a warning while loading
+     * @return the load workflow manager
+     *
+     * @throws IllegalStateException if there were loading errors
+     */
+    public static WorkflowManager loadWorkflow(final WorkflowSegment ws, final Consumer<String> warningConsumer) {
+        AtomicReference<IllegalStateException> exception = new AtomicReference<>();
+        WorkflowManager wfm = ws.loadWorkflow(lr -> { // NOSONAR
+            try {
+                String warning = checkLoadResult(lr);
+                if (warning != null) {
+                    warningConsumer.accept(warning);
+                }
+            } catch (IllegalStateException e) {
+                exception.set(e);
+                return;
+            }
+        });
+
+        if (exception.get() != null) {
+            throw exception.get();
+        }
+        return wfm;
+    }
+
 }

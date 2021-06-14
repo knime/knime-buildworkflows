@@ -155,7 +155,8 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         CheckUtils.checkArgumentNotNull(nc, "Not a local workflow");
         checkPortCompatibility(spec, nc);
-        m_executable = new WorkflowExecutable(spec.getWorkflowSegment(), spec.getWorkflowName(), nc, m_debug);
+        m_executable = new WorkflowExecutable(spec.getWorkflowSegment(), spec.getWorkflowName(), nc, m_debug,
+            this::setWarningMessage);
         return m_executable;
     }
 

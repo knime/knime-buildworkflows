@@ -241,7 +241,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         final File tmpDataDir = new File(tmpWorkflowDir, "data");
         tmpDataDir.mkdir();
 
-        final WorkflowManager wfm = segment.loadWorkflow();
+        final WorkflowManager wfm = BuildWorkflowsUtil.loadWorkflow(segment, warningMessageConsumer);
         wfm.setName(workflowName);
         try {
             writeReferenceReaderNodeData(segment, wfm, tmpDataDir, exec);

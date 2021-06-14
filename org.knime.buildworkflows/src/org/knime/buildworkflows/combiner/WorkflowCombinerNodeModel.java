@@ -48,6 +48,8 @@
  */
 package org.knime.buildworkflows.combiner;
 
+import static org.knime.buildworkflows.util.BuildWorkflowsUtil.loadWorkflow;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -61,6 +63,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -149,12 +152,13 @@ final class WorkflowCombinerNodeModel extends NodeModel {
 
         //transfer the editor settings from the first segment
         //the loaded workflow will be disposed in the copy-method below
-        wfm.setEditorUIInformation(inWorkflowSpecs[0].getWorkflowSegment().loadWorkflow().getEditorUIInformation());
+        wfm.setEditorUIInformation(
+            loadWorkflow(inWorkflowSpecs[0].getWorkflowSegment(), this::setWarningMessage).getEditorUIInformation());
 
         try {
             // copy and paste all segments to the new wfm
             final WorkflowSegmentMeta[] inWorkflowSegments = Arrays.stream(inWorkflowSpecs)
-                .map(s -> copy(wfm, s)).toArray(WorkflowSegmentMeta[]::new);
+                .map(s -> copy(wfm, s, this::setWarningMessage)).toArray(WorkflowSegmentMeta[]::new);
 
             final Set<NodeIDSuffix> objectReferenceReaderNodes =
                 new HashSet<>(inWorkflowSegments[0].m_objectReferenceReaderNodes);
@@ -242,7 +246,8 @@ final class WorkflowCombinerNodeModel extends NodeModel {
         return Optional.of(res);
     }
 
-    private static WorkflowSegmentMeta copy(final WorkflowManager wfm, final WorkflowPortObjectSpec toCopy) {
+    private static WorkflowSegmentMeta copy(final WorkflowManager wfm, final WorkflowPortObjectSpec toCopy,
+        final Consumer<String> warningConsumer) {
         // copy and paste the workflow segment into the new wfm
         // calculate the mapping between the toCopy node ids and the new node ids
         final HashMap<NodeIDSuffix, NodeIDSuffix> inIdMapping = new HashMap<>();
@@ -250,7 +255,7 @@ final class WorkflowCombinerNodeModel extends NodeModel {
         final HashSet<NodeIDSuffix> objectReferenceReaderNodes = new HashSet<>();
 
         WorkflowSegment wfToCopy = toCopy.getWorkflowSegment();
-        final WorkflowManager toCopyWFM = wfToCopy.loadWorkflow();
+        final WorkflowManager toCopyWFM = loadWorkflow(wfToCopy, warningConsumer);
         try (WorkflowLock lock = wfm.lock()) {
             int[] wfmBoundingBox = NodeUIInformation.getBoundingBoxOf(wfm.getNodeContainers());
             final int yOffset = wfmBoundingBox[1]; // top

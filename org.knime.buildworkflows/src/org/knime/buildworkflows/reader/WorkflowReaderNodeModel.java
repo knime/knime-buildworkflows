@@ -48,6 +48,8 @@
  */
 package org.knime.buildworkflows.reader;
 
+import static org.knime.buildworkflows.util.BuildWorkflowsUtil.checkLoadResult;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,7 +76,6 @@ import org.knime.core.data.container.DataContainer;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
@@ -162,9 +163,13 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         CanceledExecutionException, InvalidSettingsException, UnsupportedWorkflowVersionException, LockFailedException {
         File wfFile = toLocalWorkflowDir(inputPath);
         exec.setProgress("Reading workflow");
-        WorkflowManager wfm = readWorkflow(wfFile, this::setWarningMessage, exec);
+        WorkflowManager wfm = readWorkflow(wfFile, exec, this::setWarningMessage);
         if (wfm.canResetAll()) {
-            setWarningMessage("The read workflow contains executed nodes which have been reset");
+            if (getWarningMessage() == null) {
+                // there might be already a warning message set due to workflow loading problems
+                // -> we regard those as more important and thus don't overwrite it here
+                setWarningMessage("The read workflow contains executed nodes which have been reset");
+            }
             wfm.resetAndConfigureAll();
         }
 
@@ -214,11 +219,11 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
 
     }
 
-    private static WorkflowManager readWorkflow(final File wfFile, final Consumer<String> loadWarning,
-        final ExecutionContext exec) throws IOException, InvalidSettingsException, CanceledExecutionException,
+    private static WorkflowManager readWorkflow(final File wfFile, final ExecutionContext exec,
+        final Consumer<String> warningConsumer) throws IOException, InvalidSettingsException, CanceledExecutionException,
         UnsupportedWorkflowVersionException, LockFailedException {
 
-        final WorkflowLoadHelper loadHelper = WorkflowSegment.createWorkflowLoadHelper(wfFile, loadWarning);
+        final WorkflowLoadHelper loadHelper = WorkflowSegment.createWorkflowLoadHelper(wfFile, warningConsumer);
         final WorkflowLoadResult loadResult =
             WorkflowManager.EXTRACTED_WORKFLOW_ROOT.load(wfFile, exec, loadHelper, false);
 
@@ -227,14 +232,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
             throw new IOException(
                 "Errors reading workflow: " + loadResult.getFilteredError("", LoadResultEntryType.Ok));
         } else {
-            if (loadResult.getType() != LoadResultEntryType.Ok
-                // we accept data load errors since the workflow manager is reset anyway (i.e. loaded without data)
-                && loadResult.getType() != LoadResultEntryType.DataLoadError) {
-                WorkflowManager.EXTRACTED_WORKFLOW_ROOT.removeProject(m.getID());
-                NodeLogger.getLogger(WorkflowReaderNodeModel.class)
-                    .error("Workflow couldn't be loaded.\n" + loadResult);
-                throw new IOException("Workflow couldn't be loaded. Details in the log.");
-            }
+            warningConsumer.accept(checkLoadResult(loadResult));
         }
         return loadResult.getWorkflowManager();
     }

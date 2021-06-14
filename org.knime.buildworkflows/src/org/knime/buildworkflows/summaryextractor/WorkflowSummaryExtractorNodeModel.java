@@ -60,6 +60,7 @@ import java.util.Collections;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLStreamException;
 
+import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DataType;
 import org.knime.core.data.def.DefaultRow;
@@ -136,7 +137,7 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
         final WorkflowPortObjectSpec spec = ((WorkflowPortObject)inObjects[0]).getSpec();
         final WorkflowSegment segment = spec.getWorkflowSegment();
         try {
-            final WorkflowManager wfm = segment.loadWorkflow();
+            final WorkflowManager wfm = BuildWorkflowsUtil.loadWorkflow(segment, this::setWarningMessage);
             if (wfm != null) {
                 return new BufferedDataTable[]{fillTable(exec, wfm)};
             } else {
