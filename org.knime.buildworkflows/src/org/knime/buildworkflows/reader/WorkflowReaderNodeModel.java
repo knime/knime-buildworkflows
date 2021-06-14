@@ -63,6 +63,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.ZipInputStream;
@@ -161,7 +162,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         CanceledExecutionException, InvalidSettingsException, UnsupportedWorkflowVersionException, LockFailedException {
         File wfFile = toLocalWorkflowDir(inputPath);
         exec.setProgress("Reading workflow");
-        WorkflowManager wfm = readWorkflow(wfFile, exec);
+        WorkflowManager wfm = readWorkflow(wfFile, this::setWarningMessage, exec);
         if (wfm.canResetAll()) {
             setWarningMessage("The read workflow contains executed nodes which have been reset");
             wfm.resetAndConfigureAll();
@@ -213,10 +214,11 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
 
     }
 
-    private static WorkflowManager readWorkflow(final File wfFile, final ExecutionContext exec) throws IOException,
-        InvalidSettingsException, CanceledExecutionException, UnsupportedWorkflowVersionException, LockFailedException {
+    private static WorkflowManager readWorkflow(final File wfFile, final Consumer<String> loadWarning,
+        final ExecutionContext exec) throws IOException, InvalidSettingsException, CanceledExecutionException,
+        UnsupportedWorkflowVersionException, LockFailedException {
 
-        final WorkflowLoadHelper loadHelper = new WorkflowLoadHelper(wfFile);
+        final WorkflowLoadHelper loadHelper = WorkflowSegment.createWorkflowLoadHelper(wfFile, loadWarning);
         final WorkflowLoadResult loadResult =
             WorkflowManager.EXTRACTED_WORKFLOW_ROOT.load(wfFile, exec, loadHelper, false);
 
