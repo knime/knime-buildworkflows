@@ -178,7 +178,7 @@ public final class ValidatedWorkflowNameField extends DialogComponent {
 
     private void liveValidateInput() {
         Optional<String> errorMsg =
-            BuildWorkflowsUtil.validateCustomWorkflowName(m_input.getText(), m_allowEmpty, true);
+            BuildWorkflowsUtil.validateCustomWorkflowName(m_input.getText(), m_allowEmpty, false);
         if (errorMsg.isPresent()) {
             setError(errorMsg.get());
         } else {
