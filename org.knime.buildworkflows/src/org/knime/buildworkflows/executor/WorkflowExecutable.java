@@ -50,7 +50,6 @@ package org.knime.buildworkflows.executor;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.concurrent.ExecutionException;
@@ -273,20 +272,15 @@ final class WorkflowExecutable {
         }
     }
 
-    private static List<FlowVariable> getFlowVariablesFromNC(final NodeContainer nc) {
-        if (nc instanceof SingleNodeContainer) {
-            Stream<FlowVariable> res;
-            if (nc instanceof NativeNodeContainer) {
-                res = ((NativeNodeContainer)nc).getNodeModel()
-                    .getAvailableFlowVariables(VariableTypeRegistry.getInstance().getAllTypes()).values().stream();
-            } else {
-                res = ((SingleNodeContainer)nc).createOutFlowObjectStack().getAllAvailableFlowVariables().values()
-                    .stream();
-            }
-            return res.filter(fv -> fv.getScope() == Scope.Flow).collect(Collectors.toList());
+    private static List<FlowVariable> getFlowVariablesFromNC(final SingleNodeContainer nc) {
+        Stream<FlowVariable> res;
+        if (nc instanceof NativeNodeContainer) {
+            res = ((NativeNodeContainer)nc).getNodeModel()
+                .getAvailableFlowVariables(VariableTypeRegistry.getInstance().getAllTypes()).values().stream();
         } else {
-            return Collections.emptyList();
+            res = nc.createOutFlowObjectStack().getAllAvailableFlowVariables().values().stream();
         }
+        return res.filter(fv -> fv.getScope() == Scope.Flow).collect(Collectors.toList());
     }
 
     private static PortObject[] copyPortObjects(final PortObject[] portObjects, final ExecutionContext exec)
@@ -316,7 +310,8 @@ final class WorkflowExecutable {
 
     /*
      * Essentially only take the flow variables coming in via the 2nd to nth input port (and ignore flow var (0th)
-     * and workflow (1st) port). Otherwise those will always take precedence what we don't want.
+     * and workflow (1st) port). Otherwise those will always take precedence and can possibly
+     * interfere with the workflow being executed.
      */
     private static List<FlowVariable> collectOutputFlowVariablesFromUpstreamNodes(final NodeContainer thisNode,
         final boolean preserveFlowVarOrdering) {
@@ -325,8 +320,21 @@ final class WorkflowExecutable {
         List<FlowVariable> res = new ArrayList<>();
         for (int i = 2; i < thisNode.getNrInPorts(); i++) {
             ConnectionContainer cc = wfm.getIncomingConnectionFor(thisNode.getID(), i);
-            NodeContainer nc = wfm.getNodeContainer(cc.getSource());
-            List<FlowVariable> vars = getFlowVariablesFromNC(nc);
+            NodeID sourceId = cc.getSource();
+            SingleNodeContainer snc;
+            if (sourceId.equals(wfm.getID())) {
+                // if upstream port is the 'inner' output port of a metanode
+                snc = wfm.getWorkflowIncomingPort(cc.getSourcePort()).getConnectedNodeContainer();
+            } else {
+                NodeContainer nc = wfm.getNodeContainer(sourceId);
+                if (nc instanceof WorkflowManager) {
+                    // if the upstream node is a metanode
+                    snc = ((WorkflowManager)nc).getOutPort(cc.getSourcePort()).getConnectedNodeContainer();
+                } else {
+                    snc = (SingleNodeContainer)nc;
+                }
+            }
+            List<FlowVariable> vars = getFlowVariablesFromNC(snc);
             if (preserveFlowVarOrdering) {
                 // reverse the order of the flow variables in order to preserve the original order
                 ListIterator<FlowVariable> reverseIter = vars.listIterator(vars.size());
