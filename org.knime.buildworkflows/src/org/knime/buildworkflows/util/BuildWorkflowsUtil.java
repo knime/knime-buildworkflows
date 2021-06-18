@@ -204,6 +204,7 @@ public final class BuildWorkflowsUtil {
         });
 
         if (exception.get() != null) {
+            ws.disposeWorkflow();
             throw exception.get();
         }
         return wfm;

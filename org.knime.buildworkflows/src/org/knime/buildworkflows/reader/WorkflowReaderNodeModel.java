@@ -232,7 +232,12 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
             throw new IOException(
                 "Errors reading workflow: " + loadResult.getFilteredError("", LoadResultEntryType.Ok));
         } else {
-            warningConsumer.accept(checkLoadResult(loadResult));
+            try {
+                warningConsumer.accept(checkLoadResult(loadResult));
+            } catch (IllegalStateException e) {
+                WorkflowManager.EXTRACTED_WORKFLOW_ROOT.removeNode(m.getID());
+                throw e;
+            }
         }
         return loadResult.getWorkflowManager();
     }
