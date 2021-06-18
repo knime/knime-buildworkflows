@@ -72,12 +72,13 @@ import org.knime.core.node.workflow.VariableType;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.virtual.AbstractPortObjectRepositoryNodeModel;
+import org.knime.core.node.workflow.virtual.parchunk.VirtualNodeModel;
 import org.knime.core.util.Pair;
 
 /**
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeModel {
+final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeModel implements VirtualNodeModel {
 
     static final String CFG_DEBUG = "debug";
 

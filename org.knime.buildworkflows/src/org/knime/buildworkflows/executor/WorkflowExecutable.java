@@ -188,7 +188,7 @@ final class WorkflowExecutable {
      * Executes the workflow segment.
      *
      * @param inputData the input data to be used for execution
-     * @param exec for cancellation
+     * @param exec for cancellation and copying the output data
      * @param preserveFlowVarOrdering If true, the ordering of flow variables supplied to the executed workflow fragment
      *            and exported downstream by this node will be the same as the original stack. This is for backwards
      *            compatibility, before 4.4 the order used to be reversed.
@@ -200,7 +200,8 @@ final class WorkflowExecutable {
         VirtualParallelizedChunkPortObjectInNodeModel inNM =
             (VirtualParallelizedChunkPortObjectInNodeModel)virtualInNode.getNodeModel();
 
-        FlowVirtualScopeContext.registerHostNodeForPortObjectPersistence(m_hostNode, virtualInNode, exec);
+        FlowVirtualScopeContext virtualScopeContext =
+            FlowVirtualScopeContext.registerHostNodeForPortObjectPersistence(m_hostNode, virtualInNode, exec);
 
         inNM.setVirtualNodeInput(new VirtualParallelizedChunkNodeInput(inputData,
             collectOutputFlowVariablesFromUpstreamNodes(m_hostNode, preserveFlowVarOrdering), 0));
@@ -216,9 +217,10 @@ final class WorkflowExecutable {
         }
 
         PortObject[] portObjectCopies = copyPortObjects(outNM.getOutObjects(), exec);
-        // if (portObjectCopies != null) {
-        //     removeSuperfluousFileStores(Stream.concat(stream(portObjectCopies), outputData.stream()));
-        // }
+//        if (portObjectCopies != null) {
+//            virtualScopeContext.removeFileStores();
+//            removeSuperfluousFileStores(portObjectCopies);
+//        }
         return Pair.create(portObjectCopies, getFlowVariablesFromNC(nnc));
     }
 
@@ -301,12 +303,11 @@ final class WorkflowExecutable {
      * Remove file stores that aren't needed anymore because they aren't part of any of the port objects
      * (either as file store cell or file store port object).
      */
-    //private static void removeSuperfluousFileStores(final Stream<PortObject> portObjects) {
+    private static void removeSuperfluousFileStores(final NativeNodeContainer hostNode, final PortObject... portObjects) {
         // TODO
         // see ticket https://knime-com.atlassian.net/browse/AP-14414
-        // m_thisNode.getNode().getFileStoreHandler();
-        // ...
-    //}
+        hostNode.getNode().getFileStoreHandler();
+    }
 
     /*
      * Essentially only take the flow variables coming in via the 2nd to nth input port (and ignore flow var (0th)
