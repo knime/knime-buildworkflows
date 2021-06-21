@@ -12,7 +12,7 @@
 			This node generates a workflow summary document in either XML or JSON
 			format and stores it in the output table.
 			The workflow summary document serves as a detailed structured description of
-			a workflow including it's structure, configuration,
+			a workflow including its structure, configuration,
 			port specifications, node &amp; workflow annotations, and more.
 		</intro>
 		<option name="Output format">
@@ -20,8 +20,7 @@
 			either <i>JSON</i> or <i>XML.</i>
 		</option>
 		<option name="Column name">
-			The name of the column the summary is saved in. (The name of the row
-			is always &#8220;summary&#8221;.)
+			The name of the column the summary is saved in.
 		</option>
 	</fullDescription>
 
