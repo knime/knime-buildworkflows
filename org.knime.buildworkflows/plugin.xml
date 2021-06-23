@@ -27,11 +27,17 @@
     <node
           after="org.knime.buildworkflows.combiner.WorkflowCombinerNodeFactory"
           category-path="/flowabstraction/captureworkflows"
+          deprecated="false"
+          factory-class="org.knime.buildworkflows.reader.WorkflowReaderNodeFactory">
+    </node>
+    <node
+          after="org.knime.buildworkflows.reader.WorkflowReaderNodeFactory"
+          category-path="/flowabstraction/captureworkflows"
           deprecated="true"
           factory-class="org.knime.buildworkflows.writer.WorkflowWriterNodeFactory">
     </node>
     <node
-          after="org.knime.buildworkflows.combiner.WorkflowCombinerNodeFactory"
+          after="org.knime.buildworkflows.reader.WorkflowReaderNodeFactory"
           category-path="/flowabstraction/captureworkflows"
           factory-class="org.knime.buildworkflows.writer.WorkflowWriter2NodeFactory">
     </node>
@@ -58,12 +64,6 @@
           after="org.knime.buildworkflows.deploy.DeployWorkflow3NodeFactory"
           category-path="/flowabstraction/captureworkflows"
           factory-class="org.knime.buildworkflows.executor.WorkflowExecutorNodeFactory">
-    </node>
-    <node
-          category-path="/flowabstraction/captureworkflows"
-          deprecated="false"
-          factory-class="org.knime.buildworkflows.reader.WorkflowReaderNodeFactory"
-          hidden="false">
     </node>
     <node
        category-path="/flowabstraction/captureworkflows"
