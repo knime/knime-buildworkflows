@@ -71,6 +71,8 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
 import org.knime.core.node.context.ports.ExtendablePortGroup;
+import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
+import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.PortTypeRegistry;
@@ -101,6 +103,9 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
 
     private boolean m_preserveFlowVarOrdering = true;
 
+    private final DialogComponentBoolean m_doUpdateTemplateLinks = new DialogComponentBoolean(
+        WorkflowExecutorNodeModel.createDoUpdateTemplateLinksModel(), "Update links of components and metanodes");
+
     WorkflowExecutorNodeDialogPane() {
         JPanel options = new JPanel();
         options.setLayout(new BoxLayout(options, BoxLayout.Y_AXIS));
@@ -128,6 +133,11 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
         m_debug = new JCheckBox("Show executing workflow segment", false);
         debug.add(m_debug);
         options.add(debug);
+
+        JPanel modifySegment = new JPanel();
+        setBorder(modifySegment, "Modify captured workflow segment");
+        modifySegment.add(m_doUpdateTemplateLinks.getComponentPanel());
+        options.add(modifySegment);
     }
 
     private static void setBorder(final JPanel p, final String label) {
@@ -217,6 +227,7 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
         refreshPortAdjustment(m_workflowSpec);
         m_debug.setSelected(settings.getBoolean(CFG_DEBUG, false));
         m_preserveFlowVarOrdering = settings.getBoolean(CFG_PRESERVE_FLOWVAR_ORDER, false);
+        m_doUpdateTemplateLinks.loadSettingsFrom(settings, specs);
     }
 
     /**
@@ -226,6 +237,7 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
     protected void saveSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
         settings.addBoolean(CFG_DEBUG, m_debug.isSelected());
         settings.addBoolean(CFG_PRESERVE_FLOWVAR_ORDER, m_preserveFlowVarOrdering);
+        m_doUpdateTemplateLinks.saveSettingsTo(settings);
     }
 
 }

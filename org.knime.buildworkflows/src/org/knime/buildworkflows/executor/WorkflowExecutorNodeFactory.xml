@@ -28,6 +28,9 @@
 		<br/>
 		If the option is disabled the actual executing workflow won't be visible.
 	</option>
+	<option name="Update links of components and metanodes">
+		If enabled, linked components and metanodes contained in the given workflow segment will be updated before execution.
+	</option>
 	</fullDescription>
 	<ports>
 		<inPort index="0" name="Workflow">

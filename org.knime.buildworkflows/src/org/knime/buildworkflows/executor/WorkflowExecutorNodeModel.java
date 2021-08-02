@@ -56,11 +56,13 @@ import java.util.ListIterator;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
+import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulation;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.ports.PortsConfiguration;
+import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
@@ -71,6 +73,7 @@ import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.VariableType;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.node.workflow.virtual.AbstractPortObjectRepositoryNodeModel;
 import org.knime.core.util.Pair;
 
@@ -86,6 +89,12 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
     private WorkflowExecutable m_executable;
 
     private boolean m_debug = false;
+
+    private final SettingsModelBoolean m_doUpdateTemplateLinks = createDoUpdateTemplateLinksModel();
+
+    public static SettingsModelBoolean createDoUpdateTemplateLinksModel() {
+        return new SettingsModelBoolean("do_update_template_links", false);
+    }
 
     /**
      * Determines whether the ordering of flow variables supplied to the {@link WorkflowExecutable} and sent downstream
@@ -110,7 +119,12 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
     @Override
     protected PortObject[] execute(final PortObject[] inObjects, final ExecutionContext exec) throws Exception {
         WorkflowPortObject wpo = (WorkflowPortObject)inObjects[0];
-        WorkflowExecutable we = createWorkflowExecutable(wpo.getSpec());
+        WorkflowSegment segment = wpo.getSpec().getWorkflowSegment();
+        if (m_doUpdateTemplateLinks.getBooleanValue()) {
+            WorkflowSegmentManipulation.updateLinkedTemplates.apply(segment);
+        }
+
+        WorkflowExecutable we = createWorkflowExecutable(wpo.getSpec(), segment);
         m_executable = we;
         boolean success = false;
         try {
@@ -151,12 +165,16 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
 
     private WorkflowExecutable createWorkflowExecutable(final WorkflowPortObjectSpec spec)
         throws InvalidSettingsException {
+        return createWorkflowExecutable(spec, spec.getWorkflowSegment());
+    }
+
+    private WorkflowExecutable createWorkflowExecutable(final WorkflowPortObjectSpec spec, WorkflowSegment segment) throws InvalidSettingsException {
         disposeWorkflowExecutable();
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         CheckUtils.checkArgumentNotNull(nc, "Not a local workflow");
         checkPortCompatibility(spec, nc);
         m_executable = new WorkflowExecutable(spec.getWorkflowSegment(), spec.getWorkflowName(), nc, m_debug,
-            this::setWarningMessage);
+                this::setWarningMessage);
         return m_executable;
     }
 
@@ -228,6 +246,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
     protected void saveSettingsTo(final NodeSettingsWO settings) {
         settings.addBoolean(CFG_DEBUG, m_debug);
         settings.addBoolean(CFG_PRESERVE_FLOWVAR_ORDER, m_preserveFlowVarOrdering);
+        m_doUpdateTemplateLinks.saveSettingsTo(settings);
     }
 
     @Override
@@ -241,6 +260,11 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         if (!settings.containsKey(CFG_PRESERVE_FLOWVAR_ORDER)) {
             // In case the node was created without this setting, fall back to backwards compatible behavior.
             m_preserveFlowVarOrdering = false;
+        }
+        if (settings.containsKey(m_doUpdateTemplateLinks.getConfigName())) {
+            m_doUpdateTemplateLinks.loadSettingsFrom(settings);
+        } else {
+            m_doUpdateTemplateLinks.setBooleanValue(false);
         }
     }
 
