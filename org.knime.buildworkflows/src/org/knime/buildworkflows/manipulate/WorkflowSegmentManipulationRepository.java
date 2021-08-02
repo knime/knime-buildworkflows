@@ -45,32 +45,26 @@
  */
 package org.knime.buildworkflows.manipulate;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import org.knime.core.node.workflow.MetaNodeTemplateInformation;
-import org.knime.core.node.workflow.NodeContainerTemplate;
-import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.capture.WorkflowSegment;
-
 /**
- * Remove (disconnect) links of linked metanodes and components contained in the given workflow segment.
+ * Provides references to {@link WorkflowSegmentManipulation}s for convenience.
  *
  * @since 4.5
+ *
  */
-public class RemoveTemplateLinksManipulation implements WorkflowSegmentManipulation {
-    @Override
-    public void apply(final WorkflowSegment workflowSegment) throws Exception {
-        WorkflowManager wfm = workflowSegment.loadWorkflow();
-        Map<NodeID, NodeContainerTemplate> linkedMetaNodes =
-            wfm.fillLinkedTemplateNodesList(new LinkedHashMap<>(), true, false);
-        linkedMetaNodes.entrySet().stream().filter(entry -> {
-            MetaNodeTemplateInformation templateInformation = entry.getValue().getTemplateInformation();
-            return MetaNodeTemplateInformation.Role.Link == templateInformation.getRole();
-        }).forEach(entry -> {
-            WorkflowManager parentWfm = entry.getValue().getParent();
-            parentWfm.setTemplateInformation(entry.getKey(), MetaNodeTemplateInformation.NONE);
-        });
+public abstract class WorkflowSegmentManipulationRepository {
+
+    private WorkflowSegmentManipulationRepository() {
+
     }
+
+    /**
+     * Remove links of linked metanodes and components.
+     */
+    public static final WorkflowSegmentManipulation removeTemplateLinks = new RemoveTemplateLinksManipulation();
+
+    /**
+     * Update links of linked metanodes and components.
+     */
+    public static final WorkflowSegmentManipulation updateLinkedTemplates = new UpdateLinkedTemplatesManipulation();
+
 }

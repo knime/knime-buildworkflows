@@ -57,11 +57,8 @@ import org.knime.core.node.workflow.capture.WorkflowSegment;
  * @since 4.5
  *
  */
-public abstract class WorkflowSegmentManipulation {
-
-    public static WorkflowSegmentManipulation removeTemplateLinks = new RemoveTemplateLinksManipulation();
-
-    public static WorkflowSegmentManipulation updateLinkedTemplates = new UpdateLinkedTemplatesManipulation();
+@FunctionalInterface
+public interface WorkflowSegmentManipulation {
 
     /**
      * Apply the manipulation to the given Workflow Segment. The manipulation is assumed to be stateless and have no
@@ -70,6 +67,6 @@ public abstract class WorkflowSegmentManipulation {
      * @param workflowSegment
      * @throws Exception
      */
-    public abstract void apply(WorkflowSegment workflowSegment) throws Exception;
+    public abstract void apply(WorkflowSegment workflowSegment) throws Exception;  // NOSONAR: Exception must be generic
 
 }

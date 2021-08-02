@@ -61,7 +61,7 @@ import org.knime.core.util.FileUtil;
  *
  * @since 4.5
  */
-public class UpdateLinkedTemplatesManipulation extends WorkflowSegmentManipulation {
+public class UpdateLinkedTemplatesManipulation implements WorkflowSegmentManipulation {
     @Override
     public void apply(final WorkflowSegment workflowSegment) throws IOException, CanceledExecutionException {
         WorkflowManager wfm = workflowSegment.loadWorkflow();

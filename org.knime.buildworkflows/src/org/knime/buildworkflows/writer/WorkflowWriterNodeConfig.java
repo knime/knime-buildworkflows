@@ -94,7 +94,7 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
 
     private static final String CFG_DO_REMOVE_LINKS = "do_remove_template_links";
 
-    private final boolean DO_REMOVE_LINKS_DEFAULT = false;
+    private static final boolean DO_REMOVE_LINKS_DEFAULT = false;
 
     /**
      * Whether to remove links of linked metanodes and components before writing the workflow segment.
@@ -106,7 +106,7 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
 
     private static final String CFG_DO_UPDATE_LINKS = "do_update_template_links";
 
-    private final boolean DO_UPDATE_LINKS_DEFAULT = false;
+    private static final boolean DO_UPDATE_LINKS_DEFAULT = false;
 
     /**
      * Whether to update linked metanodes and components before writing the workflow segment.
