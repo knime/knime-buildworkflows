@@ -23,9 +23,6 @@
 			(but not captured).
 		</intro>
 		<tab name="Settings">
-			<option name="Custom workflow name">A custom name for the captured workflow. If left
-				empty, the original name will be taken.
-			</option>
 			<option name="Store input tables">If checked the input tables at the extracted
 				workflow's input ports (table ports only!) will be stored, too.
 			</option>
@@ -38,6 +35,13 @@
 				In most cases users will want to check this box (which is also the default). Previous 
 				versions of KNIME did not have this option and variables were always limited in scope and 
 				not visible downstream.
+			</option>
+			<option name="Disconnect links of components and metanodes">
+				If enabled, the links on linked components and metanodes contained in the captured workflow segment
+				will be removed upon capture.
+			</option>
+			<option name="Custom workflow name">A custom name for the captured workflow. If left
+				empty, the original name will be taken.
 			</option>
 		</tab>
 		<tab name="Input and Output IDs">

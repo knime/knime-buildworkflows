@@ -108,7 +108,8 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
     }
 
     private final ValidatedWorkflowNameField m_customName =
-        new ValidatedWorkflowNameField(CaptureWorkflowEndNodeModel.createCustomWorkflowNameModel());
+        new ValidatedWorkflowNameField(CaptureWorkflowEndNodeModel.createCustomWorkflowNameModel(), "Custom workflow " +
+                "name", true);
 
     private final DialogComponentNumber m_maxNumOfRowsModel = new DialogComponentNumber(
         CaptureWorkflowEndNodeModel.createMaxNumOfRowsModel(), "Maximum numbers of rows to store", 1);
@@ -119,6 +120,9 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
     private final DialogComponentBoolean m_exportAllVariablesModel =
             new DialogComponentBoolean(CaptureWorkflowEndNodeModel.createExportVariablesModel(), "Propagate variables");
 
+    private final DialogComponentBoolean m_doRemoveTemplateLinks =
+            new DialogComponentBoolean(CaptureWorkflowEndNodeModel.createDoRemoveTemplateLinksModel(), "Disconnect links of components and metanodes");
+
     private final JPanel m_ioIds;
 
     private InputOutputIDsPanel m_idsPanel;
@@ -127,11 +131,13 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         JPanel options = new JPanel();
         options.setLayout(new BoxLayout(options, BoxLayout.PAGE_AXIS));
 
-        options.add(group("Custom workflow name", m_customName.getComponentPanel()));
         options
             .add(group("Input data", m_addInputDataModel.getComponentPanel(), m_maxNumOfRowsModel.getComponentPanel()));
 
         options.add(group("Variables", m_exportAllVariablesModel.getComponentPanel()));
+
+        options.add(group("Modify captured segment", m_doRemoveTemplateLinks.getComponentPanel(),
+                m_customName.getComponentPanel()));
 
         addTab("Settings", options);
 
@@ -149,6 +155,7 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         m_maxNumOfRowsModel.loadSettingsFrom(settings, specs);
         m_addInputDataModel.loadSettingsFrom(settings, specs);
         m_exportAllVariablesModel.loadSettingsFrom(settings, specs);
+        m_doRemoveTemplateLinks.loadSettingsFrom(settings, specs);
 
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         if (nc == null) {
@@ -191,6 +198,7 @@ final class CaptureWorkflowEndNodeDialog extends NodeDialogPane {
         m_maxNumOfRowsModel.saveSettingsTo(settings);
         m_addInputDataModel.saveSettingsTo(settings);
         m_exportAllVariablesModel.saveSettingsTo(settings);
+        m_doRemoveTemplateLinks.saveSettingsTo(settings);
 
         List<String> inputIDs = m_idsPanel.getInputIDs();
         List<String> outputIDs = m_idsPanel.getOutputIDs();

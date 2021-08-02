@@ -58,6 +58,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulation;
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTable;
 import org.knime.core.data.container.CloseableRowIterator;
@@ -115,6 +116,10 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         return new SettingsModelIntegerBounded("max_num_rows", 10, 1, Integer.MAX_VALUE);
     }
 
+    public static SettingsModelBoolean createDoRemoveTemplateLinksModel() {
+        return new SettingsModelBoolean("do_remove_template_links", false);
+    }
+
     private final SettingsModelString m_customWorkflowName = createCustomWorkflowNameModel();
 
     private final SettingsModelBoolean m_addInputData = createAddInputDataModel();
@@ -122,6 +127,12 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
     private final SettingsModelInteger m_maxNumRows = createMaxNumOfRowsModel();
 
     private final SettingsModelBoolean m_exportVariables = createExportVariablesModel();
+
+    /**
+     * Whether to remove links of linked metanodes and components upon capture.
+     * @since 4.5
+     */
+    private final SettingsModelBoolean m_doRemoveTemplateLinks = createDoRemoveTemplateLinksModel();
 
     private WorkflowSegment m_lastSegment;
 
@@ -158,6 +169,14 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
             Optional<String> err = BuildWorkflowsUtil.validateCustomWorkflowName(getCustomWorkflowName(), true, false);
             if (err.isPresent()) {
                 throw new InvalidSettingsException(err.get());
+            }
+        }
+
+        if (m_doRemoveTemplateLinks.getBooleanValue()) {
+            try {
+                WorkflowSegmentManipulation.removeTemplateLinks.apply(wfs);
+            } catch (Exception e) {
+                throw new InvalidSettingsException(e.getCause());
             }
         }
 
@@ -277,6 +296,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         m_addInputData.saveSettingsTo(settings);
         m_maxNumRows.saveSettingsTo(settings);
         m_exportVariables.saveSettingsTo(settings);
+        m_doRemoveTemplateLinks.saveSettingsTo(settings);
         saveInputOutputIDs(settings, m_inputIDs, m_outputIDs);
     }
 
@@ -309,6 +329,9 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         if (settings.containsKey(m_exportVariables.getConfigName())) {
             m_exportVariables.validateSettings(settings);
         }
+        if (settings.containsKey(m_doRemoveTemplateLinks.getConfigName())) {
+            m_doRemoveTemplateLinks.validateSettings(settings);
+        }
     }
 
     /**
@@ -327,6 +350,11 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         } else {
             // was 'false' in prior versions
             m_exportVariables.setBooleanValue(false);
+        }
+        if (settings.containsKey(m_doRemoveTemplateLinks.getConfigName())) {
+            m_doRemoveTemplateLinks.loadSettingsFrom(settings);
+        } else {
+            m_doRemoveTemplateLinks.setBooleanValue(false);
         }
         m_inputIDs.clear();
         m_outputIDs.clear();
