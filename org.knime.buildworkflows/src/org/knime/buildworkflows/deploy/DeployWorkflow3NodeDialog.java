@@ -108,6 +108,16 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
 
     private final int m_workflowInputPortIndex;
 
+    /**
+     * @see DeployWorkflow3Config#m_doRemoveTemplateLinks
+     */
+    private final DialogComponentBoolean m_doRemoveTemplateLinks;
+
+    /**
+     * @see DeployWorkflow3Config#m_doUpdateTemplateLinks
+     */
+    private final DialogComponentBoolean m_doUpdateTemplateLinks;
+
     DeployWorkflow3NodeDialog(final PortsConfiguration portsConfig) {
         m_cfg = new DeployWorkflow3Config(portsConfig);
 
@@ -134,6 +144,8 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
 
         SettingsModelBoolean createSnapshotModel = m_cfg.createSnapshotModel();
         m_createSnapshot = new DialogComponentBoolean(createSnapshotModel, "Create snapshot");
+        m_doRemoveTemplateLinks = new DialogComponentBoolean(m_cfg.getDoRemoveTemplateLinksModel(), "Disconnect links of components and metanodes");
+        m_doUpdateTemplateLinks = new DialogComponentBoolean(m_cfg.getDoUpdateTemplateLinksModel(), "Update links of components and metanodes");
         m_snapshotName = new DialogComponentString(m_cfg.getSnapshotNameModel(), "Snapshot comment");
         // the port always exists and is unique therefore this cannot cause a NPE
         m_workflowInputPortIndex =
@@ -147,6 +159,7 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
 
         addTab("Settings", createSettingsTab());
         addTab("Inputs and Outputs", m_ioNodes.getComponentPanel());
+        addTab("Deployment Options", createDeploymentOptionsTab());
     }
 
     private void toggleWorkflowName() {
@@ -155,6 +168,21 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
 
     private void toggleSnapshotName() {
         m_snapshotName.getModel().setEnabled(((SettingsModelBoolean)m_createSnapshot.getModel()).getBooleanValue());
+    }
+
+     private Component createDeploymentOptionsTab() {
+        final JPanel p = new JPanel(new GridBagLayout());
+        final GBCBuilder gbc = new GBCBuilder().resetPos().anchorLineStart().weight(1, 0).fillHorizontal();
+
+        p.add(createSnapshotPanel(), gbc.build());
+
+        gbc.incY();
+        p.add(createSegmentManipulationPanel(), gbc.build());
+
+        gbc.incY().weight(1, 1).fillBoth().insetTop(-10);
+        p.add(new JPanel(), gbc.build());
+
+        return p;
     }
 
     private Component createSettingsTab() {
@@ -166,8 +194,6 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         gbc.incY();
         p.add(createWorkflowPanel(), gbc.build());
 
-        gbc.incY();
-        p.add(createSnapshotPanel(), gbc.build());
 
         gbc.incY().weight(1, 1).fillBoth().insetTop(-10);
         p.add(new JPanel(), gbc.build());
@@ -213,9 +239,26 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         return p;
     }
 
+    private Component createSegmentManipulationPanel() {
+        final JPanel p = new JPanel(new GridBagLayout());
+        p.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(),
+            "Modify workflow segment before deployment"));
+
+        final GBCBuilder gbc = new GBCBuilder().resetPos().anchorLineStart().weight(0, 0).fillNone();
+        p.add(m_doUpdateTemplateLinks.getComponentPanel(), gbc.build());
+
+        gbc.incY();
+        p.add(m_doRemoveTemplateLinks.getComponentPanel(), gbc.build());
+
+        gbc.resetX().incY().weight(1, 1).insetTop(-10).fillBoth();
+        p.add(new JPanel(), gbc.build());
+
+        return p;
+    }
+
     private Component createSnapshotPanel() {
         final JPanel p = new JPanel(new GridBagLayout());
-        p.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Deployment options"));
+        p.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Snapshot options"));
 
         final GBCBuilder gbc = new GBCBuilder().resetPos().anchorLineStart().weight(0, 0).fillNone();
         p.add(m_createSnapshot.getComponentPanel(), gbc.build());
@@ -238,6 +281,8 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         m_cfg.saveUseCustomWorkflowNameInDialog(subSettings, m_customWorkflowRadio.isSelected());
         m_customWorkflowName.saveSettingsTo(subSettings);
         m_createSnapshot.saveSettingsTo(subSettings);
+        m_doRemoveTemplateLinks.saveSettingsTo(subSettings);
+        m_doUpdateTemplateLinks.saveSettingsTo(subSettings);
         m_snapshotName.saveSettingsTo(subSettings);
         m_ioNodes.saveSettingsTo(settings);
     }
@@ -256,6 +301,8 @@ final class DeployWorkflow3NodeDialog extends NodeDialogPane {
         m_cfg.loadUseCustomWorkflowNameInDialog(subSettings);
         m_customWorkflowName.loadSettingsFrom(subSettings, specs);
         m_createSnapshot.loadSettingsFrom(subSettings, specs);
+        m_doRemoveTemplateLinks.loadSettingsFrom(subSettings, specs);
+        m_doUpdateTemplateLinks.loadSettingsFrom(subSettings, specs);
         m_snapshotName.loadSettingsFrom(subSettings, specs);
         m_ioNodes.loadSettingsFrom(settings, specs);
 

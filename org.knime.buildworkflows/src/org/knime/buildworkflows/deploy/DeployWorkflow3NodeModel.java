@@ -57,6 +57,7 @@ import javax.ws.rs.WebApplicationException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.knime.buildworkflows.ExistsOption;
+import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulation;
 import org.knime.buildworkflows.writer.WorkflowWriterNodeModel;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
@@ -70,6 +71,7 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.util.FileUtil;
 import org.knime.filehandling.core.connections.FSConnection;
 import org.knime.filehandling.core.connections.FSFileSystem;
@@ -162,6 +164,14 @@ final class DeployWorkflow3NodeModel extends NodeModel {
             final FSPath dest = (FSPath)dir.resolve(workflowName);
             exec.setProgress(.3, () -> "Checking if workflow exists.");
             validatePath(dest);
+
+            WorkflowSegment segment = workflowPortObject.getSpec().getWorkflowSegment();
+            if (m_cfg.getDoUpdateTemplateLinksModel().getBooleanValue()) {
+                WorkflowSegmentManipulation.updateLinkedTemplates.apply(segment);
+            }
+            if (m_cfg.getDoRemoveTemplateLinksModel().getBooleanValue()) {
+                WorkflowSegmentManipulation.removeTemplateLinks.apply(segment);
+            }
 
             exec.setProgress(.5, () -> "Saving workflow to disk.");
             final File tmpDir = FileUtil.createTempDir("deploy-workflow");

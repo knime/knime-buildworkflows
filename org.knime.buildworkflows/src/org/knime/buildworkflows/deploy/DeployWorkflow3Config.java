@@ -91,6 +91,20 @@ final class DeployWorkflow3Config {
 
     private static final String CFG_INPUTS_AND_OUTPUTS = "inputs_and_outputs";
 
+    /**
+     * @see DeployWorkflow3Config#m_doRemoveTemplateLinks
+     */
+    private static final String CFG_DO_REMOVE_LINKS = "do_remove_template_links";
+
+    private static final boolean DO_REMOVE_LINKS_DEFAULT = false;
+
+    /**
+     * @see DeployWorkflow3Config#m_doUpdateTemplateLinks
+     */
+    private static final String CFG_DO_UPDATE_LINKS = "do_update_template_links";
+
+    private static final boolean DO_UPDATE_LINKS_DEFAULT = false;
+
     private final SettingsModelWriterFileChooser m_fileChooser;
 
     private final SettingsModelString m_workflowExists;
@@ -104,6 +118,20 @@ final class DeployWorkflow3Config {
     private final SettingsModelString m_snapshotName;
 
     private final SettingsModelIONodes m_ioNodes;
+
+    /**
+     * Whether to remove links of linked metanodes and components before deployment.
+     * @since 4.5
+     */
+    private final SettingsModelBoolean m_doRemoveTemplateLinks;
+
+    /**
+     * Whether to update linked metanodes and components before deployment.
+     * If this is enabled and links are also set to be removed, the metanodes/components will first be
+     * updated and then disconnected.
+     * @since 4.5
+     */
+    private final SettingsModelBoolean m_doUpdateTemplateLinks;
 
     DeployWorkflow3Config(final PortsConfiguration portsConfig) {
         m_fileChooser = new SettingsModelWriterFileChooser(CFG_FOLDER, portsConfig,
@@ -143,6 +171,10 @@ final class DeployWorkflow3Config {
 
         m_ioNodes = new SettingsModelIONodes(CFG_INPUTS_AND_OUTPUTS);
 
+        m_doRemoveTemplateLinks = new SettingsModelBoolean(CFG_DO_REMOVE_LINKS, DO_REMOVE_LINKS_DEFAULT);
+
+        m_doUpdateTemplateLinks = new SettingsModelBoolean(CFG_DO_UPDATE_LINKS, DO_UPDATE_LINKS_DEFAULT);
+
     }
 
     SettingsModelWriterFileChooser getFileChooserModel() {
@@ -159,6 +191,14 @@ final class DeployWorkflow3Config {
 
     SettingsModelBoolean createSnapshotModel() {
         return m_createSnapshot;
+    }
+
+    SettingsModelBoolean getDoRemoveTemplateLinksModel() {
+        return m_doRemoveTemplateLinks;
+    }
+
+    SettingsModelBoolean getDoUpdateTemplateLinksModel() {
+        return m_doUpdateTemplateLinks;
     }
 
     SettingsModelString getSnapshotNameModel() {
@@ -180,6 +220,8 @@ final class DeployWorkflow3Config {
         saveUseCustomWorkflowName(subSettings);
         m_customWorkflowName.saveSettingsTo(subSettings);
         m_createSnapshot.saveSettingsTo(subSettings);
+        m_doRemoveTemplateLinks.saveSettingsTo(subSettings);
+        m_doUpdateTemplateLinks.saveSettingsTo(subSettings);
         m_snapshotName.saveSettingsTo(subSettings);
         m_ioNodes.saveSettingsTo(settings);
     }
@@ -191,6 +233,13 @@ final class DeployWorkflow3Config {
         subSettings.containsKey(CFG_USE_CUSTOM_NAME);
         m_customWorkflowName.validateSettings(subSettings);
         m_createSnapshot.validateSettings(subSettings);
+        if (subSettings.containsKey(CFG_DO_REMOVE_LINKS)) {
+            // backwards compatibility: do not validate if not present
+            m_doRemoveTemplateLinks.validateSettings(subSettings);
+        }
+        if (subSettings.containsKey(CFG_DO_UPDATE_LINKS)) {
+            m_doUpdateTemplateLinks.validateSettings(subSettings);
+        }
         m_snapshotName.validateSettings(subSettings);
         m_ioNodes.validateSettings(settings);
     }
@@ -202,6 +251,17 @@ final class DeployWorkflow3Config {
         m_useCustomWorkflowName = subSettings.getBoolean(CFG_USE_CUSTOM_NAME);
         m_customWorkflowName.loadSettingsFrom(subSettings);
         m_createSnapshot.loadSettingsFrom(subSettings);
+        if (subSettings.containsKey(CFG_DO_REMOVE_LINKS)) {
+            // backwards compatibility: load default value if setting not present.
+            m_doRemoveTemplateLinks.loadSettingsFrom(subSettings);
+        } else {
+            m_doRemoveTemplateLinks.setBooleanValue(DO_REMOVE_LINKS_DEFAULT);
+        }
+        if (subSettings.containsKey(CFG_DO_UPDATE_LINKS)) {
+            m_doUpdateTemplateLinks.loadSettingsFrom(subSettings);
+        } else {
+            m_doUpdateTemplateLinks.setBooleanValue(DO_UPDATE_LINKS_DEFAULT);
+        }
         m_snapshotName.loadSettingsFrom(subSettings);
         m_ioNodes.loadSettingsFrom(settings);
     }

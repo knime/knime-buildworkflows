@@ -42,12 +42,6 @@
 			<option name="Use custom workflow name">
 				If selected the specified custom workflow name is used.
 			</option>
-			<option name="Create snapshot">
-				If checked, a snapshot will be created after the workflow has been deployed.
-			</option>
-			<option name="Snapshot comment">
-				A customizable comment message that describes the created snapshot.
-			</option>
 		</tab>
 		<tab name="Inputs and outputs">
 			<option name="Add input node">
@@ -58,6 +52,19 @@
 			<option name="Add output node">
 			    Allows one to add output nodes connected to selected inputs prior writing.
 			    Depending on the selected node, there is a limited set of options available to pre-configure the node to be added.
+			</option>
+		</tab>
+		<tab name="Deployment Options">
+			<option name="Create snapshot">
+				If checked, a snapshot will be created after the workflow has been deployed.
+			</option>
+			<option name="Snapshot comment">
+				A customizable comment message that describes the created snapshot.
+			</option>
+			<option	name="Update / disconnect links of components and metanodes">
+				If the workflow segment contains linked components or linked metanodes, these operations will update or
+				disconnect (remove) these links. If both operations are enabled, the components/metanodes will first
+				be updated and then disconnected.
 			</option>
 		</tab>
 	</fullDescription>
