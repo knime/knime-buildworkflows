@@ -92,6 +92,35 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
 
     private final SettingsModelIONodes m_ioNodes = new SettingsModelIONodes(CFG_IO_NODES);
 
+    private static final String CFG_DO_REMOVE_LINKS = "do_remove_template_links";
+
+    private final boolean DO_REMOVE_LINKS_DEFAULT = false;
+
+    /**
+     * Whether to remove links of linked metanodes and components before writing the workflow segment.
+     * @since 4.5
+     */
+    private final SettingsModelBoolean m_doRemoveTemplateLinks = new SettingsModelBoolean(CFG_DO_REMOVE_LINKS,
+            DO_REMOVE_LINKS_DEFAULT);
+
+
+    private static final String CFG_DO_UPDATE_LINKS = "do_update_template_links";
+
+    private final boolean DO_UPDATE_LINKS_DEFAULT = false;
+
+    /**
+     * Whether to update linked metanodes and components before writing the workflow segment.
+     * If this is enabled and links are also set to be removed, the metanodes/components will first be
+     * updated and then disconnected.
+     * @since 4.5
+     */
+    private final SettingsModelBoolean m_doUpdateTemplateLinks = new SettingsModelBoolean(CFG_DO_UPDATE_LINKS,
+            DO_UPDATE_LINKS_DEFAULT);
+
+
+
+
+
     /**
      * Constructor for configs in which the file chooser doesn't filter on file suffixes.
      *
@@ -127,6 +156,14 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
         return m_ioNodes;
     }
 
+    SettingsModelBoolean getDoRemoveTemplateLinks() {
+        return m_doRemoveTemplateLinks;
+    }
+
+    SettingsModelBoolean getDoUpdateTemplateLinks() {
+        return m_doUpdateTemplateLinks;
+    }
+
     @Override
     protected void validateConfigurationForModel(final NodeSettingsRO settings) throws InvalidSettingsException {
         super.validateConfigurationForModel(settings);
@@ -136,6 +173,12 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
         m_archive.validateSettings(settings);
         m_openAfterWrite.validateSettings(settings);
         m_ioNodes.validateSettings(settings);
+        if (settings.containsKey(CFG_DO_REMOVE_LINKS)) {
+            m_doRemoveTemplateLinks.validateSettings(settings);
+        }
+        if (settings.containsKey(CFG_DO_UPDATE_LINKS)) {
+            m_doUpdateTemplateLinks.validateSettings(settings);
+        }
     }
 
     @Override
@@ -147,6 +190,8 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
         m_archive.saveSettingsTo(settings);
         m_openAfterWrite.saveSettingsTo(settings);
         m_ioNodes.saveSettingsTo(settings);
+        m_doRemoveTemplateLinks.saveSettingsTo(settings);
+        m_doUpdateTemplateLinks.saveSettingsTo(settings);
     }
 
     @Override
@@ -158,6 +203,17 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
         m_archive.loadSettingsFrom(settings);
         m_openAfterWrite.loadSettingsFrom(settings);
         m_ioNodes.loadSettingsFrom(settings);
+        if (settings.containsKey(CFG_DO_REMOVE_LINKS)) {
+            // backwards compatibility: load default value if setting not present.
+            m_doRemoveTemplateLinks.loadSettingsFrom(settings);
+        } else {
+            m_doRemoveTemplateLinks.setBooleanValue(DO_REMOVE_LINKS_DEFAULT);
+        }
+        if (settings.containsKey(CFG_DO_UPDATE_LINKS)) {
+            m_doUpdateTemplateLinks.loadSettingsFrom(settings);
+        } else {
+            m_doUpdateTemplateLinks.setBooleanValue(DO_UPDATE_LINKS_DEFAULT);
+        }
     }
 
 }

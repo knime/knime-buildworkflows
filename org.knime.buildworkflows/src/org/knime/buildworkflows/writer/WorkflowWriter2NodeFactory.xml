@@ -92,6 +92,8 @@
 			<option name="Custom workflow name">
 				A customizable name for the to-be-written workflow.
 			</option>
+		</tab>
+		<tab name="Deployment Options">
 			<option name="Write workflow">
 				If selected, the workflow will be written into a folder and the KNIME Explorer view will be refreshed.
 			</option>
@@ -101,6 +103,11 @@
 			<option name="Export workflow as knwf archive">
 				If selected, he workflow will be written as a .knwf archive, just as if it were exported from KNIME Analytics Platform.
 				This archive can be imported into other installations of KNIME Analytics Platform.
+			</option>
+			<option	name="Update / disconnect links of components and metanodes">
+				If the workflow segment contains linked components or linked metanodes, these operations will update or
+				disconnect (remove) these links. If both operations are enabled, the components/metanodes will first
+				be updated and then disconnected.
 			</option>
 		</tab>
 		<tab name="Inputs and outputs">

@@ -48,8 +48,7 @@
  */
 package org.knime.buildworkflows.writer;
 
-import java.awt.Component;
-import java.awt.Dimension;
+import java.awt.*;
 import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
@@ -75,6 +74,7 @@ import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.SettingsModelWriterFileChooser;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeDialog;
+import org.knime.filehandling.core.util.GBCBuilder;
 
 /**
  * Dialog for the workflow writer node.
@@ -122,6 +122,16 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
 
     private final JRadioButton m_exportButton;
 
+    /**
+     * @see WorkflowWriterNodeConfig#m_doRemoveTemplateLinks
+     */
+    private final DialogComponentBoolean m_doRemoveTemplateLinks;
+
+    /**
+     * @see WorkflowWriterNodeConfig#m_doUpdateTemplateLinks
+     */
+    private final DialogComponentBoolean m_doUpdateTemplateLinks;
+
     WorkflowWriterNodeDialog(final NodeCreationConfiguration creationConfig, final String fileChooserHistoryId) {
         super(new WorkflowWriterNodeConfig(creationConfig), fileChooserHistoryId);
         final WorkflowWriterNodeConfig config = getConfig();
@@ -153,7 +163,13 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         m_exportButton.setActionCommand("EXPORT");
         group.add(m_exportButton);
 
-        addAdditionalPanel(group("Deployment Options", m_writeButton, m_openButton, m_exportButton));
+        m_doRemoveTemplateLinks = new DialogComponentBoolean(config.getDoRemoveTemplateLinks(), "Disconnect links of " +
+                "components and metanodes");
+        m_doUpdateTemplateLinks = new DialogComponentBoolean(config.getDoUpdateTemplateLinks(), "Update links of " +
+                "components and metanodes");
+
+        // TODO: remove
+        //addAdditionalPanel(group("Deployment Options", m_writeButton, m_openButton, m_exportButton));
 
         final SettingsModelWriterFileChooser fc = config.getFileChooserModel();
         final ChangeListener cl = e -> toggleOpenButton(fc);
@@ -162,11 +178,46 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         config.isUseCustomName()
             .addChangeListener(e -> config.getCustomName().setEnabled(config.isUseCustomName().getBooleanValue()));
 
+        addTab("Deployment Options", createDeploymentOptionsTab());
+
         // the portsconfig cannot be null, otherwise we have a problem in the framework
         m_workflowInputPortIndex = creationConfig.getPortConfig().orElseThrow(IllegalStateException::new)
             .getInputPortLocation().get(getPortObjectInputGrpName())[0];
         m_ioNodes = new DialogComponentIONodes(getConfig().getIONodes(), m_workflowInputPortIndex);
         addTab("Inputs and outputs", m_ioNodes.getComponentPanel());
+    }
+
+
+    private Component createDeploymentOptionsTab() {
+        final JPanel p = new JPanel(new GridBagLayout());
+        final GBCBuilder gbc = new GBCBuilder().resetPos().anchorLineStart().weight(1, 0).fillHorizontal();
+
+        p.add(group("Output", m_writeButton, m_openButton, m_exportButton), gbc.build());
+
+        gbc.incY();
+        p.add(createSegmentManipulationPanel(), gbc.build());
+
+        gbc.incY().weight(1, 1).fillBoth().insetTop(-10);
+        p.add(new JPanel(), gbc.build());
+
+        return p;
+    }
+
+
+    private Component createSegmentManipulationPanel() {
+        final JPanel p = new JPanel(new GridBagLayout());
+        p.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Modify workflow segment before deployment"));
+
+        final GBCBuilder gbc = new GBCBuilder().resetPos().anchorLineStart().weight(0, 0).fillNone();
+        p.add(m_doUpdateTemplateLinks.getComponentPanel(), gbc.build());
+
+        gbc.incY();
+        p.add(m_doRemoveTemplateLinks.getComponentPanel(), gbc.build());
+
+        gbc.resetX().incY().weight(1, 1).insetTop(-10).fillBoth();
+        p.add(new JPanel(), gbc.build());
+
+        return p;
     }
 
     private void toggleOpenButton(final SettingsModelWriterFileChooser fc) {
@@ -190,6 +241,8 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         settings.addBoolean(getConfig().isArchive().getConfigName(), m_exportButton.isSelected());
         m_existsOption.saveSettingsTo(settings);
         m_ioNodes.saveSettingsTo(settings);
+        m_doRemoveTemplateLinks.saveSettingsTo(settings);
+        m_doUpdateTemplateLinks.saveSettingsTo(settings);
     }
 
     @Override
@@ -213,5 +266,8 @@ final class WorkflowWriterNodeDialog extends PortObjectWriterNodeDialog<Workflow
         m_ioNodes.loadSettingsFrom(settings, specs);
 
         config.getCustomName().setEnabled(config.isUseCustomName().getBooleanValue());
+
+        m_doRemoveTemplateLinks.loadSettingsFrom(settings, specs);
+        m_doUpdateTemplateLinks.loadSettingsFrom(settings, specs);
     }
 }
