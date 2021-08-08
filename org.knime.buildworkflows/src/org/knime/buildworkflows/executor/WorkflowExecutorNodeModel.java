@@ -121,7 +121,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         WorkflowPortObject wpo = (WorkflowPortObject)inObjects[0];
         WorkflowSegment segment = wpo.getSpec().getWorkflowSegment();
         if (m_doUpdateTemplateLinks.getBooleanValue()) {
-            WorkflowSegmentManipulationRepository.updateLinkedTemplates.apply(segment);
+            WorkflowSegmentManipulationRepository.UPDATE_LINKED_TEMPLATES.apply(segment);
         }
 
         WorkflowExecutable we = createWorkflowExecutable(wpo.getSpec(), segment);

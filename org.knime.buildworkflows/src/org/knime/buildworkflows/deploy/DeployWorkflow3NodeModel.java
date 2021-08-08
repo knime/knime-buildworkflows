@@ -167,10 +167,10 @@ final class DeployWorkflow3NodeModel extends NodeModel {
 
             WorkflowSegment segment = workflowPortObject.getSpec().getWorkflowSegment();
             if (m_cfg.getDoUpdateTemplateLinksModel().getBooleanValue()) {
-                WorkflowSegmentManipulationRepository.updateLinkedTemplates.apply(segment);
+                WorkflowSegmentManipulationRepository.UPDATE_LINKED_TEMPLATES.apply(segment);
             }
             if (m_cfg.getDoRemoveTemplateLinksModel().getBooleanValue()) {
-                WorkflowSegmentManipulationRepository.removeTemplateLinks.apply(segment);
+                WorkflowSegmentManipulationRepository.REMOVE_TEMPLATE_LINKS.apply(segment);
             }
 
             exec.setProgress(.5, () -> "Saving workflow to disk.");

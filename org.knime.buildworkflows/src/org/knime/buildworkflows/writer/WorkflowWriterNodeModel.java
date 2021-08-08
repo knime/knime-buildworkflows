@@ -69,7 +69,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.knime.buildworkflows.ExistsOption;
-import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulation;
 import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulationRepository;
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.container.DataContainer;
@@ -156,10 +155,10 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
             config.getExistsOption().getStringValue().equals(ExistsOption.OVERWRITE.getActionCommand());
 
         if (config.getDoUpdateTemplateLinks().getBooleanValue()) {
-            WorkflowSegmentManipulationRepository.updateLinkedTemplates.apply(segment);
+            WorkflowSegmentManipulationRepository.UPDATE_LINKED_TEMPLATES.apply(segment);
         }
         if (config.getDoRemoveTemplateLinks().getBooleanValue()) {
-            WorkflowSegmentManipulationRepository.removeTemplateLinks.apply(segment);
+            WorkflowSegmentManipulationRepository.REMOVE_TEMPLATE_LINKS.apply(segment);
         }
 
         // determine workflow name

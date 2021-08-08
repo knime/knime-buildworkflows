@@ -51,7 +51,7 @@ package org.knime.buildworkflows.manipulate;
  * @since 4.5
  *
  */
-public abstract class WorkflowSegmentManipulationRepository {
+public final class WorkflowSegmentManipulationRepository {
 
     private WorkflowSegmentManipulationRepository() {
 
@@ -60,11 +60,11 @@ public abstract class WorkflowSegmentManipulationRepository {
     /**
      * Remove links of linked metanodes and components.
      */
-    public static final WorkflowSegmentManipulation removeTemplateLinks = new RemoveTemplateLinksManipulation();
+    public static final WorkflowSegmentManipulation REMOVE_TEMPLATE_LINKS = new RemoveTemplateLinksManipulation();
 
     /**
      * Update links of linked metanodes and components.
      */
-    public static final WorkflowSegmentManipulation updateLinkedTemplates = new UpdateLinkedTemplatesManipulation();
+    public static final WorkflowSegmentManipulation UPDATE_LINKED_TEMPLATES = new UpdateLinkedTemplatesManipulation();
 
 }

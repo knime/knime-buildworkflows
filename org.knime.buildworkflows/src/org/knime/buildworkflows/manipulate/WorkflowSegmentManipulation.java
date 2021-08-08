@@ -67,6 +67,6 @@ public interface WorkflowSegmentManipulation {
      * @param workflowSegment
      * @throws Exception
      */
-    public abstract void apply(WorkflowSegment workflowSegment) throws Exception;  // NOSONAR: Exception must be generic
+    void apply(WorkflowSegment workflowSegment) throws Exception;  // NOSONAR: Exception must be generic
 
 }
