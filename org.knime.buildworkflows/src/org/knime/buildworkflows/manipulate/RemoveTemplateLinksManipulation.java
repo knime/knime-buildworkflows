@@ -57,9 +57,18 @@ import org.knime.core.node.workflow.capture.WorkflowSegment;
 /**
  * Remove (disconnect) links of linked metanodes and components contained in the given workflow segment.
  *
+ * @author Benjamin Moser, KNIME GmbH, Konstanz, Germany
  * @since 4.5
  */
 public class RemoveTemplateLinksManipulation implements WorkflowSegmentManipulation {
+
+    /**
+     * @see WorkflowSegmentManipulations
+     */
+    RemoveTemplateLinksManipulation() {
+
+    }
+
     @Override
     public void apply(final WorkflowSegment workflowSegment) throws Exception {
         WorkflowManager wfm = workflowSegment.loadWorkflow();

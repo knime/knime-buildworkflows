@@ -50,12 +50,16 @@ import org.knime.core.node.workflow.capture.WorkflowSegment;
 /**
  * Operation that acts on and modifies a {@link org.knime.core.node.workflow.capture.WorkflowSegment}.
  *
- * A {@link WorkflowSegmentManipulation} is assumed to be stateless and only modify the given {@link WorkflowSegment}.
+ * For usage, static references to implementations can be obtained via {@link WorkflowSegmentManipulations}.
  *
- * This interface contains static references to instances of concrete implementations for convenience.
+ * Implementations are expected to...
+ * <ul>
+ *     <li>... be stateless and modify only the given {@link WorkflowSegment}.</li>
+ *     <li>... be registered in {@link WorkflowSegmentManipulations} and have package-scope constructors.</li>
+ * </ul>
  *
+ * @author Benjamin Moser, KNIME GmbH, Konstanz, Germany
  * @since 4.5
- *
  */
 @FunctionalInterface
 public interface WorkflowSegmentManipulation {

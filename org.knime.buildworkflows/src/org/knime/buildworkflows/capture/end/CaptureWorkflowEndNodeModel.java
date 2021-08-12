@@ -58,7 +58,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulationRepository;
+import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTable;
 import org.knime.core.data.container.CloseableRowIterator;
@@ -174,8 +174,8 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
 
         if (m_doRemoveTemplateLinks.getBooleanValue()) {
             try {
-                WorkflowSegmentManipulationRepository.REMOVE_TEMPLATE_LINKS.apply(wfs);
-            } catch (Exception e) {
+                WorkflowSegmentManipulations.REMOVE_TEMPLATE_LINKS.apply(wfs);
+            } catch (Exception e) {  // NOSONAR: Exception is handled
                 throw new InvalidSettingsException(e.getCause());
             }
         }

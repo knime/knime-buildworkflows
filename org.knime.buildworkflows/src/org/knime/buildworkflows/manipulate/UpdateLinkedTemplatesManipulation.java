@@ -59,9 +59,18 @@ import org.knime.core.util.FileUtil;
 /**
  * Update linked metanodes and components in the given workflow segment.
  *
+ * @author Benjamin Moser, KNIME GmbH, Konstanz, Germany
  * @since 4.5
  */
 public class UpdateLinkedTemplatesManipulation implements WorkflowSegmentManipulation {
+
+    /**
+     * @see WorkflowSegmentManipulations
+     */
+    UpdateLinkedTemplatesManipulation() {
+
+    }
+
     @Override
     public void apply(final WorkflowSegment workflowSegment) throws IOException, CanceledExecutionException {
         WorkflowManager wfm = workflowSegment.loadWorkflow();

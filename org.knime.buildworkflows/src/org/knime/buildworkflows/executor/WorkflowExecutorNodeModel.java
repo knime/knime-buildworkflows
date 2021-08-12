@@ -56,7 +56,7 @@ import java.util.ListIterator;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
-import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulationRepository;
+import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
@@ -121,7 +121,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         WorkflowPortObject wpo = (WorkflowPortObject)inObjects[0];
         WorkflowSegment segment = wpo.getSpec().getWorkflowSegment();
         if (m_doUpdateTemplateLinks.getBooleanValue()) {
-            WorkflowSegmentManipulationRepository.UPDATE_LINKED_TEMPLATES.apply(segment);
+            WorkflowSegmentManipulations.UPDATE_LINKED_TEMPLATES.apply(segment);
         }
 
         WorkflowExecutable we = createWorkflowExecutable(wpo.getSpec(), segment);

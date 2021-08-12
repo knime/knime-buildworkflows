@@ -48,22 +48,22 @@ package org.knime.buildworkflows.manipulate;
 /**
  * Provides references to {@link WorkflowSegmentManipulation}s for convenience.
  *
+ * @author Benjamin Moser, KNIME GmbH, Konstanz, Germany
  * @since 4.5
- *
  */
-public final class WorkflowSegmentManipulationRepository {
+public final class WorkflowSegmentManipulations {
 
-    private WorkflowSegmentManipulationRepository() {
+    private WorkflowSegmentManipulations() {
 
     }
 
     /**
-     * Remove links of linked metanodes and components.
+     * Remove links of linked metanodes and components contained in a given workflow segment.
      */
     public static final WorkflowSegmentManipulation REMOVE_TEMPLATE_LINKS = new RemoveTemplateLinksManipulation();
 
     /**
-     * Update links of linked metanodes and components.
+     * Update links of linked metanodes and components contained in a given workflow segment.
      */
     public static final WorkflowSegmentManipulation UPDATE_LINKED_TEMPLATES = new UpdateLinkedTemplatesManipulation();
 

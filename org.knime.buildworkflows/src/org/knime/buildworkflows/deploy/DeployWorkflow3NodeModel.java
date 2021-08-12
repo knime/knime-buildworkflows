@@ -57,7 +57,7 @@ import javax.ws.rs.WebApplicationException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.knime.buildworkflows.ExistsOption;
-import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulationRepository;
+import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
 import org.knime.buildworkflows.writer.WorkflowWriterNodeModel;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
@@ -167,10 +167,10 @@ final class DeployWorkflow3NodeModel extends NodeModel {
 
             WorkflowSegment segment = workflowPortObject.getSpec().getWorkflowSegment();
             if (m_cfg.getDoUpdateTemplateLinksModel().getBooleanValue()) {
-                WorkflowSegmentManipulationRepository.UPDATE_LINKED_TEMPLATES.apply(segment);
+                WorkflowSegmentManipulations.UPDATE_LINKED_TEMPLATES.apply(segment);
             }
             if (m_cfg.getDoRemoveTemplateLinksModel().getBooleanValue()) {
-                WorkflowSegmentManipulationRepository.REMOVE_TEMPLATE_LINKS.apply(segment);
+                WorkflowSegmentManipulations.REMOVE_TEMPLATE_LINKS.apply(segment);
             }
 
             exec.setProgress(.5, () -> "Saving workflow to disk.");
