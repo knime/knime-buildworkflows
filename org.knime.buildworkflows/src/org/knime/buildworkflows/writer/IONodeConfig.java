@@ -50,8 +50,6 @@ package org.knime.buildworkflows.writer;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.util.Collection;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.swing.Box;
@@ -64,7 +62,6 @@ import javax.swing.event.DocumentListener;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTable;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
@@ -74,13 +71,13 @@ import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.dialog.DialogNode;
+import org.knime.core.node.port.PortType;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
-import org.knime.core.util.Pair;
 import org.knime.filehandling.core.defaultnodesettings.status.DefaultStatusMessage;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
@@ -92,39 +89,54 @@ import org.knime.filehandling.core.defaultnodesettings.status.StatusView;
  * Possible future TODO: split into model, view, etc.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
+ * @author Dionysios Stolis, KNIME GmbH, Berlin, Germany
  */
-abstract class IONodeConfig {
+abstract class IONodeConfig implements NodeSettingsConfigurator{
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(IONodeConfig.class);
 
     /**
-     * Helper to add, connect and configure input or output nodes.
+     * Helper to configure input or output nodes.
      *
      * @param wfm the workflow to add the nodes to
-     * @param idToConfigMap gives the node-config for a 'configured' input/output
-     * @param in whether input or output nodes are to be added
+     * @param nodeID a connected {@link NodeID}
      * @param useV2SmartInOutNames true to use non-fully qualified parameter names (false for old deprecated node only)
-     * @param wfBounds the workflow's bounding box
-     * @param inputs the inputs to connect
-     * @param outputs the outputs to connect
+     * @param dataTable optional {@link DataTable} for specific implementations
      * @throws InvalidSettingsException if the configuration failed
      */
-    static void addConnectAndConfigureIONodes(final WorkflowManager wfm, final Collection<String> inputOrOutputIDs,
-        final Function<String, Stream<PortID>> idToPortsMap,
-        final Function<String, ? extends IONodeConfig> idToConfigMap,
-        final Function<String, DataTable> idToInputDataMap, final boolean in, final boolean useV2SmartInOutNames,
-        final int[] wfBounds) throws InvalidSettingsException {
-
-        int numNodes = inputOrOutputIDs.size();
-        Pair<Integer, int[]> positions = BuildWorkflowsUtil.getInputOutputNodePositions(wfBounds, numNodes, in);
-
-        int i = 0;
-        for (String id : inputOrOutputIDs) {
-            idToConfigMap.apply(id).addConnectAndConfigureNode(wfm, idToPortsMap.apply(id), positions.getFirst(),
-                //add and configure
-                positions.getSecond()[i], idToInputDataMap.apply(id), useV2SmartInOutNames);
-            i++;
+    protected void configureIONode(final WorkflowManager wfm, final NodeID nodeID, final boolean useV2SmartInOutNames,
+        final DataTable dataTable) throws InvalidSettingsException {
+        NodeSettings settings = new NodeSettings("root");
+        wfm.saveNodeSettings(nodeID, settings);
+        NodeSettingsWO modelSettings = settings.addNodeSettings("model");
+        if (this instanceof DataTableConfigurator) {
+            ((DataTableConfigurator)this).saveActualNodeSettingsTo(modelSettings, dataTable, useV2SmartInOutNames);
+        } else {
+            saveActualNodeSettingsTo(modelSettings, useV2SmartInOutNames);
         }
+        wfm.loadNodeSettings(nodeID, settings);
+    }
+
+    /**
+     * Helper to add and connect input or output nodes.
+     *
+     * @param wfm the workflow to add the nodes to
+     * @param portType specifies the {@link PortType} of the port
+     * @param ports a stream of {@link PortID}
+     * @param x the x coordinate
+     * @param y the y coordinate
+     * @return a connected {@link NodeID}
+     * @throws InvalidSettingsException if the configuration failed
+     */
+    protected NodeID addAndConnectIONode(final WorkflowManager wfm, final PortType portType, final Stream<PortID> ports,
+        final int x, final int y) throws InvalidSettingsException {
+        NodeID nodeID = wfm.createAndAddNode(createNodeFactory(portType));
+        NodeContainer nc = wfm.getNodeContainer(nodeID);
+        nc.setUIInformation(NodeUIInformation.builder().setNodeLocation(x, y, -1, -1).build());
+
+        ports.forEach(p -> addConnection(wfm, p, nodeID));
+
+        return nodeID;
     }
 
     private String m_paramName = getDefaultParameterName();
@@ -195,55 +207,11 @@ abstract class IONodeConfig {
     abstract String getNodeName();
 
     /**
-     * Adds the respective node to the given workflow at the given position, connects and configures it.
-     *
-     * @param wfm the workflow to add to
-     * @param ports the ports to connect to
-     * @param x the x coordinate
-     * @param y the y coordinate
-     * @param inputData optional input data used to configure a node
-     * @param useV2SmartInOutNames true to use non-fully qualified parameter names (false for old deprecated node only)
-     * @return the id of the new node
-     * @throws InvalidSettingsException if the configuration failed
-     */
-    protected NodeID addConnectAndConfigureNode(final WorkflowManager wfm, final Stream<PortID> ports, final int x,
-        final int y, final DataTable inputData, final boolean useV2SmartInOutNames) throws InvalidSettingsException {
-        //add
-        NodeID nodeID = wfm.createAndAddNode(createNodeFactory());
-        NodeContainer nc = wfm.getNodeContainer(nodeID);
-        nc.setUIInformation(NodeUIInformation.builder().setNodeLocation(x, y, -1, -1).build());
-
-        //connect
-        ports.forEach(p -> addConnection(wfm, p, nodeID));
-
-        //config
-        NodeSettings settings = new NodeSettings("root");
-        wfm.saveNodeSettings(nodeID, settings);
-        NodeSettingsWO modelSettings = settings.addNodeSettings("model");
-        if (this instanceof InputNodeConfig) {
-            ((InputNodeConfig)this).saveActualNodeSettingsTo(modelSettings, inputData, useV2SmartInOutNames);
-        } else {
-            saveActualNodeSettingsTo(modelSettings, useV2SmartInOutNames);
-        }
-        wfm.loadNodeSettings(nodeID, settings);
-
-        return nodeID;
-    }
-
-    /**
+     * @param portType the {@link PortType} of the port
      * @return the node factory instance of the represented node
+     * @throws InvalidSettingsException
      */
-    protected abstract NodeFactory<? extends NodeModel> createNodeFactory();
-
-    /**
-     * Saves the configuration as node settings as required to pre-configure the respective node.
-     *
-     * @param settings the object to store the settings into
-     * @param useV2SmartInOutNames
-     *
-     * @throws InvalidSettingsException if the configuration failed
-     */
-    protected abstract void saveActualNodeSettingsTo(NodeSettingsWO settings, boolean useV2SmartInOutNames) throws InvalidSettingsException;
+    protected abstract NodeFactory<? extends NodeModel> createNodeFactory(PortType portType) throws InvalidSettingsException;
 
     /**
      * Connects the node to the given port.

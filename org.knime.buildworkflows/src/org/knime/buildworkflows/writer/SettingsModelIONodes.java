@@ -108,13 +108,13 @@ public class SettingsModelIONodes extends SettingsModel {
         if (m_inputNodeConfigs == null) {
             m_inputNodeConfigs = new HashMap<>();
             for (String input : inputs) {
-                m_inputNodeConfigs.put(input, new TableInputNodeConfig());
+                m_inputNodeConfigs.put(input, new WorkflowInputNodeConfig());
             }
         }
         if (m_outputNodeConfigs == null) {
             m_outputNodeConfigs = new HashMap<>();
             for (String output : outputs) {
-                m_outputNodeConfigs.put(output, new TableOutputNodeConfig());
+                m_outputNodeConfigs.put(output, new WorkflowOutputNodeConfig());
             }
         }
     }

@@ -44,28 +44,27 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Feb 6, 2020 (hornm): created
+ *   28 Oct 2021 (Dionysios Stolis): created
  */
 package org.knime.buildworkflows.writer;
 
-import org.knime.core.node.BufferedDataTable;
+import org.apache.commons.lang3.StringUtils;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.port.PortType;
-import org.knime.core.node.util.CheckUtils;
-import org.knime.json.node.container.output.row.ContainerRowOutputNodeFactory;
-import org.knime.json.node.container.output.row.ContainerRowOutputNodeModel;
+import org.knime.workflowservices.knime.callee.WorkflowBoundaryConfiguration;
+import org.knime.workflowservices.knime.callee.WorkflowInputNodeFactory;
 
 /**
- * Represents the {@link ContainerRowOutputNodeFactory} node.
+ * Represents the {@link WorkflowInputNodeFactory} node
  *
- * @author Martin Horn, KNIME GmbH, Konstanz, Germany
+ * @author Dionysios Stolis, KNIME GmbH, Berlin, Germany
  */
-final class RowOutputNodeConfig extends OutputNodeConfig {
+final class WorkflowInputNodeConfig extends InputNodeConfig {
 
-    static final String NODE_NAME = "Container Output (Row)";
+    static final String NODE_NAME = "Workflow Input";
 
     /**
      * {@inheritDoc}
@@ -79,9 +78,16 @@ final class RowOutputNodeConfig extends OutputNodeConfig {
      * {@inheritDoc}
      */
     @Override
-    protected NodeFactory<? extends NodeModel> createNodeFactory(final PortType portType) throws InvalidSettingsException {
-        CheckUtils.checkSetting(portType.equals(BufferedDataTable.TYPE), "The %s supports only Data Table port type", NODE_NAME);
-        return new ContainerRowOutputNodeFactory();
+    protected NodeFactory<? extends NodeModel> createNodeFactory(final PortType portType) {
+        return new WorkflowInputNodeFactory(portType);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected String getDefaultParameterName() {
+        return "workflow-input";
     }
 
     /**
@@ -90,14 +96,8 @@ final class RowOutputNodeConfig extends OutputNodeConfig {
     @Override
     public void saveActualNodeSettingsTo(final NodeSettingsWO settings, final boolean useV2SmartInOutNames)
         throws InvalidSettingsException {
-        ContainerRowOutputNodeModel.saveConfigAsNodeSettings(settings, getParameterName(), !useV2SmartInOutNames);
+        String parameterName = StringUtils.isEmpty(getParameterName()) ? getDefaultParameterName() : getParameterName();
+        WorkflowBoundaryConfiguration.saveConfigAsNodeSettings(settings, parameterName);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected String getDefaultParameterName() {
-        return "row-output";
-    }
 }

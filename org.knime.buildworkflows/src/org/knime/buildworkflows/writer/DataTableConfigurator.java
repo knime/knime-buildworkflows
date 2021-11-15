@@ -44,60 +44,35 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Feb 6, 2020 (hornm): created
+ *   5 Nov 2021 (Dionysios Stolis): created
  */
 package org.knime.buildworkflows.writer;
 
-import org.knime.core.node.BufferedDataTable;
+import org.knime.core.data.DataTable;
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeFactory;
-import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsWO;
-import org.knime.core.node.port.PortType;
-import org.knime.core.node.util.CheckUtils;
-import org.knime.json.node.container.output.row.ContainerRowOutputNodeFactory;
-import org.knime.json.node.container.output.row.ContainerRowOutputNodeModel;
 
 /**
- * Represents the {@link ContainerRowOutputNodeFactory} node.
  *
- * @author Martin Horn, KNIME GmbH, Konstanz, Germany
+ * @author Dionysios Stolis, KNIME GmbH, Berlin, Germany
  */
-final class RowOutputNodeConfig extends OutputNodeConfig {
-
-    static final String NODE_NAME = "Container Output (Row)";
+interface DataTableConfigurator extends NodeSettingsConfigurator {
 
     /**
-     * {@inheritDoc}
+     * Saves the configuration as node settings as required to pre-configure the respective node.
+     *
+     * @param settings the object to store the settings into
+     * @param inputData tabular input data possibly to be used to configure the input node, can be <code>null</code> if
+     *            not available
+     * @param useV2SmartInOutNames
+     * @throws InvalidSettingsException if the configuration failed
      */
-    @Override
-    String getNodeName() {
-        return NODE_NAME;
-    }
+    void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData,
+        boolean useV2SmartInOutNames) throws InvalidSettingsException;
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected NodeFactory<? extends NodeModel> createNodeFactory(final PortType portType) throws InvalidSettingsException {
-        CheckUtils.checkSetting(portType.equals(BufferedDataTable.TYPE), "The %s supports only Data Table port type", NODE_NAME);
-        return new ContainerRowOutputNodeFactory();
-    }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void saveActualNodeSettingsTo(final NodeSettingsWO settings, final boolean useV2SmartInOutNames)
-        throws InvalidSettingsException {
-        ContainerRowOutputNodeModel.saveConfigAsNodeSettings(settings, getParameterName(), !useV2SmartInOutNames);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected String getDefaultParameterName() {
-        return "row-output";
+    default void saveActualNodeSettingsTo(final NodeSettingsWO settings, final boolean useV2SmartInOutNames) throws InvalidSettingsException{
+        saveActualNodeSettingsTo(settings, null, useV2SmartInOutNames);
     }
 }

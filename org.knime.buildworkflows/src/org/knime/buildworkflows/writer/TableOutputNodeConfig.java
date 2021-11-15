@@ -48,10 +48,13 @@
  */
 package org.knime.buildworkflows.writer;
 
+import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.port.PortType;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.json.node.container.output.table.ContainerTableOutputNodeFactory;
 import org.knime.json.node.container.output.table.ContainerTableOutputNodeModel;
 
@@ -60,7 +63,7 @@ import org.knime.json.node.container.output.table.ContainerTableOutputNodeModel;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class TableOutputNodeConfig extends OutputNodeConfig {
+final class TableOutputNodeConfig extends OutputNodeConfig {
 
     static final String NODE_NAME = "Container Output (Table)";
 
@@ -74,9 +77,11 @@ class TableOutputNodeConfig extends OutputNodeConfig {
 
     /**
      * {@inheritDoc}
+     * @throws InvalidSettingsException
      */
     @Override
-    protected NodeFactory<? extends NodeModel> createNodeFactory() {
+    protected NodeFactory<? extends NodeModel> createNodeFactory(final PortType portType) throws InvalidSettingsException {
+        CheckUtils.checkSetting(portType.equals(BufferedDataTable.TYPE), "The %s supports only Data Table port type", NODE_NAME);
         return new ContainerTableOutputNodeFactory();
     }
 
@@ -84,7 +89,7 @@ class TableOutputNodeConfig extends OutputNodeConfig {
      * {@inheritDoc}
      */
     @Override
-    protected void saveActualNodeSettingsTo(final NodeSettingsWO settings, final boolean useV2SmartInOutNames)
+    public void saveActualNodeSettingsTo(final NodeSettingsWO settings, final boolean useV2SmartInOutNames)
         throws InvalidSettingsException {
         ContainerTableOutputNodeModel.saveConfigAsNodeSettings(settings, getParameterName(), !useV2SmartInOutNames);
     }

@@ -48,9 +48,6 @@
  */
 package org.knime.buildworkflows.writer;
 
-import org.knime.core.data.DataTable;
-import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
@@ -69,25 +66,4 @@ abstract class InputNodeConfig extends IONodeConfig {
     protected void addConnection(final WorkflowManager wfm, final PortID p, final NodeID nodeID) {
         wfm.addConnection(nodeID, 1, p.getNodeIDSuffix().prependParent(wfm.getID()), p.getIndex());
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected final void saveActualNodeSettingsTo(final NodeSettingsWO settings, final boolean useV2SmartInOutNames)
-        throws InvalidSettingsException {
-        saveActualNodeSettingsTo(settings, null, useV2SmartInOutNames);
-    }
-
-    /**
-     * Saves the configuration as node settings as required to pre-configure the respective node.
-     *
-     * @param settings the object to store the settings into
-     * @param inputData tabular input data possibly to be used to configure the input node, can be <code>null</code> if
-     *            not available
-     * @param useV2SmartInOutNames
-     * @throws InvalidSettingsException if the configuration failed
-     */
-    protected abstract void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData,
-        boolean useV2SmartInOutNames) throws InvalidSettingsException;
 }

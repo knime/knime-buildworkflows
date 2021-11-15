@@ -51,10 +51,13 @@ package org.knime.buildworkflows.writer;
 import java.io.IOException;
 
 import org.knime.core.data.DataTable;
+import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.port.PortType;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.json.node.container.input.row.ContainerRowInputNodeFactory;
 import org.knime.json.node.container.input.row.ContainerRowInputNodeModel;
 
@@ -63,7 +66,7 @@ import org.knime.json.node.container.input.row.ContainerRowInputNodeModel;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class RowInputNodeConfig extends InputNodeConfig {
+final class RowInputNodeConfig extends InputNodeConfig implements DataTableConfigurator{
 
     static final String NODE_NAME = "Container Input (Row)";
 
@@ -79,7 +82,8 @@ class RowInputNodeConfig extends InputNodeConfig {
      * {@inheritDoc}
      */
     @Override
-    protected NodeFactory<? extends NodeModel> createNodeFactory() {
+    protected NodeFactory<? extends NodeModel> createNodeFactory(final PortType portType) throws InvalidSettingsException {
+        CheckUtils.checkSetting(portType.equals(BufferedDataTable.TYPE), "The %s supports only Data Table port type", NODE_NAME);
         return new ContainerRowInputNodeFactory();
     }
 
@@ -87,7 +91,7 @@ class RowInputNodeConfig extends InputNodeConfig {
      * {@inheritDoc}
      */
     @Override
-    protected void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData,
+     public void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData,
         final boolean useV2SmartInOutNames) throws InvalidSettingsException {
         try {
             ContainerRowInputNodeModel.saveConfigAsNodeSettings(settings, getParameterName(), !useV2SmartInOutNames,
@@ -104,5 +108,4 @@ class RowInputNodeConfig extends InputNodeConfig {
     protected String getDefaultParameterName() {
         return "row-input";
     }
-
 }

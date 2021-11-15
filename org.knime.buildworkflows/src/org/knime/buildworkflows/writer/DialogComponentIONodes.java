@@ -55,12 +55,10 @@ import java.util.stream.Collectors;
 
 import javax.swing.JLabel;
 
-import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.defaultnodesettings.DialogComponent;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.workflow.capture.WorkflowSegment.IOInfo;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 
 /**
@@ -89,9 +87,9 @@ public class DialogComponentIONodes extends DialogComponent {
         m_workflowInputPortIndex = workflowInputPortIndex;
 
         m_inputs = new PortAndNodeConfigPanel<>("Add input node", n -> getInputConfigInstanceFor(n), NONE_CHOICE,
-            TableInputNodeConfig.NODE_NAME, RowInputNodeConfig.NODE_NAME);
+                WorkflowInputNodeConfig.NODE_NAME, TableInputNodeConfig.NODE_NAME, RowInputNodeConfig.NODE_NAME);
         m_outputs = new PortAndNodeConfigPanel<>("Add output node", n -> getOutputConfigInstanceFor(n), NONE_CHOICE,
-            TableOutputNodeConfig.NODE_NAME, RowOutputNodeConfig.NODE_NAME);
+                WorkflowOutputNodeConfig.NODE_NAME, TableOutputNodeConfig.NODE_NAME, RowOutputNodeConfig.NODE_NAME);
 
         getComponentPanel().setLayout(new GridLayout(2, 1));
         getComponentPanel().add(m_inputs);
@@ -105,12 +103,15 @@ public class DialogComponentIONodes extends DialogComponent {
      * @return the instance
      */
     private static InputNodeConfig getInputConfigInstanceFor(final String nodeName) {
-        if (TableInputNodeConfig.NODE_NAME.equals(nodeName)) {
-            return new TableInputNodeConfig();
-        } else if (RowInputNodeConfig.NODE_NAME.equals(nodeName)) {
-            return new RowInputNodeConfig();
-        } else {
-            throw new IllegalStateException("Node name doesn't match. Implementation error!");
+        switch (nodeName) {
+            case TableInputNodeConfig.NODE_NAME:
+                return new TableInputNodeConfig();
+            case RowInputNodeConfig.NODE_NAME:
+                return new RowInputNodeConfig();
+            case WorkflowInputNodeConfig.NODE_NAME:
+                return new WorkflowInputNodeConfig();
+            default:
+                throw new IllegalStateException("Node name doesn't match. Implementation error!");
         }
     }
 
@@ -121,12 +122,15 @@ public class DialogComponentIONodes extends DialogComponent {
      * @return the {@link OutputNodeConfig} instance
      */
     static OutputNodeConfig getOutputConfigInstanceFor(final String nodeName) {
-        if (TableOutputNodeConfig.NODE_NAME.equals(nodeName)) {
-            return new TableOutputNodeConfig();
-        } else if (RowOutputNodeConfig.NODE_NAME.equals(nodeName)) {
-            return new RowOutputNodeConfig();
-        } else {
-            throw new IllegalStateException("Node name doesn't match. Implementation error!");
+        switch (nodeName) {
+            case TableOutputNodeConfig.NODE_NAME:
+                return new TableOutputNodeConfig();
+            case RowOutputNodeConfig.NODE_NAME:
+                return new RowOutputNodeConfig();
+            case WorkflowOutputNodeConfig.NODE_NAME:
+                return new WorkflowOutputNodeConfig();
+            default:
+                throw new IllegalStateException("Node name doesn't match. Implementation error!");
         }
     }
 
@@ -142,10 +146,10 @@ public class DialogComponentIONodes extends DialogComponent {
             return;
         }
 
-        List<String> inputs = workflowPortObjectSpec.getInputs().entrySet().stream().filter(e -> isValid(e.getValue()))
+        List<String> inputs = workflowPortObjectSpec.getInputs().entrySet().stream()
             .map(Entry::getKey).collect(Collectors.toList());
         List<String> outputs = workflowPortObjectSpec.getOutputs().entrySet().stream()
-            .filter(e -> isValid(e.getValue())).map(Entry::getKey).collect(Collectors.toList());
+            .map(Entry::getKey).collect(Collectors.toList());
 
         SettingsModelIONodes model = (SettingsModelIONodes)getModel();
         model.initWithDefaults(inputs, outputs);
@@ -154,9 +158,6 @@ public class DialogComponentIONodes extends DialogComponent {
         m_outputs.updatePanel(outputs, p -> model.getOutputNodeConfig(p).orElse(null));
     }
 
-    private static boolean isValid(final IOInfo i) {
-        return i.getType().isPresent() && i.getType().get().equals(BufferedDataTable.TYPE);
-    }
 
     private void updateModel() {
         SettingsModelIONodes model = (SettingsModelIONodes)getModel();
@@ -173,6 +174,9 @@ public class DialogComponentIONodes extends DialogComponent {
      */
     @Override
     protected void validateSettingsBeforeSave() throws InvalidSettingsException {
+        WorkflowPortObjectSpec workflowPortObjectSpec =
+                (WorkflowPortObjectSpec)getLastTableSpec(m_workflowInputPortIndex);
+        WorkflowWriterNodeModel.validateInputNodeConfigs(workflowPortObjectSpec, m_inputs.getSelectedConfigs());
         updateModel();
     }
 

@@ -48,8 +48,6 @@
  */
 package org.knime.buildworkflows.writer;
 
-import static org.knime.buildworkflows.writer.IONodeConfig.addConnectAndConfigureIONodes;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -61,6 +59,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -71,6 +70,7 @@ import java.util.stream.Stream;
 import org.knime.buildworkflows.ExistsOption;
 import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
+import org.knime.core.data.DataTable;
 import org.knime.core.data.container.DataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
@@ -84,6 +84,7 @@ import org.knime.core.node.exec.dataexchange.PortObjectIDSettings;
 import org.knime.core.node.exec.dataexchange.in.PortObjectInNodeModel;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
+import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.PortUtil;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.NativeNodeContainer;
@@ -99,6 +100,7 @@ import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
 import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
 import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 import org.knime.core.util.FileUtil;
+import org.knime.core.util.Pair;
 import org.knime.core.util.VMFileLocker;
 import org.knime.filehandling.core.connections.FSFiles;
 import org.knime.filehandling.core.connections.WorkflowAware;
@@ -333,6 +335,24 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         }
     }
 
+    static void validateInputNodeConfigs(final WorkflowPortObjectSpec specs, final Map<String, InputNodeConfig> inputs)
+            throws InvalidSettingsException {
+        for (Entry<String, InputNodeConfig> e : inputs.entrySet()) {
+            if (e.getKey() != null && e.getValue() != null) {
+                PortType portType = specs.getInputs().get(e.getKey()).getType().get();
+                validateIONodeConfig(portType, e.getValue());
+            }
+        }
+    }
+
+    private static void validateIONodeConfig(final PortType portType, final IONodeConfig config) throws InvalidSettingsException {
+        boolean isDataTableSupported = true;
+        if (config instanceof DataTableConfigurator) {
+            isDataTableSupported = portType.equals(BufferedDataTable.TYPE);
+        }
+        CheckUtils.checkArgument(isDataTableSupported, "The %s supports only Data Table port type", config.getNodeName());
+    }
+
     private static void addIONodes(final WorkflowManager wfm, final SettingsModelIONodes ioNodes,
         final boolean useV2SmartInOutNames, final WorkflowPortObject workflowPortObject, final ExecutionContext exec,
         final Consumer<String> warningMessageConsumer) throws InvalidSettingsException {
@@ -342,24 +362,50 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
             .initWithDefaults(workflowPortObject.getSpec().getInputIDs(),
             workflowPortObject.getSpec().getOutputIDs());
 
-        //add, connect and configure input and output nodes
         int[] wfmb = NodeUIInformation.getBoundingBoxOf(wfm.getNodeContainers());
+
         List<String> configuredInputs = ioNodes.getConfiguredInputs(workflowPortObject.getSpec().getInputIDs());
-        Map<String, Input> inputs = workflowPortObject.getSpec().getInputs();
-        addConnectAndConfigureIONodes(wfm, configuredInputs, //
-            id -> inputs.get(id).getConnectedPorts().stream(), //
-            id -> ioNodes.getInputNodeConfig(id).get(), //
-            id -> workflowPortObject.getInputDataFor(id).orElse(null), //
-            true, useV2SmartInOutNames, wfmb);
         List<String> configuredOutputs = ioNodes.getConfiguredOutputs(workflowPortObject.getSpec().getOutputIDs());
+
+        Map<String, Input> inputs = workflowPortObject.getSpec().getInputs();
         Map<String, Output> outputs = workflowPortObject.getSpec().getOutputs();
-        addConnectAndConfigureIONodes(wfm, configuredOutputs, //
-            id -> {
-                Optional<PortID> connectedPort = outputs.get(id).getConnectedPort();
-                return connectedPort.isPresent() ? Stream.of(connectedPort.get()) : Stream.empty();
-            }, //
-            id -> ioNodes.getOutputNodeConfig(id).get(), id -> workflowPortObject.getInputDataFor(id).orElse(null), //
-            false, useV2SmartInOutNames, wfmb);
+
+        Pair<Integer, int[]> inputPositions = BuildWorkflowsUtil.getInputOutputNodePositions(wfmb, inputs.size(), true);
+        Pair<Integer, int[]> outputPositions = BuildWorkflowsUtil.getInputOutputNodePositions(wfmb, outputs.size(), false);
+
+        // add, connect and configure inputs
+        int i = 0;
+        for (String id : configuredInputs) {
+            // add and connect
+            IONodeConfig inConfig = ioNodes.getInputNodeConfig(id).get();
+            var portType = inputs.get(id).getType().orElse(null);
+            var x = inputPositions.getFirst();
+            var y = inputPositions.getSecond()[i];
+            var ports = inputs.get(id).getConnectedPorts().stream();
+            var nodeID = inConfig.addAndConnectIONode(wfm, portType, ports, x, y);
+
+            // configure (optional data table for specific implementations)
+            DataTable dataTable = workflowPortObject.getInputDataFor(id).orElse(null);
+            inConfig.configureIONode(wfm, nodeID, useV2SmartInOutNames, dataTable);
+            i++;
+        }
+
+        // add, connect and configure outputs
+        i = 0;
+        for (String id : configuredOutputs) {
+            // add and connect
+            IONodeConfig outConfig = ioNodes.getOutputNodeConfig(id).get();
+            var portType = outputs.get(id).getType().orElse(null);
+            var x = outputPositions.getFirst();
+            var y = outputPositions.getSecond()[i];
+            var ports = getOutputPortIdStream(outputs, id);
+            var nodeID = outConfig.addAndConnectIONode(wfm, portType, ports, x, y);
+
+            // configure
+            outConfig.configureIONode(wfm, nodeID, useV2SmartInOutNames, null);
+            i++;
+        }
+
         boolean unconnectedInputs = inputs.size() > configuredInputs.size();
         boolean unconnectedOutputs = outputs.size() > configuredOutputs.size();
         if (unconnectedInputs || unconnectedOutputs) {
@@ -368,6 +414,17 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
                     + (unconnectedOutputs ? "output" : "") + " ports are not connected.");
         }
     }
+
+    /**
+     * @param outputs a map of id to {@link Output}
+     * @param id the id of the Output Node
+     * @return a stream of {@link PortID}
+     */
+    protected static Stream<PortID> getOutputPortIdStream(final Map<String, Output> outputs, final String id) {
+        Optional<PortID> connectedPort = outputs.get(id).getConnectedPort();
+        return connectedPort.isPresent() ? Stream.of(connectedPort.get()) : Stream.empty();
+    }
+
 
     public static Optional<String> validateWorkflowName(final WorkflowPortObjectSpec portObjectSpec,
         final boolean useCustomName, final String customName) {

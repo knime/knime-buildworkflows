@@ -49,10 +49,13 @@
 package org.knime.buildworkflows.writer;
 
 import org.knime.core.data.DataTable;
+import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.port.PortType;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.json.node.container.input.table.ContainerTableInputNodeFactory;
 import org.knime.json.node.container.input.table.ContainerTableInputNodeModel;
 
@@ -61,7 +64,7 @@ import org.knime.json.node.container.input.table.ContainerTableInputNodeModel;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class TableInputNodeConfig extends InputNodeConfig {
+final class TableInputNodeConfig extends InputNodeConfig implements DataTableConfigurator {
 
     static final String NODE_NAME = "Container Input (Table)";
 
@@ -75,9 +78,11 @@ class TableInputNodeConfig extends InputNodeConfig {
 
     /**
      * {@inheritDoc}
+     * @throws InvalidSettingsException
      */
     @Override
-    protected NodeFactory<? extends NodeModel> createNodeFactory() {
+    protected NodeFactory<? extends NodeModel> createNodeFactory(final PortType portType) throws InvalidSettingsException {
+        CheckUtils.checkSetting(portType.equals(BufferedDataTable.TYPE), "The %s supports only Data Table port type", NODE_NAME);
         return new ContainerTableInputNodeFactory();
     }
 
@@ -85,7 +90,7 @@ class TableInputNodeConfig extends InputNodeConfig {
      * {@inheritDoc}
      */
     @Override
-    protected void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData,
+    public void saveActualNodeSettingsTo(final NodeSettingsWO settings, final DataTable inputData,
         final boolean useV2SmartInOutNames) throws InvalidSettingsException {
         ContainerTableInputNodeModel.saveConfigAsNodeSettings(settings, getParameterName(), !useV2SmartInOutNames,
             inputData);
