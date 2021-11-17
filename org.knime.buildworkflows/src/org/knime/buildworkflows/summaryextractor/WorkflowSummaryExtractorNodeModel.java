@@ -53,12 +53,8 @@ import static org.knime.core.util.workflowsummary.WorkflowSummaryUtil.writeXML;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.stream.XMLStreamException;
 
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTableSpec;
@@ -86,7 +82,6 @@ import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.util.workflowsummary.WorkflowSummary;
 import org.knime.core.util.workflowsummary.WorkflowSummaryCreator;
-import org.xml.sax.SAXException;
 
 /**
  * Node to extract WorkflowSummaries.
@@ -154,7 +149,7 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
     }
 
     private BufferedDataTable fillTable(final ExecutionContext exec, final WorkflowManager wfm)
-        throws IOException, ParserConfigurationException, SAXException, XMLStreamException {
+        throws Exception {
         final WorkflowSummary summary = WorkflowSummaryCreator.create(wfm, false, Collections.emptyList());
         final BufferedDataContainer container = exec.createDataContainer(createSpec());
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
