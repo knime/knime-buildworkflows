@@ -727,6 +727,10 @@ license terms applicable to such Node, including when such Node is
 propagated with or for interoperation with KNIME.
    </license>
 
+  <requires>
+      <import feature="org.eclipse.birt.knime.osgi.runtime" version="4.9.0.v202104071056-knime-20210408" match="greaterOrEqual"/>
+   </requires>
+
    <plugin
          id="org.knime.buildworkflows"
          download-size="0"
