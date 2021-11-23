@@ -64,7 +64,7 @@ import org.knime.workflowservices.knime.callee.WorkflowOutputNodeFactory;
  */
 final class WorkflowOutputNodeConfig extends OutputNodeConfig {
 
-    static final String NODE_NAME = "Workflow Output";
+    static final String NODE_NAME = "Workflow Service Output";
 
     /**
      * {@inheritDoc}

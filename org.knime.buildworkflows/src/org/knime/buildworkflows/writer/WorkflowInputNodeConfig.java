@@ -64,7 +64,7 @@ import org.knime.workflowservices.knime.callee.WorkflowInputNodeFactory;
  */
 final class WorkflowInputNodeConfig extends InputNodeConfig {
 
-    static final String NODE_NAME = "Workflow Input";
+    static final String NODE_NAME = "Workflow Service Input";
 
     /**
      * {@inheritDoc}
