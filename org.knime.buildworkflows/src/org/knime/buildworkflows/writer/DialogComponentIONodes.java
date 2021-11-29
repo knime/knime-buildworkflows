@@ -174,9 +174,10 @@ public class DialogComponentIONodes extends DialogComponent {
      */
     @Override
     protected void validateSettingsBeforeSave() throws InvalidSettingsException {
-        WorkflowPortObjectSpec workflowPortObjectSpec =
-                (WorkflowPortObjectSpec)getLastTableSpec(m_workflowInputPortIndex);
-        WorkflowWriterNodeModel.validateInputNodeConfigs(workflowPortObjectSpec, m_inputs.getSelectedConfigs());
+        var workflowPOS = (WorkflowPortObjectSpec)getLastTableSpec(m_workflowInputPortIndex);
+
+        WorkflowWriterNodeModel.validateIONodeConfigs(workflowPOS.getInputs(), m_inputs.getSelectedConfigs());
+        WorkflowWriterNodeModel.validateIONodeConfigs(workflowPOS.getOutputs(), m_outputs.getSelectedConfigs());
         updateModel();
     }
 

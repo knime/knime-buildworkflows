@@ -111,15 +111,15 @@ class PortAndNodeConfigPanel<C extends IONodeConfig> extends JPanel {
         return m_selectedConfigs;
     }
 
-    void updatePanel(final List<String> ports,
-        final Function<String, C> getConfig) {
+    void updatePanel(final List<String> ports, final Function<String, C> getConfig) {
+        m_selectedConfigs.clear();
+        m_portSelection.removeAllItems();
         if (ports.isEmpty()) {
             removeAll();
             add(new JLabel("No ports"));
             revalidate();
             repaint();
         } else {
-            m_portSelection.removeAllItems();
             ports.forEach(m_portSelection::addItem);
             m_portSelection.setEnabled(ports.size() > 1);
             for (String port : ports) {

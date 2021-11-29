@@ -57,6 +57,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -67,6 +68,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.knime.buildworkflows.ExistsOption;
 import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
@@ -87,6 +89,7 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.PortUtil;
 import org.knime.core.node.util.CheckUtils;
+import org.knime.core.node.util.ConvenienceMethods;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
@@ -96,6 +99,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
+import org.knime.core.node.workflow.capture.WorkflowSegment.IOInfo;
 import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
 import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
 import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
@@ -335,22 +339,41 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         }
     }
 
-    static void validateInputNodeConfigs(final WorkflowPortObjectSpec specs, final Map<String, InputNodeConfig> inputs)
-            throws InvalidSettingsException {
-        for (Entry<String, InputNodeConfig> e : inputs.entrySet()) {
-            if (e.getKey() != null && e.getValue() != null) {
-                PortType portType = specs.getInputs().get(e.getKey()).getType().get();
-                validateIONodeConfig(portType, e.getValue());
-            }
+    static void validateIONodeConfigs(final Map<String, ? extends IOInfo> ioSpecs,
+        final Map<String, ? extends IONodeConfig> ioNodeConfigs) throws InvalidSettingsException {
+        // inputs and outputs that are present in the workflow fragment -- expecting all to be configured
+        var validNamesSet = new HashSet<>(ioSpecs.keySet());
+
+        for (Entry<String, ? extends IONodeConfig> nodeConfig : ioNodeConfigs.entrySet()) {
+            var parameterName = nodeConfig.getKey();
+            var ioInfo = ioSpecs.get(parameterName);
+            CheckUtils.checkSettingNotNull(ioInfo,
+                "Node was configured for \"%s\" but no such parameter exists in the workflow fragment",
+                parameterName);
+            validNamesSet.remove(parameterName);
+
+            var type = ioInfo.getType().orElseThrow(() -> new InvalidSettingsException(
+                    "Workflow fragment contains port types not present in this installation (plug-in installed?)"));
+            validateIONodeConfig(type, nodeConfig.getValue());
         }
+
+
+        CheckUtils.checkSetting(validNamesSet.isEmpty(),
+            "Found nodes in the workflow fragment that are not configured (%s)",
+            ConvenienceMethods.getShortStringFrom(validNamesSet, 3));
     }
 
-    private static void validateIONodeConfig(final PortType portType, final IONodeConfig config) throws InvalidSettingsException {
-        boolean isDataTableSupported = true;
+
+    private static void validateIONodeConfig(final PortType portType, final IONodeConfig config)
+        throws InvalidSettingsException {
+        if (ObjectUtils.isEmpty(config)) { // NONE_CHOICE was selected, don't validate it
+            return;
+        }
+        var isDataTableSupported = true;
         if (config instanceof DataTableConfigurator) {
             isDataTableSupported = portType.equals(BufferedDataTable.TYPE);
         }
-        CheckUtils.checkArgument(isDataTableSupported, "The %s supports only Data Table port type", config.getNodeName());
+        CheckUtils.checkSetting(isDataTableSupported, "The %s supports only Data Table port type", config.getNodeName());
     }
 
     private static void addIONodes(final WorkflowManager wfm, final SettingsModelIONodes ioNodes,
