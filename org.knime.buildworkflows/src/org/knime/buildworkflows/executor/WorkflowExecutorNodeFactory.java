@@ -90,6 +90,11 @@ public class WorkflowExecutorNodeFactory extends ConfigurableNodeFactory<Workflo
     }
 
     @Override
+    public boolean isPortConfigurableViaMenu() {
+        return false;
+    }
+
+    @Override
     protected int getNrNodeViews() {
         return 0;
     }
