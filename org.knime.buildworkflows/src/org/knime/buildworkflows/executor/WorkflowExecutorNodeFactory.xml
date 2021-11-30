@@ -36,7 +36,7 @@
 		<inPort index="0" name="Workflow">
 			The workflow segment to be executed.
 		</inPort>
-		<dynInPort insert-before="1" name="Workflow inputs"
+		<dynInPort insert-before="1" name="Workflow inputs" configurable-via-menu="false"
 			group-identifier="Inputs">
 			The inputs for the execution. Number and types of
 			the ports must
@@ -44,7 +44,7 @@
 			the workflow
 			port.
 		</dynInPort>
-		<dynOutPort insert-before="0" name="Workflow outputs"
+		<dynOutPort insert-before="0" name="Workflow outputs" configurable-via-menu="false"
 			group-identifier="Outputs">The outputs of the execution. Number and types of
 			the ports must exactly match the outputs of the workflow provided at
 			the workflow port.
