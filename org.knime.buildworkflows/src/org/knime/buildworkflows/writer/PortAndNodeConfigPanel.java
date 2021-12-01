@@ -51,6 +51,7 @@ package org.knime.buildworkflows.writer;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.event.ItemEvent;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,16 +88,25 @@ class PortAndNodeConfigPanel<C extends IONodeConfig> extends JPanel {
 
     private Function<String, C> m_instantiateConfig;
 
+    @SuppressWarnings("java:S1699") // calls to derived methods in constructor (sonar)
     PortAndNodeConfigPanel(final String title, final Function<String, C> instantiateConfig, final String noneChoice,
         final String... nodeNames) {
         setLayout(new BorderLayout());
         setBorder(createBorder(title));
 
-        JPanel comboBoxes = new JPanel(new BorderLayout());
+        var comboBoxes = new JPanel(new BorderLayout());
         m_portSelection = new JComboBox<>();
-        m_portSelection.addActionListener(e -> portSelectionChanged());
+        m_portSelection.addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.SELECTED) {
+                portSelectionChanged();
+            }
+        });
         m_nodeSelection = new JComboBox<>(ArrayUtils.insert(0, nodeNames, noneChoice));
-        m_nodeSelection.addActionListener(e -> nodeSelectionChanged());
+        m_nodeSelection.addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.SELECTED) {
+                nodeSelectionChanged();
+            }
+        });
         comboBoxes.add(m_portSelection, BorderLayout.WEST);
         comboBoxes.add(m_nodeSelection, BorderLayout.CENTER);
         add(comboBoxes, BorderLayout.NORTH);
