@@ -53,7 +53,6 @@ import static org.knime.buildworkflows.util.BuildWorkflowsUtil.checkLoadResult;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
@@ -61,45 +60,35 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.ZipInputStream;
 
 import org.apache.commons.lang3.StringUtils;
-import org.knime.core.data.container.ContainerTable;
-import org.knime.core.data.container.DataContainer;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.dialog.InputNode;
 import org.knime.core.node.dialog.OutputNode;
-import org.knime.core.node.exec.dataexchange.PortObjectIDSettings;
-import org.knime.core.node.exec.dataexchange.PortObjectIDSettings.ReferenceType;
-import org.knime.core.node.exec.dataexchange.PortObjectRepository;
-import org.knime.core.node.exec.dataexchange.in.PortObjectInNodeModel;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.port.PortUtil;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
-import org.knime.core.node.workflow.WorkflowLoadHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
+import org.knime.core.node.workflow.capture.ReferenceReaderDataUtil;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
@@ -112,7 +101,6 @@ import org.knime.core.util.LockFailedException;
 import org.knime.filehandling.core.connections.FSFiles;
 import org.knime.filehandling.core.connections.FSPath;
 import org.knime.filehandling.core.connections.WorkflowAware;
-import org.knime.filehandling.core.defaultnodesettings.filechooser.reader.ReadPathAccessor;
 import org.knime.filehandling.core.defaultnodesettings.status.NodeModelStatusConsumer;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage.MessageType;
 
@@ -149,7 +137,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
 
     @Override
     protected final PortObject[] execute(final PortObject[] data, final ExecutionContext exec) throws Exception {
-        try (final ReadPathAccessor accessor = m_config.getWorkflowChooserModel().createReadPathAccessor()) {
+        try (final var accessor = m_config.getWorkflowChooserModel().createReadPathAccessor()) {
             final List<FSPath> paths = accessor.getFSPaths(m_statusConsumer);
             assert paths.size() == 1;
             m_statusConsumer.setWarningsIfRequired(this::setWarningMessage);
@@ -161,7 +149,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
 
     private PortObject[] readFromPath(final Path inputPath, final ExecutionContext exec) throws IOException,
         CanceledExecutionException, InvalidSettingsException, UnsupportedWorkflowVersionException, LockFailedException {
-        File wfFile = toLocalWorkflowDir(inputPath);
+        var wfFile = toLocalWorkflowDir(inputPath);
         exec.setProgress("Reading workflow");
         WorkflowManager wfm = readWorkflow(wfFile, exec, this::setWarningMessage);
         if (wfm.canResetAll()) {
@@ -173,11 +161,11 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
             wfm.resetAndConfigureAll();
         }
 
-        String customWorkflowName = m_config.getWorkflowName().getStringValue();
+        var customWorkflowName = m_config.getWorkflowName().getStringValue();
         if (!StringUtils.isBlank(customWorkflowName)) {
             wfm.setName(customWorkflowName);
         } else {
-            String wfName = inputPath.getFileName().toString();
+            var wfName = inputPath.getFileName().toString();
             if (wfName.endsWith(".knwf")) {
                 wfName = wfName.substring(0, wfName.length() - 5);
             }
@@ -195,9 +183,10 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
             outputs = Collections.emptyList();
         }
 
-        Set<NodeIDSuffix> portObjectReferenceReaderNodes = copyPortObjectReferenceReaderData(wfm, wfFile, exec);
+        Set<NodeIDSuffix> portObjectReferenceReaderNodes =
+            ReferenceReaderDataUtil.copyReferenceReaderData(wfm, exec, this);
 
-        WorkflowSegment ws = new WorkflowSegment(wfm, inputs, outputs, portObjectReferenceReaderNodes);
+        var ws = new WorkflowSegment(wfm, inputs, outputs, portObjectReferenceReaderNodes);
         try {
             return new PortObject[]{new WorkflowPortObject(new WorkflowPortObjectSpec(ws, null,
                 getIOIds(inputs.size(), m_config.getInputIdPrefix().getStringValue()),
@@ -223,11 +212,11 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         final Consumer<String> warningConsumer) throws IOException, InvalidSettingsException, CanceledExecutionException,
         UnsupportedWorkflowVersionException, LockFailedException {
 
-        final WorkflowLoadHelper loadHelper = WorkflowSegment.createWorkflowLoadHelper(wfFile, warningConsumer);
+        final var loadHelper = WorkflowSegment.createWorkflowLoadHelper(wfFile, warningConsumer);
         final WorkflowLoadResult loadResult =
             WorkflowManager.EXTRACTED_WORKFLOW_ROOT.load(wfFile, exec, loadHelper, false);
 
-        final WorkflowManager m = loadResult.getWorkflowManager();
+        final var m = loadResult.getWorkflowManager();
         if (m == null) {
             throw new IOException(
                 "Errors reading workflow: " + loadResult.getFilteredError("", LoadResultEntryType.Ok));
@@ -251,7 +240,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
             }
             return ((WorkflowAware)provider).toLocalWorkflowDir(path);
         } else {
-            try (InputStream in = FSFiles.newInputStream(path)) {
+            try (var in = FSFiles.newInputStream(path)) {
                 return unzipToLocalDir(in);
             }
         }
@@ -259,7 +248,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
 
     private static File unzipToLocalDir(final InputStream in) throws IOException {
         File tmpDir = null;
-        try (ZipInputStream zip = new ZipInputStream(in)) {
+        try (var zip = new ZipInputStream(in)) {
             tmpDir = FileUtil.createTempDir("workflow_reader");
             FileUtil.unzip(zip, tmpDir, 1);
         }
@@ -296,7 +285,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
     private static boolean collectInputs(final WorkflowManager wfm, final List<Input> inputs,
         final NativeNodeContainer nnc) {
         if (nnc.getNodeModel() instanceof InputNode) {
-            for (int i = 0; i < nnc.getNrOutPorts(); i++) {
+            for (var i = 0; i < nnc.getNrOutPorts(); i++) {
                 Set<PortID> ports = wfm.getOutgoingConnectionsFor(nnc.getID(), i).stream()
                     .map(cc -> new PortID(NodeIDSuffix.create(wfm.getID(), cc.getDest()), cc.getDestPort()))
                     .collect(Collectors.toSet());
@@ -308,66 +297,6 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         } else {
             return false;
         }
-    }
-
-    private Set<NodeIDSuffix> copyPortObjectReferenceReaderData(final WorkflowManager wfm, final File wfFile,
-        final ExecutionContext exec) throws IOException, CanceledExecutionException, InvalidSettingsException {
-        Set<NodeIDSuffix> res = new HashSet<>();
-        for (NodeContainer nc : wfm.getNodeContainers()) {
-            if (nc instanceof NativeNodeContainer
-                && ((NativeNodeContainer)nc).getNodeModel() instanceof PortObjectInNodeModel) {
-                exec.setProgress("Copying data for node " + nc.getID());
-                PortObjectInNodeModel portObjectReader =
-                    (PortObjectInNodeModel)((NativeNodeContainer)nc).getNodeModel();
-                final PortObjectIDSettings poSettings = portObjectReader.getInputNodeSettingsCopy();
-                if (poSettings.getReferenceType() != ReferenceType.FILE) {
-                    throw new IllegalStateException(
-                        "Reference reader nodes expected to reference a file. But the reference type is "
-                            + poSettings.getReferenceType());
-                }
-                URI uri = poSettings.getUri();
-                File absoluteDataFile =
-                    new File(wfFile, uri.toString().replace("knime://knime.workflow", ""));
-                if (!absoluteDataFile.getCanonicalPath().startsWith(wfFile.getCanonicalPath())) {
-                    throw new IllegalStateException(
-                        "Trying to read in a data file outside of the workflow directory. Not allowed!");
-                }
-                PortObject po;
-                try (InputStream in = absoluteDataFile.toURI().toURL().openStream()) {
-                    po = readPortObject(exec, in, poSettings.isTable());
-                }
-                UUID id = UUID.randomUUID();
-                addPortObject(id, po);
-                PortObjectRepository.add(id, po);
-                updatePortObjectReferenceReaderReference(wfm, nc.getID(), poSettings, id);
-                res.add(NodeIDSuffix.create(wfm.getID(), nc.getID()));
-            }
-        }
-        return res;
-    }
-
-    private static PortObject readPortObject(final ExecutionContext exec, final InputStream in, final boolean isTable)
-        throws CanceledExecutionException, IOException {
-        PortObject po;
-        if (isTable) {
-            try (ContainerTable table = DataContainer.readFromStream(in)) {
-                po = exec.createBufferedDataTable(table, exec);
-            }
-        } else {
-            po = PortUtil.readObjectFromStream(in, exec);
-        }
-        return po;
-    }
-
-    private static void updatePortObjectReferenceReaderReference(final WorkflowManager wfm, final NodeID nodeId,
-        final PortObjectIDSettings poSettings, final UUID id) throws InvalidSettingsException {
-        poSettings.setId(id);
-
-        final NodeSettings settings = new NodeSettings("root");
-        wfm.saveNodeSettings(nodeId, settings);
-        final NodeSettingsWO modelSettings = settings.addNodeSettings("model");
-        poSettings.saveSettings(modelSettings);
-        wfm.loadNodeSettings(nodeId, settings);
     }
 
     @Override

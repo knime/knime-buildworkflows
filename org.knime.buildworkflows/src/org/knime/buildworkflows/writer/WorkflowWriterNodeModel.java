@@ -50,7 +50,6 @@ package org.knime.buildworkflows.writer;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
@@ -62,7 +61,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -72,30 +70,19 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.knime.buildworkflows.ExistsOption;
 import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
-import org.knime.core.data.DataTable;
-import org.knime.core.data.container.DataContainer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeModel;
-import org.knime.core.node.NodeSettings;
-import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.NodeCreationConfiguration;
-import org.knime.core.node.exec.dataexchange.PortObjectIDSettings;
-import org.knime.core.node.exec.dataexchange.in.PortObjectInNodeModel;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
-import org.knime.core.node.port.PortUtil;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.util.ConvenienceMethods;
-import org.knime.core.node.workflow.NativeNodeContainer;
-import org.knime.core.node.workflow.NodeContainer;
-import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.capture.ReferenceReaderDataUtil;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
@@ -104,6 +91,7 @@ import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
 import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
 import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 import org.knime.core.util.FileUtil;
+import org.knime.core.util.LockFailedException;
 import org.knime.core.util.Pair;
 import org.knime.core.util.VMFileLocker;
 import org.knime.filehandling.core.connections.FSFiles;
@@ -130,7 +118,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
     protected void configureInternal(final PortObjectSpec[] inSpecs) throws InvalidSettingsException {
 
         final WorkflowWriterNodeConfig config = getConfig();
-        final WorkflowPortObjectSpec workflowPortObjectSpec =
+        final var workflowPortObjectSpec =
             validateAndGetWorkflowPortObjectSpec(inSpecs[getInputTableIndex()], InvalidSettingsException::new);
 
         final Optional<String> err = validateWorkflowName(workflowPortObjectSpec,
@@ -152,11 +140,11 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
 
         final WorkflowWriterNodeConfig config = getConfig();
 
-        final WorkflowPortObject workflowPortObject = (WorkflowPortObject)object;
-        final WorkflowPortObjectSpec workflowPortObjectSpec = workflowPortObject.getSpec();
-        final WorkflowSegment segment = workflowPortObjectSpec.getWorkflowSegment();
-        final boolean archive = config.isArchive().getBooleanValue();
-        final boolean openAfterWrite = config.isOpenAfterWrite().getBooleanValue();
+        final var workflowPortObject = (WorkflowPortObject)object;
+        final var workflowPortObjectSpec = workflowPortObject.getSpec();
+        final var segment = workflowPortObjectSpec.getWorkflowSegment();
+        final var archive = config.isArchive().getBooleanValue();
+        final var openAfterWrite = config.isOpenAfterWrite().getBooleanValue();
         final boolean overwrite =
             config.getExistsOption().getStringValue().equals(ExistsOption.OVERWRITE.getActionCommand());
 
@@ -206,11 +194,11 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
 
         // create temporary local directory
         exec.setProgress(.33, () -> "Saving workflow to disk.");
-        final File tmpDir = FileUtil.createTempDir("workflow-writer");
+        final var tmpDir = FileUtil.createTempDir("workflow-writer");
         final File localSource = write(tmpDir, workflowName, segment, exec, config.getIONodes(),
             m_useV2SmartInOutNames, workflowPortObject, archive, this::setWarningMessage);
 
-        final Path localSourcePath = localSource.toPath();
+        final var localSourcePath = localSource.toPath();
 
         // copy workflow from temporary source to desired destination
         exec.setProgress(.67, () -> "Copying workflow to destination.");
@@ -227,8 +215,8 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         } else {
             try (final Stream<Path> streams = Files.walk(localSourcePath)) {
                 for (final Path path : streams.collect(Collectors.toList())) {
-                    final Path rel = localSourcePath.relativize(path);
-                    final String relString = UnixStylePathUtil.asUnixStylePath(rel.toString());
+                    final var rel = localSourcePath.relativize(path);
+                    final var relString = UnixStylePathUtil.asUnixStylePath(rel.toString());
                     final Path res = dest.resolve(relString);
                     exec.setMessage(() -> String.format("Copying file %s.", relString));
                     if (overwrite) {
@@ -246,21 +234,42 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         FileUtil.deleteRecursively(tmpDir);
     }
 
+    /**
+     * @param tmpDir
+     * @param workflowName
+     * @param segment
+     * @param exec
+     * @param ioNodes
+     * @param useV2SmartInOutNames
+     * @param workflowPortObject
+     * @param archive
+     * @param warningMessageConsumer
+     * @return
+     * @throws Exception
+     */
     public static File write(final File tmpDir, final String workflowName, final WorkflowSegment segment,
         final ExecutionContext exec, final SettingsModelIONodes ioNodes, final boolean useV2SmartInOutNames,
         final WorkflowPortObject workflowPortObject, final boolean archive,
         final Consumer<String> warningMessageConsumer) throws Exception {
-        final File tmpWorkflowDir = new File(tmpDir, workflowName);
-        tmpWorkflowDir.mkdir();
-        final File tmpDataDir = new File(tmpWorkflowDir, "data");
-        tmpDataDir.mkdir();
 
         final WorkflowManager wfm = BuildWorkflowsUtil.loadWorkflow(segment, warningMessageConsumer);
         wfm.setName(workflowName);
-        try {
-            writeReferenceReaderNodeData(segment, wfm, tmpDataDir, exec);
-            addIONodes(wfm, ioNodes, useV2SmartInOutNames, workflowPortObject, exec, warningMessageConsumer);
+        addIONodes(wfm, ioNodes, useV2SmartInOutNames, workflowPortObject, exec, warningMessageConsumer);
 
+        return writeWorkflowPortObjectAndReferencedData(wfm, tmpDir, segment, exec, archive);
+    }
+
+    private static File writeWorkflowPortObjectAndReferencedData(final WorkflowManager wfm, final File tmpDir,
+        final WorkflowSegment segment, final ExecutionContext exec, final boolean archive) throws IOException,
+        CanceledExecutionException, URISyntaxException, InvalidSettingsException, LockFailedException {
+        final var tmpWorkflowDir = new File(tmpDir, wfm.getName());
+        tmpWorkflowDir.mkdir();
+        final var tmpDataDir = new File(tmpWorkflowDir, "data");
+        tmpDataDir.mkdir();
+
+        try {
+            ReferenceReaderDataUtil.writeReferenceReaderData(wfm, segment.getPortObjectReferenceReaderNodes(),
+                tmpDataDir, exec);
             wfm.save(tmpWorkflowDir, exec.createSubProgress(.34), false);
         } finally {
             segment.disposeWorkflow();
@@ -270,74 +279,11 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         if (!archive) {
             return tmpWorkflowDir;
         }
-        final File localSource = new File(tmpDir, String.format("%s.knwf", workflowName));
+        final var localSource = new File(tmpDir, String.format("%s.knwf", wfm.getName()));
         FileUtil.zipDir(localSource, tmpWorkflowDir, 9);
         return localSource;
     }
 
-    private static void writeReferenceReaderNodeData(final WorkflowSegment segment,
-        final WorkflowManager wfm, final File tmpDataDir, final ExecutionContext exec)
-        throws IOException, CanceledExecutionException, URISyntaxException, InvalidSettingsException {
-        // reconfigure reference reader nodes and store their data in temp directory
-        exec.setMessage(() -> "Introducing reference reader nodes.");
-        final Set<NodeIDSuffix> portObjectReaderSufIds = segment.getPortObjectReferenceReaderNodes();
-        for (NodeIDSuffix portObjectReaderSufId : portObjectReaderSufIds) {
-
-            final NodeID portObjectReaderId = portObjectReaderSufId.prependParent(wfm.getID());
-            final NodeContainer portObjectReaderNC = wfm.findNodeContainer(portObjectReaderId);
-            assert portObjectReaderNC instanceof NativeNodeContainer;
-            final NodeModel portObjectReaderNM = ((NativeNodeContainer)portObjectReaderNC).getNodeModel();
-            assert portObjectReaderNM instanceof PortObjectInNodeModel;
-            final PortObjectInNodeModel portObjectReader = (PortObjectInNodeModel)portObjectReaderNM;
-            final Optional<PortObject> poOpt = portObjectReader.getPortObject();
-            assert poOpt.isPresent();
-            PortObject po = poOpt.get();
-
-            if (po instanceof WorkflowPortObject) {
-                // also write the data for potential reference reader nodes within a referenced workflow segment
-                // AP-16062
-                po = writeReferenceReaderDataForWorkflowPort((WorkflowPortObject)po, tmpDataDir, exec);
-            }
-
-            final String poFileName =
-                portObjectReaderSufId.toString().replace(":", "_") + "_" + System.identityHashCode(po);
-            final URI poFileRelativeURI = new URI("knime://knime.workflow/data/" + poFileName);
-            final File tmpPoFile = new File(tmpDataDir, poFileName);
-            final PortObjectIDSettings poSettings = portObjectReader.getInputNodeSettingsCopy();
-            if (po instanceof BufferedDataTable) {
-                final BufferedDataTable table = (BufferedDataTable)po;
-                DataContainer.writeToZip(table, tmpPoFile, exec.createSubProgress(.2 / portObjectReaderSufIds.size()));
-                poSettings.setFileReference(poFileRelativeURI, true);
-            } else {
-                PortUtil.writeObjectToFile(po, tmpPoFile, exec.createSubProgress(.2 / portObjectReaderSufIds.size()));
-                poSettings.setFileReference(poFileRelativeURI, false);
-            }
-
-            final NodeSettings settings = new NodeSettings("root");
-            portObjectReaderNC.getParent().saveNodeSettings(portObjectReaderId, settings);
-            final NodeSettingsWO modelSettings = settings.addNodeSettings("model");
-            poSettings.saveSettings(modelSettings);
-            portObjectReaderNC.getParent().loadNodeSettings(portObjectReaderId, settings);
-        }
-    }
-
-    private static PortObject writeReferenceReaderDataForWorkflowPort(final WorkflowPortObject wpo, final File dataDir,
-        final ExecutionContext exec)
-        throws IOException, CanceledExecutionException, URISyntaxException, InvalidSettingsException {
-        WorkflowPortObjectSpec spec = wpo.getSpec();
-        WorkflowSegment segment = spec.getWorkflowSegment();
-        WorkflowManager wfm = segment.loadWorkflow();
-        WorkflowSegment newSegment = new WorkflowSegment(wfm, segment.getConnectedInputs(),
-            segment.getConnectedOutputs(), segment.getPortObjectReferenceReaderNodes());
-        try {
-            writeReferenceReaderNodeData(segment, wfm, dataDir, exec);
-            return new WorkflowPortObject(new WorkflowPortObjectSpec(newSegment, spec.getWorkflowName(),
-                spec.getInputIDs(), spec.getOutputIDs()));
-        } finally {
-            newSegment.serializeAndDisposeWorkflow();
-            segment.disposeWorkflow();
-        }
-    }
 
     static void validateIONodeConfigs(final Map<String, ? extends IOInfo> ioSpecs,
         final Map<String, ? extends IONodeConfig> ioNodeConfigs) throws InvalidSettingsException {
@@ -397,7 +343,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         Pair<Integer, int[]> outputPositions = BuildWorkflowsUtil.getInputOutputNodePositions(wfmb, outputs.size(), false);
 
         // add, connect and configure inputs
-        int i = 0;
+        var i = 0;
         for (String id : configuredInputs) {
             // add and connect
             IONodeConfig inConfig = ioNodes.getInputNodeConfig(id).get();
@@ -408,7 +354,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
             var nodeID = inConfig.addAndConnectIONode(wfm, portType, ports, x, y);
 
             // configure (optional data table for specific implementations)
-            DataTable dataTable = workflowPortObject.getInputDataFor(id).orElse(null);
+            var dataTable = workflowPortObject.getInputDataFor(id).orElse(null);
             inConfig.configureIONode(wfm, nodeID, useV2SmartInOutNames, dataTable);
             i++;
         }
@@ -443,7 +389,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
      * @param id the id of the Output Node
      * @return a stream of {@link PortID}
      */
-    protected static Stream<PortID> getOutputPortIdStream(final Map<String, Output> outputs, final String id) {
+    private static Stream<PortID> getOutputPortIdStream(final Map<String, Output> outputs, final String id) {
         Optional<PortID> connectedPort = outputs.get(id).getConnectedPort();
         return connectedPort.isPresent() ? Stream.of(connectedPort.get()) : Stream.empty();
     }
