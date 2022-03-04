@@ -84,12 +84,12 @@ import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
 import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
 import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
+import org.knime.core.node.workflow.virtual.DefaultVirtualPortObjectInNodeFactory;
+import org.knime.core.node.workflow.virtual.DefaultVirtualPortObjectInNodeModel;
+import org.knime.core.node.workflow.virtual.DefaultVirtualPortObjectOutNodeFactory;
+import org.knime.core.node.workflow.virtual.DefaultVirtualPortObjectOutNodeModel;
+import org.knime.core.node.workflow.virtual.VirtualNodeInput;
 import org.knime.core.node.workflow.virtual.parchunk.FlowVirtualScopeContext;
-import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkNodeInput;
-import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPortObjectInNodeFactory;
-import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPortObjectInNodeModel;
-import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPortObjectOutNodeFactory;
-import org.knime.core.node.workflow.virtual.parchunk.VirtualParallelizedChunkPortObjectOutNodeModel;
 import org.knime.core.util.Pair;
 import org.knime.core.util.ThreadPool;
 
@@ -104,6 +104,8 @@ final class WorkflowExecutable {
     private final WorkflowManager m_wfm;
 
     private final NativeNodeContainer m_hostNode;
+
+    private FlowVirtualScopeContext m_flowVirtualScopeContext;
 
     private NodeID m_virtualStartID;
 
@@ -124,6 +126,8 @@ final class WorkflowExecutable {
         m_hostNode = (NativeNodeContainer)hostNode;
         m_wfm = hostNode.getParent().createAndAddSubWorkflow(new PortType[0], new PortType[0],
             (debug ? "Debug: " : "") + workflowName);
+        m_flowVirtualScopeContext = new FlowVirtualScopeContext(hostNode.getID());
+        m_wfm.setInitialScopeContext(m_flowVirtualScopeContext);
         if (!debug) {
             m_wfm.hideInUI();
         }
@@ -152,7 +156,7 @@ final class WorkflowExecutable {
         PortType[] inTypes =
             inputs.stream().map(i -> getNonOptionalType(i.getType().get())).toArray(s -> new PortType[s]);
         int[] wfBounds = NodeUIInformation.getBoundingBoxOf(m_wfm.getNodeContainers());
-        m_virtualStartID = m_wfm.createAndAddNode(new VirtualParallelizedChunkPortObjectInNodeFactory(inTypes));
+        m_virtualStartID = m_wfm.createAndAddNode(new DefaultVirtualPortObjectInNodeFactory(inTypes));
         Pair<Integer, int[]> pos = BuildWorkflowsUtil.getInputOutputNodePositions(wfBounds, 1, true);
         m_wfm.getNodeContainer(m_virtualStartID).setUIInformation(
             NodeUIInformation.builder().setNodeLocation(pos.getFirst(), pos.getSecond()[0], -1, -1).build());
@@ -161,7 +165,7 @@ final class WorkflowExecutable {
         List<Output> outputs = wf.getConnectedOutputs();
         PortType[] outTypes =
             outputs.stream().map(o -> getNonOptionalType(o.getType().get())).toArray(s -> new PortType[s]);
-        m_virtualEndID = m_wfm.createAndAddNode(new VirtualParallelizedChunkPortObjectOutNodeFactory(outTypes));
+        m_virtualEndID = m_wfm.createAndAddNode(new DefaultVirtualPortObjectOutNodeFactory(outTypes));
         pos = BuildWorkflowsUtil.getInputOutputNodePositions(wfBounds, 1, false);
         m_wfm.getNodeContainer(m_virtualEndID).setUIInformation(
             NodeUIInformation.builder().setNodeLocation(pos.getFirst(), pos.getSecond()[0], -1, -1).build());
@@ -201,16 +205,16 @@ final class WorkflowExecutable {
     Pair<PortObject[], List<FlowVariable>> executeWorkflow(final PortObject[] inputData, final ExecutionContext exec,
         final boolean preserveFlowVarOrdering) throws Exception { // NOSONAR
         NativeNodeContainer virtualInNode = ((NativeNodeContainer)m_wfm.getNodeContainer(m_virtualStartID));
-        VirtualParallelizedChunkPortObjectInNodeModel inNM =
-            (VirtualParallelizedChunkPortObjectInNodeModel)virtualInNode.getNodeModel();
+        DefaultVirtualPortObjectInNodeModel inNM =
+                (DefaultVirtualPortObjectInNodeModel)virtualInNode.getNodeModel();
 
-        FlowVirtualScopeContext.registerHostNodeForPortObjectPersistence(m_hostNode, virtualInNode, exec);
+        m_flowVirtualScopeContext.registerHostNodeForPortObjectPersistence(m_hostNode, exec);
 
-        inNM.setVirtualNodeInput(new VirtualParallelizedChunkNodeInput(inputData,
-            collectOutputFlowVariablesFromUpstreamNodes(m_hostNode, preserveFlowVarOrdering), 0));
+        inNM.setVirtualNodeInput(new VirtualNodeInput(inputData,
+            collectOutputFlowVariablesFromUpstreamNodes(m_hostNode, preserveFlowVarOrdering)));
         NativeNodeContainer nnc = (NativeNodeContainer)m_wfm.getNodeContainer(m_virtualEndID);
-        VirtualParallelizedChunkPortObjectOutNodeModel outNM =
-            (VirtualParallelizedChunkPortObjectOutNodeModel)nnc.getNodeModel();
+        DefaultVirtualPortObjectOutNodeModel outNM =
+            (DefaultVirtualPortObjectOutNodeModel)nnc.getNodeModel();
 
         AtomicReference<Exception> exception = new AtomicReference<>();
         executeAndWait(exec, exception);
