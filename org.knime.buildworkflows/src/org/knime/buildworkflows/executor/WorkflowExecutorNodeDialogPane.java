@@ -49,7 +49,6 @@
 package org.knime.buildworkflows.executor;
 
 import static org.knime.buildworkflows.executor.WorkflowExecutorNodeModel.CFG_DEBUG;
-import static org.knime.buildworkflows.executor.WorkflowExecutorNodeModel.CFG_PRESERVE_FLOWVAR_ORDER;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -72,7 +71,6 @@ import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
 import org.knime.core.node.context.ports.ExtendablePortGroup;
 import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
-import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.PortTypeRegistry;
@@ -100,8 +98,6 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
     private final JLabel m_portAdjustmentLabel;
 
     private final JCheckBox m_debug;
-
-    private boolean m_preserveFlowVarOrdering = true;
 
     private final DialogComponentBoolean m_doUpdateTemplateLinks = new DialogComponentBoolean(
         WorkflowExecutorNodeModel.createDoUpdateTemplateLinksModel(), "Update links of components and metanodes");
@@ -226,7 +222,6 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
         m_button.setEnabled(true);
         refreshPortAdjustment(m_workflowSpec);
         m_debug.setSelected(settings.getBoolean(CFG_DEBUG, false));
-        m_preserveFlowVarOrdering = settings.getBoolean(CFG_PRESERVE_FLOWVAR_ORDER, false);
         m_doUpdateTemplateLinks.loadSettingsFrom(settings, specs);
     }
 
@@ -236,7 +231,6 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
     @Override
     protected void saveSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
         settings.addBoolean(CFG_DEBUG, m_debug.isSelected());
-        settings.addBoolean(CFG_PRESERVE_FLOWVAR_ORDER, m_preserveFlowVarOrdering);
         m_doUpdateTemplateLinks.saveSettingsTo(settings);
     }
 

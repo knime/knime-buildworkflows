@@ -84,8 +84,6 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
 
     static final String CFG_DEBUG = "debug";
 
-    static final String CFG_PRESERVE_FLOWVAR_ORDER = "preserveFlowVarOrder";
-
     private WorkflowExecutable m_executable;
 
     private boolean m_debug = false;
@@ -95,13 +93,6 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
     public static SettingsModelBoolean createDoUpdateTemplateLinksModel() {
         return new SettingsModelBoolean("do_update_template_links", false);
     }
-
-    /**
-     * Determines whether the ordering of flow variables supplied to the {@link WorkflowExecutable} and sent downstream
-     * of this node should be the same as in the original stack. Otherwise, the ordering is reversed. This was the case
-     * before 4.4 and this configuration exists to ensure backwards compatibility.
-     */
-    private boolean m_preserveFlowVarOrdering = true;
 
     WorkflowExecutorNodeModel(final PortsConfiguration portsConf) {
         super(portsConf.getInputPorts(), portsConf.getOutputPorts());
@@ -130,7 +121,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         try {
             exec.setMessage("Executing workflow segment '" + wpo.getSpec().getWorkflowName() + "'");
             Pair<PortObject[], List<FlowVariable>> output =
-                we.executeWorkflow(Arrays.copyOfRange(inObjects, 1, inObjects.length), exec, m_preserveFlowVarOrdering);
+                we.executeWorkflow(Arrays.copyOfRange(inObjects, 1, inObjects.length), exec);
             if (output.getFirst() == null || Arrays.stream(output.getFirst()).anyMatch(Objects::isNull)) {
                 NodeContainer nc = NodeContext.getContext().getNodeContainer();
                 String message = "Execution didn't finish successfully";
@@ -161,11 +152,6 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
     @SuppressWarnings("unchecked")
     private <T> void pushFlowVariableInternal(final FlowVariable fv) {
         pushFlowVariable(fv.getName(), (VariableType<T>)fv.getVariableType(), (T)fv.getValue(fv.getVariableType()));
-    }
-
-    private WorkflowExecutable createWorkflowExecutable(final WorkflowPortObjectSpec spec)
-        throws InvalidSettingsException {
-        return createWorkflowExecutable(spec, spec.getWorkflowSegment());
     }
 
     private WorkflowExecutable createWorkflowExecutable(final WorkflowPortObjectSpec spec, final WorkflowSegment segment) throws InvalidSettingsException {
@@ -245,7 +231,6 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
     @Override
     protected void saveSettingsTo(final NodeSettingsWO settings) {
         settings.addBoolean(CFG_DEBUG, m_debug);
-        settings.addBoolean(CFG_PRESERVE_FLOWVAR_ORDER, m_preserveFlowVarOrdering);
         m_doUpdateTemplateLinks.saveSettingsTo(settings);
     }
 
@@ -257,10 +242,6 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
     @Override
     protected void loadValidatedSettingsFrom(final NodeSettingsRO settings) throws InvalidSettingsException {
         m_debug = settings.getBoolean(CFG_DEBUG);
-        if (!settings.containsKey(CFG_PRESERVE_FLOWVAR_ORDER)) {
-            // In case the node was created without this setting, fall back to backwards compatible behavior.
-            m_preserveFlowVarOrdering = false;
-        }
         if (settings.containsKey(m_doUpdateTemplateLinks.getConfigName())) {
             m_doUpdateTemplateLinks.loadSettingsFrom(settings);
         } else {
