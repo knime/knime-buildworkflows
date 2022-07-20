@@ -728,7 +728,7 @@ propagated with or for interoperation with KNIME.
    </license>
 
   <requires>
-      <import feature="org.eclipse.birt.knime.osgi.runtime" version="4.9.0.v202104071056-knime-20210408" match="greaterOrEqual"/>
+      <import feature="org.eclipse.birt.knime.osgi.runtime" version="4.9.0.v202203150031-20220720-knime" match="greaterOrEqual"/>
    </requires>
 
    <plugin
