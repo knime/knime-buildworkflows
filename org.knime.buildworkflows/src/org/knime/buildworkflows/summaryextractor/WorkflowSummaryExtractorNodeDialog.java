@@ -51,6 +51,7 @@ package org.knime.buildworkflows.summaryextractor;
 import org.knime.core.data.json.JSONCell;
 import org.knime.core.data.xml.XMLCell;
 import org.knime.core.node.defaultnodesettings.DefaultNodeSettingsPane;
+import org.knime.core.node.defaultnodesettings.DialogComponentBoolean;
 import org.knime.core.node.defaultnodesettings.DialogComponentString;
 import org.knime.core.node.defaultnodesettings.DialogComponentStringSelection;
 import org.knime.core.node.util.DefaultStringIconOption;
@@ -71,5 +72,7 @@ final class WorkflowSummaryExtractorNodeDialog extends DefaultNodeSettingsPane {
             WorkflowSummaryExtractorNodeModel.createOutputFormatSelectionModel(), "Output format", OPTIONS));
         addDialogComponent(new DialogComponentString(WorkflowSummaryExtractorNodeModel.createColumnNameModel(),
             "Column name", true, 20));
+        addDialogComponent(new DialogComponentBoolean(WorkflowSummaryExtractorNodeModel.createCheckForUpdatesModel(),
+            "Check for updates of linked components and metanodes"));
     }
 }

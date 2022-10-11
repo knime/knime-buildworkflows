@@ -72,10 +72,12 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
+import org.knime.core.node.workflow.WorkflowLoadHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
@@ -108,9 +110,18 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
         return new SettingsModelString("column_name", COLUMN_NAME);
     }
 
+    static SettingsModelBoolean createCheckForUpdatesModel() {
+        return new SettingsModelBoolean("check_for_updates", false);
+    }
+
     private final SettingsModelString m_outputFormat = createOutputFormatSelectionModel();
 
     private final SettingsModelString m_columnName = createColumnNameModel();
+
+    /**
+     * Added with AP-19535: Whether to check for updates in the workflow
+     */
+    private final SettingsModelBoolean m_checkForUpdates = createCheckForUpdatesModel();
 
     WorkflowSummaryExtractorNodeModel() {
         super(new PortType[]{WorkflowPortObject.TYPE}, new PortType[]{BufferedDataTable.TYPE});
@@ -134,6 +145,13 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
         try {
             final WorkflowManager wfm = BuildWorkflowsUtil.loadWorkflow(segment, this::setWarningMessage);
             if (wfm != null) {
+                // Added with AP-19535: Set the UpdateStatus of linked templates (without updating the node)
+                if (m_checkForUpdates.getBooleanValue()) {
+                    for (var node : wfm.getLinkedMetaNodes(true)) { // check every template node recursively
+                        var helper = new WorkflowLoadHelper(true, wfm.getContext());
+                        wfm.checkUpdateMetaNodeLink(node, helper);
+                    }
+                }
                 return new BufferedDataTable[]{fillTable(exec, wfm)};
             } else {
                 throw new IllegalStateException("No workflow context available");
@@ -195,6 +213,7 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
     protected void saveSettingsTo(final NodeSettingsWO settings) {
         m_outputFormat.saveSettingsTo(settings);
         m_columnName.saveSettingsTo(settings);
+        m_checkForUpdates.saveSettingsTo(settings);
     }
 
     /**
@@ -204,6 +223,10 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
     protected void validateSettings(final NodeSettingsRO settings) throws InvalidSettingsException {
         m_outputFormat.validateSettings(settings);
         m_columnName.validateSettings(settings);
+        // Added with AP-19535
+        if (settings.containsKey(m_checkForUpdates.getConfigName())) {
+            m_checkForUpdates.validateSettings(settings);
+        }
     }
 
     /**
@@ -213,6 +236,10 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
     protected void loadValidatedSettingsFrom(final NodeSettingsRO settings) throws InvalidSettingsException {
         m_outputFormat.loadSettingsFrom(settings);
         m_columnName.loadSettingsFrom(settings);
+        // Added with AP-19535
+        if (settings.containsKey(m_checkForUpdates.getConfigName())) {
+            m_checkForUpdates.loadSettingsFrom(settings);
+        }
     }
 
     /**
