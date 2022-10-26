@@ -48,9 +48,6 @@
  */
 package org.knime.buildworkflows.reader;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.EnumConfig;
@@ -68,21 +65,11 @@ class SettingsModelWorkflowChooser extends AbstractSettingsModelFileChooser<Sett
     protected SettingsModelWorkflowChooser(final String configName, final String fileSystemPortIdentifier,
         final PortsConfiguration portConfig) {
         super(configName, portConfig, fileSystemPortIdentifier, EnumConfig.create(FilterMode.WORKFLOW),
-            getConvenienceFSs());
+            FSCategory.getStandardFSCategories());
     }
 
     private SettingsModelWorkflowChooser(final SettingsModelWorkflowChooser toCopy) {
         super(toCopy);
-    }
-
-    private static Set<FSCategory> getConvenienceFSs() {
-        Set<FSCategory> res = new HashSet<>();
-        res.add(FSCategory.LOCAL);
-        res.add(FSCategory.MOUNTPOINT);
-        res.add(FSCategory.RELATIVE);
-        res.add(FSCategory.CUSTOM_URL);
-        res.add(FSCategory.CONNECTED);
-        return res;
     }
 
     ReadPathAccessor createReadPathAccessor() {

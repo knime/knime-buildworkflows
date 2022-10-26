@@ -129,7 +129,7 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
     WorkflowWriterNodeConfig(final NodeCreationConfiguration creationConfig) {
         super(builder(creationConfig).withSelectionMode(SELECTION_MODE)
             .withFileOverwritePolicies(FileOverwritePolicy.APPEND)
-            .withConvenienceFS(FSCategory.LOCAL, FSCategory.MOUNTPOINT, FSCategory.RELATIVE));
+            .withConvenienceFS(FSCategory.LOCAL, FSCategory.HUB_SPACE, FSCategory.MOUNTPOINT, FSCategory.RELATIVE));
     }
 
     SettingsModelString getExistsOption() {
