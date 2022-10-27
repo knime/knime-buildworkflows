@@ -53,6 +53,7 @@ import static org.knime.core.util.workflowsummary.WorkflowSummaryUtil.writeXML;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 
@@ -69,6 +70,7 @@ import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
@@ -93,6 +95,8 @@ import org.knime.core.util.workflowsummary.WorkflowSummaryCreator;
  * @author Jannik Löscher, KNIME GmbH, Konstanz, Germany
  */
 final class WorkflowSummaryExtractorNodeModel extends NodeModel {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowSummaryExtractorNodeModel.class);
 
     static final String FMT_SELECTION_JSON = "JSON";
 
@@ -147,10 +151,7 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
             if (wfm != null) {
                 // Added with AP-19535: Set the UpdateStatus of linked templates (without updating the node)
                 if (m_checkForUpdates.getBooleanValue()) {
-                    for (var node : wfm.getLinkedMetaNodes(true)) { // check every template node recursively
-                        var helper = new WorkflowLoadHelper(true, wfm.getContext());
-                        wfm.checkUpdateMetaNodeLink(node, helper);
-                    }
+                    checkForMetanodeUpdates(wfm);
                 }
                 return new BufferedDataTable[]{fillTable(exec, wfm)};
             } else {
@@ -158,6 +159,28 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
             }
         } finally {
             segment.disposeWorkflow();
+        }
+    }
+
+    /**
+     * Added with AP-19535: Checks all linked metanodes/components for updates
+     *
+     * @param wfm The workflow in which to operate
+     */
+    private void checkForMetanodeUpdates(final WorkflowManager wfm) {
+        var errors = false;
+        for (var nodeID : wfm.getLinkedMetaNodes(true)) { // check every template node recursively
+            try {
+                var helper = new WorkflowLoadHelper(true, wfm.getContext());
+                wfm.checkUpdateMetaNodeLink(nodeID, helper);
+            } catch (IOException e) {
+                errors = true;
+                var node = wfm.findNodeContainer(nodeID);
+                LOGGER.warn("Error while checking for updates of \"" + node.getNameWithID() + "\".", e);
+            }
+        }
+        if (errors) {
+            setWarningMessage("There have been errors checking for some metanode / component updates");
         }
     }
 

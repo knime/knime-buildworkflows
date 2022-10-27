@@ -22,6 +22,10 @@
 		<option name="Column name">
 			The name of the column the summary is saved in.
 		</option>
+		<option name="Check for updates of linked components and metanodes">
+			When checked, the node will check for updates for any linked components / 
+			metanodes before creating the summary.
+		</option>
 	</fullDescription>
 
 	<ports>
