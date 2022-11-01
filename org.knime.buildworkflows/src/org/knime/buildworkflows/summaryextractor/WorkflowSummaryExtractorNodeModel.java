@@ -171,7 +171,7 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
         var errors = false;
         for (var nodeID : wfm.getLinkedMetaNodes(true)) { // check every template node recursively
             try {
-                var helper = new WorkflowLoadHelper(true, wfm.getContext());
+                var helper = new WorkflowLoadHelper(true, wfm.getContextV2());
                 wfm.checkUpdateMetaNodeLink(nodeID, helper);
             } catch (IOException e) {
                 errors = true;
