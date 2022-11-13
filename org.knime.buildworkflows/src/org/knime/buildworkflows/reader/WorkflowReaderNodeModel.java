@@ -54,8 +54,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.spi.FileSystemProvider;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -100,9 +98,11 @@ import org.knime.core.util.FileUtil;
 import org.knime.core.util.LockFailedException;
 import org.knime.filehandling.core.connections.FSFiles;
 import org.knime.filehandling.core.connections.FSPath;
-import org.knime.filehandling.core.connections.WorkflowAware;
+import org.knime.filehandling.core.connections.workflowaware.Entity;
+import org.knime.filehandling.core.connections.workflowaware.WorkflowAwareUtil;
 import org.knime.filehandling.core.defaultnodesettings.status.NodeModelStatusConsumer;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage.MessageType;
+import org.knime.filehandling.core.util.TempPathCloseable;
 
 /**
  * Workflow Reader node model.
@@ -138,62 +138,80 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
     @Override
     protected final PortObject[] execute(final PortObject[] data, final ExecutionContext exec) throws Exception {
         try (final var accessor = m_config.getWorkflowChooserModel().createReadPathAccessor()) {
-            final List<FSPath> paths = accessor.getFSPaths(m_statusConsumer);
-            assert paths.size() == 1;
+            final var path = accessor.getRootPath(m_statusConsumer);
             m_statusConsumer.setWarningsIfRequired(this::setWarningMessage);
-            return readFromPath(paths.get(0), exec);
+            return readFromPath(path, exec);
         } catch (NoSuchFileException e) {
             throw new IOException(String.format("The workflow '%s' does not exist.", e.getFile()), e);
         }
     }
 
-    private PortObject[] readFromPath(final Path inputPath, final ExecutionContext exec) throws IOException,
+    private static void ensureIsWorkflow(final FSPath path) throws IOException {
+        final boolean isWorkflow;
+        if (WorkflowAwareUtil.isWorkflowAwarePath(path)) {
+            isWorkflow = WorkflowAwareUtil.getWorkflowAwareEntityOf(path) //
+                .map(Entity.WORKFLOW::equals) //
+                .orElse(false);
+        } else {
+            isWorkflow = path.toString().endsWith(".knwf");
+        }
+
+        if (!isWorkflow) {
+            throw new IOException("Not a workflow");
+        }
+    }
+
+    private PortObject[] readFromPath(final FSPath inputPath, final ExecutionContext exec) throws IOException,
         CanceledExecutionException, InvalidSettingsException, UnsupportedWorkflowVersionException, LockFailedException {
-        var wfFile = toLocalWorkflowDir(inputPath);
+
+        WorkflowSegment ws = null;
+
         exec.setProgress("Reading workflow");
-        WorkflowManager wfm = readWorkflow(wfFile, exec, this::setWarningMessage);
-        if (wfm.canResetAll()) {
-            if (getWarningMessage() == null) {
-                // there might be already a warning message set due to workflow loading problems
-                // -> we regard those as more important and thus don't overwrite it here
-                setWarningMessage("The read workflow contains executed nodes which have been reset");
+        try (var wfTempFolder = toLocalWorkflowDir(inputPath)) {
+            final var wfm = readWorkflow(wfTempFolder.getTempFileOrFolder().toFile(), exec, this::setWarningMessage);
+            if (wfm.canResetAll()) {
+                if (getWarningMessage() == null) {
+                    // there might be already a warning message set due to workflow loading problems
+                    // -> we regard those as more important and thus don't overwrite it here
+                    setWarningMessage("The read workflow contains executed nodes which have been reset");
+                }
+                wfm.resetAndConfigureAll();
             }
-            wfm.resetAndConfigureAll();
-        }
 
-        var customWorkflowName = m_config.getWorkflowName().getStringValue();
-        if (!StringUtils.isBlank(customWorkflowName)) {
-            wfm.setName(customWorkflowName);
-        } else {
-            var wfName = inputPath.getFileName().toString();
-            if (wfName.endsWith(".knwf")) {
-                wfName = wfName.substring(0, wfName.length() - 5);
+            var customWorkflowName = m_config.getWorkflowName().getStringValue();
+            if (!StringUtils.isBlank(customWorkflowName)) {
+                wfm.setName(customWorkflowName);
+            } else {
+                var wfName = inputPath.getFileName().toString();
+                if (wfName.endsWith(".knwf")) {
+                    wfName = wfName.substring(0, wfName.length() - 5);
+                }
+                wfm.setName(wfName);
             }
-            wfm.setName(wfName);
-        }
 
-        List<Input> inputs;
-        List<Output> outputs;
-        if (m_config.getRemoveIONodes().getBooleanValue()) {
-            inputs = new ArrayList<>();
-            outputs = new ArrayList<>();
-            removeAndCollectContainerInputsAndOutputs(wfm, inputs, outputs);
-        } else {
-            inputs = Collections.emptyList();
-            outputs = Collections.emptyList();
-        }
+            List<Input> inputs;
+            List<Output> outputs;
+            if (m_config.getRemoveIONodes().getBooleanValue()) {
+                inputs = new ArrayList<>();
+                outputs = new ArrayList<>();
+                removeAndCollectContainerInputsAndOutputs(wfm, inputs, outputs);
+            } else {
+                inputs = Collections.emptyList();
+                outputs = Collections.emptyList();
+            }
 
-        Set<NodeIDSuffix> portObjectReferenceReaderNodes =
-            ReferenceReaderDataUtil.copyReferenceReaderData(wfm, exec, this);
+            Set<NodeIDSuffix> portObjectReferenceReaderNodes =
+                ReferenceReaderDataUtil.copyReferenceReaderData(wfm, exec, this);
 
-        var ws = new WorkflowSegment(wfm, inputs, outputs, portObjectReferenceReaderNodes);
-        try {
+            ws = new WorkflowSegment(wfm, inputs, outputs, portObjectReferenceReaderNodes);
             return new PortObject[]{new WorkflowPortObject(new WorkflowPortObjectSpec(ws, null,
                 getIOIds(inputs.size(), m_config.getInputIdPrefix().getStringValue()),
                 getIOIds(outputs.size(), m_config.getOutputIdPrefix().getStringValue())))};
         } finally {
             exec.setMessage("Finalizing");
-            ws.serializeAndDisposeWorkflow();
+            if (ws != null) {
+                ws.serializeAndDisposeWorkflow();
+            }
         }
     }
 
@@ -231,14 +249,15 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         return loadResult.getWorkflowManager();
     }
 
-    private static File toLocalWorkflowDir(final Path path) throws IOException {
+    private static TempPathCloseable toLocalWorkflowDir(final FSPath path) throws IOException {
         // the connected file system is either WorkflowAware or provides the workflow as a '.knwf'-file
-        FileSystemProvider provider = path.getFileSystem().provider();
-        if (provider instanceof WorkflowAware) {
-            if (path.toString().endsWith(".knwf")) {
-                throw new IOException("Not a workflow");
-            }
-            return ((WorkflowAware)provider).toLocalWorkflowDir(path);
+
+        ensureIsWorkflow(path);
+
+        @SuppressWarnings("resource")
+        final var wfAware = path.getFileSystem().getWorkflowAware();
+        if (wfAware.isPresent()) {
+            return wfAware.orElseThrow().toLocalWorkflowDir(path);
         } else {
             try (var in = FSFiles.newInputStream(path)) {
                 return unzipToLocalDir(in);
@@ -246,13 +265,13 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         }
     }
 
-    private static File unzipToLocalDir(final InputStream in) throws IOException {
+    private static TempPathCloseable unzipToLocalDir(final InputStream in) throws IOException {
         File tmpDir = null;
         try (var zip = new ZipInputStream(in)) {
             tmpDir = FileUtil.createTempDir("workflow_reader");
             FileUtil.unzip(zip, tmpDir, 1);
         }
-        return tmpDir;
+        return new TempPathCloseable(tmpDir.toPath());
     }
 
     private static void removeAndCollectContainerInputsAndOutputs(final WorkflowManager wfm, final List<Input> inputs,

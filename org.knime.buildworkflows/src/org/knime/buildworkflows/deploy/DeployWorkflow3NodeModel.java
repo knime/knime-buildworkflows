@@ -77,7 +77,7 @@ import org.knime.filehandling.core.connections.FSConnection;
 import org.knime.filehandling.core.connections.FSFileSystem;
 import org.knime.filehandling.core.connections.FSFiles;
 import org.knime.filehandling.core.connections.FSPath;
-import org.knime.filehandling.core.connections.WorkflowAware;
+import org.knime.filehandling.core.connections.workflowaware.WorkflowAware;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.WritePathAccessor;
 import org.knime.filehandling.core.defaultnodesettings.status.NodeModelStatusConsumer;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage.MessageType;
@@ -186,7 +186,7 @@ final class DeployWorkflow3NodeModel extends NodeModel {
             } else {
                 overwrite = false;
             }
-            ((WorkflowAware)dest.getFileSystem().provider()).deployWorkflow(localSource, dest, overwrite, false);
+            ((WorkflowAware)dest.getFileSystem().provider()).deployWorkflow(localSource.toPath(), dest, overwrite, false);
             FileUtil.deleteRecursively(tmpDir);
 
             if (m_cfg.createSnapshotModel().getBooleanValue()) {

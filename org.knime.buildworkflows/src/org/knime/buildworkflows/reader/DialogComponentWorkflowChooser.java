@@ -54,7 +54,7 @@ import java.util.Optional;
 import org.knime.core.node.FlowVariableModel;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.util.FileSystemBrowser.DialogType;
-import org.knime.filehandling.core.connections.WorkflowAware;
+import org.knime.filehandling.core.connections.workflowaware.WorkflowAware;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.AbstractDialogComponentFileChooser;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.StatusMessageReporter;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.reader.ReadPathAccessor;

@@ -55,7 +55,6 @@ import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.spi.FileSystemProvider;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +94,7 @@ import org.knime.core.util.LockFailedException;
 import org.knime.core.util.Pair;
 import org.knime.core.util.VMFileLocker;
 import org.knime.filehandling.core.connections.FSFiles;
-import org.knime.filehandling.core.connections.WorkflowAware;
+import org.knime.filehandling.core.connections.FSPath;
 import org.knime.filehandling.core.connections.base.UnixStylePathUtil;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectToPathWriterNodeModel;
 
@@ -130,6 +129,7 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         config.getIONodes().validateSettings();
     }
 
+    @SuppressWarnings("resource")
     @Override
     protected void writeToPath(final PortObject object, final Path outputPath, final ExecutionContext exec)
         throws Exception {
@@ -176,11 +176,11 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
         }
 
         // resolve destination path and check if it is present already
-        final Path dest;
+        final FSPath dest;
         if (archive) {
-            dest = outputPath.resolve(String.format("%s.knwf", workflowName));
+            dest = (FSPath) outputPath.resolve(String.format("%s.knwf", workflowName));
         } else {
-            dest = outputPath.resolve(workflowName);
+            dest = (FSPath) outputPath.resolve(workflowName);
         }
         if (Files.exists(dest)) {
             if (!overwrite) {
@@ -202,16 +202,15 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
 
         // copy workflow from temporary source to desired destination
         exec.setProgress(.67, () -> "Copying workflow to destination.");
-        final FileSystemProvider provider = dest.getFileSystem().provider();
-        final boolean workflowAware = provider instanceof WorkflowAware;
+        final var workflowAware = dest.getFileSystem().getWorkflowAware();
         if (archive) {
             if (overwrite && Files.exists(dest)) {
                 Files.copy(localSourcePath, dest, StandardCopyOption.REPLACE_EXISTING);
             } else {
                 Files.copy(localSourcePath, dest);
             }
-        } else if (workflowAware) {
-            ((WorkflowAware)provider).deployWorkflow(localSource, dest, overwrite, openAfterWrite);
+        } else if (workflowAware.isPresent()) {
+            workflowAware.orElseThrow().deployWorkflow(localSourcePath, dest, overwrite, openAfterWrite);
         } else {
             try (final Stream<Path> streams = Files.walk(localSourcePath)) {
                 for (final Path path : streams.collect(Collectors.toList())) {
