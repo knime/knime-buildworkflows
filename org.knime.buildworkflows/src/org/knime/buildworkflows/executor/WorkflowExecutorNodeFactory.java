@@ -73,8 +73,10 @@ public class WorkflowExecutorNodeFactory extends ConfigurableNodeFactory<Workflo
     protected Optional<PortsConfigurationBuilder> createPortsConfigBuilder() {
         final PortsConfigurationBuilder b = new PortsConfigurationBuilder();
         b.addFixedInputPortGroup("Workflow", WorkflowPortObject.TYPE);
-        b.addExtendableInputPortGroup(INPUT_PORT_GROUP, p -> true);
-        b.addExtendableOutputPortGroup(OUTPUT_PORT_GROUP, p -> true);
+        // The ports in these groups are controlled by the dialog when configuring the workflow to execute
+        // to keep them in sync with the workflow to execute
+        b.addNonInteractiveExtendableInputPortGroup(INPUT_PORT_GROUP, p -> true);
+        b.addNonInteractiveExtendableOutputPortGroup(OUTPUT_PORT_GROUP, p -> true);
         return Optional.of(b);
     }
 
@@ -91,6 +93,7 @@ public class WorkflowExecutorNodeFactory extends ConfigurableNodeFactory<Workflo
 
     @Override
     public boolean isPortConfigurableViaMenu() {
+        // this is now redundant, since we made the extendable port groups non-interactive.
         return false;
     }
 
