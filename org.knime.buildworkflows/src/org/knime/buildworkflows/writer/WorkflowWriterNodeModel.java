@@ -80,6 +80,7 @@ import org.knime.core.node.port.PortType;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.util.ConvenienceMethods;
 import org.knime.core.node.workflow.NodeUIInformation;
+import org.knime.core.node.workflow.VariableTypeRegistry;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.ReferenceReaderDataUtil;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
@@ -92,10 +93,12 @@ import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.LockFailedException;
 import org.knime.core.util.Pair;
+import org.knime.core.util.UniqueNameGenerator;
 import org.knime.core.util.VMFileLocker;
 import org.knime.filehandling.core.connections.FSFiles;
 import org.knime.filehandling.core.connections.FSPath;
 import org.knime.filehandling.core.connections.base.UnixStylePathUtil;
+import org.knime.filehandling.core.data.location.variable.FSLocationVariableType;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectToPathWriterNodeModel;
 
 /**
@@ -230,6 +233,9 @@ public final class WorkflowWriterNodeModel extends PortObjectToPathWriterNodeMod
                 }
             }
         }
+        UniqueNameGenerator nameGen = new UniqueNameGenerator(
+            getAvailableFlowVariables(VariableTypeRegistry.getInstance().getAllTypes()).keySet());
+        pushFlowVariable(nameGen.newName("workflow-location"), FSLocationVariableType.INSTANCE, dest.toFSLocation());
         FileUtil.deleteRecursively(tmpDir);
     }
 
