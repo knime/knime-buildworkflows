@@ -36,7 +36,8 @@ try {
 			            "knime-productivity-oss",
 			            "knime-reporting",
 			            "knime-server-api",
-			            "knime-virtual"
+			            "knime-virtual",
+			            "knime-stats"
 			        ]
 			    ]
 			)
