@@ -57,8 +57,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 
-import javax.ws.rs.ForbiddenException;
-
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTableSpec;
 import org.knime.core.data.DataType;
@@ -178,14 +176,8 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
             } catch (IOException e) {
                 errors = true;
                 var node = wfm.findNodeContainer(nodeID);
-                LOGGER.warn("Error while checking for updates of \"" + node.getNameWithID()
-                    + "\". Maybe the template has been moved?", e);
-            } catch (ForbiddenException e) {
-                errors = true;
-                var node = wfm.findNodeContainer(nodeID);
-                LOGGER.warn("Cannot access the resource where the template of \"" + node.getNameWithID()
-                    + "\" is stored. Maybe the resource (e.g. a Hub space) is not available / not mounted? "
-                    + "Assuming link to be up to date.", e);
+                LOGGER.warn("Error checking for updates of \"" + node.getNameWithID()
+                    + "\". Maybe the template has been moved or the resource is not mounted?", e);
             }
         }
         if (errors) {
