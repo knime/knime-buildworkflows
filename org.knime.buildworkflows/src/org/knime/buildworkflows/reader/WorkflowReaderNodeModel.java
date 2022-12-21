@@ -167,7 +167,13 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         WorkflowSegment ws = null;
 
         exec.setProgress("Reading workflow");
-        try (var wfTempFolder = toLocalWorkflowDir(inputPath)) {
+
+        // Note on why this is explicitly not managed by 'try-with-resource':
+        // It's because the workflow manager using the directory needs to be disposed _first_ in
+        // the 'finally' clause before the temp-directory can be closed, i.e. deleted.
+        @SuppressWarnings("resource")
+        var wfTempFolder = toLocalWorkflowDir(inputPath);
+        try {
             final var wfm = readWorkflow(wfTempFolder.getTempFileOrFolder().toFile(), exec, this::setWarningMessage);
             if (wfm.canResetAll()) {
                 if (getWarningMessage() == null) {
@@ -212,6 +218,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
             if (ws != null) {
                 ws.serializeAndDisposeWorkflow();
             }
+            wfTempFolder.close();
         }
     }
 
