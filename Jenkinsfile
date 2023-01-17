@@ -48,14 +48,15 @@ try {
                 dependencies: [
                     repositories: [
                         "knime-buildworkflows",
-                        "knime-javasnippet",
-                        "knime-ensembles",
-                        "knime-distance",
-                        "knime-server-client",
-                        "knime-js-base",
                         "knime-com-shared",
-                                "knime-productivity-oss",
-                        "knime-reporting"
+                        "knime-distance",
+                        "knime-ensembles",
+                        "knime-gateway",
+                        "knime-javasnippet",
+                        "knime-js-base",
+                        "knime-productivity-oss",
+                        "knime-reporting",
+                        "knime-server-client"
                     ]
                 ],
             )
