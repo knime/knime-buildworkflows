@@ -17,51 +17,51 @@ try {
     knimetools.defaultTychoBuild('org.knime.update.buildworkflows')
 
     configs = [
-		"Workflowtests" : {
-			workflowTests.runTests(
-			    dependencies: [
-			        repositories: [
-			            "knime-distance",
-			            "knime-server-client",
-			            "knime-buildworkflows",
-			            "knime-com-shared",
-			            "knime-datageneration",
-			            "knime-ensembles",
-			            "knime-filehandling",
-			            "knime-kerberos",
-			            "knime-javasnippet",
-			            "knime-jep",
-			            "knime-js-base",
-			            "knime-json",
-			            "knime-productivity-oss",
-			            "knime-reporting",
-			            "knime-server-api",
-			            "knime-virtual",
-			            "knime-stats"
-			        ]
-			    ]
-			)
-		},
-		"Filehandlingtests" : {
-			workflowTests.runFilehandlingTests (
-				dependencies: [
-					repositories: [
-						"knime-buildworkflows",
-						"knime-javasnippet",
-						"knime-ensembles",
-						"knime-distance",
-						"knime-server-client",
-						"knime-js-base",
-						"knime-com-shared",
-			            		"knime-productivity-oss",
-						"knime-reporting"
-					]
-				],
-			)
-		}
-	]
+        "Workflowtests" : {
+            workflowTests.runTests(
+                dependencies: [
+                    repositories: [
+                        "knime-buildworkflows",
+                        "knime-com-shared",
+                        "knime-datageneration",
+                        "knime-distance",
+                        "knime-ensembles",
+                        "knime-filehandling",
+                        "knime-javasnippet",
+                        "knime-jep",
+                        "knime-js-base",
+                        "knime-json",
+                        "knime-kerberos",
+                        "knime-productivity-oss",
+                        "knime-reporting",
+                        "knime-server-api",
+                        "knime-server-client",
+                        "knime-stats",
+                        "knime-virtual"
+                    ]
+                ]
+            )
+        },
+        "Filehandlingtests" : {
+            workflowTests.runFilehandlingTests (
+                dependencies: [
+                    repositories: [
+                        "knime-buildworkflows",
+                        "knime-javasnippet",
+                        "knime-ensembles",
+                        "knime-distance",
+                        "knime-server-client",
+                        "knime-js-base",
+                        "knime-com-shared",
+                                "knime-productivity-oss",
+                        "knime-reporting"
+                    ]
+                ],
+            )
+        }
+    ]
 
-	parallel configs
+    parallel configs
 
     stage('Sonarqube analysis') {
         env.lastStage = env.STAGE_NAME
