@@ -35,7 +35,6 @@ try {
                         "knime-kerberos",
                         "knime-productivity-oss",
                         "knime-reporting",
-                        "knime-server-api",
                         "knime-server-client",
                         "knime-stats",
                         "knime-virtual"
