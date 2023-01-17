@@ -27,6 +27,7 @@ try {
                         "knime-distance",
                         "knime-ensembles",
                         "knime-filehandling",
+                        "knime-gateway",
                         "knime-javasnippet",
                         "knime-jep",
                         "knime-js-base",
