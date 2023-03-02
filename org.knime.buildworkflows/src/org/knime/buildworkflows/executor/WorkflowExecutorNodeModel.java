@@ -59,6 +59,7 @@ import java.util.stream.IntStream;
 import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.KNIMEException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.ports.PortsConfiguration;
@@ -115,7 +116,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
             WorkflowSegmentManipulations.UPDATE_LINKED_TEMPLATES.apply(segment);
         }
 
-        WorkflowExecutable we = createWorkflowExecutable(wpo.getSpec(), segment);
+        WorkflowExecutable we = createWorkflowExecutable(wpo.getSpec());
         m_executable = we;
         boolean success = false;
         try {
@@ -154,13 +155,13 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         pushFlowVariable(fv.getName(), (VariableType<T>)fv.getVariableType(), (T)fv.getValue(fv.getVariableType()));
     }
 
-    private WorkflowExecutable createWorkflowExecutable(final WorkflowPortObjectSpec spec, final WorkflowSegment segment) throws InvalidSettingsException {
+    private WorkflowExecutable createWorkflowExecutable(final WorkflowPortObjectSpec spec) throws InvalidSettingsException, KNIMEException {
         disposeWorkflowExecutable();
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         CheckUtils.checkArgumentNotNull(nc, "Not a local workflow");
         checkPortCompatibility(spec, nc);
         m_executable = new WorkflowExecutable(spec.getWorkflowSegment(), spec.getWorkflowName(), nc, m_debug,
-                this::setWarningMessage);
+            this::setWarningMessage);
         return m_executable;
     }
 

@@ -72,6 +72,8 @@ import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.KNIMEException;
+import org.knime.core.node.KNIMEException.KNIMERuntimeException;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
@@ -247,7 +249,7 @@ final class WorkflowCombinerNodeModel extends NodeModel {
     }
 
     private static WorkflowSegmentMeta copy(final WorkflowManager wfm, final WorkflowPortObjectSpec toCopy,
-        final Consumer<String> warningConsumer) {
+        final Consumer<String> warningConsumer) throws KNIMERuntimeException {
         // copy and paste the workflow segment into the new wfm
         // calculate the mapping between the toCopy node ids and the new node ids
         final HashMap<NodeIDSuffix, NodeIDSuffix> inIdMapping = new HashMap<>();
@@ -255,7 +257,12 @@ final class WorkflowCombinerNodeModel extends NodeModel {
         final HashSet<NodeIDSuffix> objectReferenceReaderNodes = new HashSet<>();
 
         WorkflowSegment wfToCopy = toCopy.getWorkflowSegment();
-        final WorkflowManager toCopyWFM = loadWorkflow(wfToCopy, warningConsumer);
+        WorkflowManager toCopyWFM;
+        try {
+            toCopyWFM = loadWorkflow(wfToCopy, warningConsumer);
+        } catch (KNIMEException e) {
+            throw e.toUnchecked();
+        }
         try (WorkflowLock lock = wfm.lock()) {
             int[] wfmBoundingBox = NodeUIInformation.getBoundingBoxOf(wfm.getNodeContainers());
             final int yOffset = wfmBoundingBox[1]; // top

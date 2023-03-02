@@ -64,6 +64,7 @@ import java.util.stream.Stream;
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
+import org.knime.core.node.KNIMEException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.exec.dataexchange.PortObjectRepository;
 import org.knime.core.node.port.PortObject;
@@ -120,9 +121,10 @@ final class WorkflowExecutable {
      * @param debug if <code>true</code> the metanode the workflow segment is executed in, will be visible (for
      *            debugging purposes), if <code>false</code> it's hidden
      * @param warningConsumer callback for warning if there have while loading the workflow from the workflow segment
+     * @throws KNIMEException If the workflow can't be instantiated from the segment.
      */
     WorkflowExecutable(final WorkflowSegment ws, final String workflowName, final NodeContainer hostNode,
-        final boolean debug, final Consumer<String> warningConsumer) {
+        final boolean debug, final Consumer<String> warningConsumer) throws KNIMEException {
         m_hostNode = (NativeNodeContainer)hostNode;
         m_wfm = hostNode.getParent().createAndAddSubWorkflow(new PortType[0], new PortType[0],
             (debug ? "Debug: " : "") + workflowName);

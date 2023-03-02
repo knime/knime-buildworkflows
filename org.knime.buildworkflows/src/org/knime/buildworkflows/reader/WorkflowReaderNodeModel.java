@@ -60,7 +60,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.ZipInputStream;
@@ -69,12 +68,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.KNIMEException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.dialog.InputNode;
 import org.knime.core.node.dialog.OutputNode;
+import org.knime.core.node.message.Message;
+import org.knime.core.node.message.MessageBuilder;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.ConnectionContainer;
@@ -140,7 +142,13 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         try (final var accessor = m_config.getWorkflowChooserModel().createReadPathAccessor()) {
             final var path = accessor.getRootPath(m_statusConsumer);
             m_statusConsumer.setWarningsIfRequired(this::setWarningMessage);
-            return readFromPath(path, exec);
+            var messageBuilder = createMessageBuilder();
+            var resultObjects = readFromPath(path, exec, messageBuilder);
+            if (messageBuilder.getIssueCount() > 0) {
+                messageBuilder.withSummary("Problem(s) while loading the workflow.");
+            }
+            messageBuilder.build().ifPresent(this::setWarning);
+            return resultObjects;
         } catch (NoSuchFileException e) {
             throw new IOException(String.format("The workflow '%s' does not exist.", e.getFile()), e);
         }
@@ -161,8 +169,9 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         }
     }
 
-    private PortObject[] readFromPath(final FSPath inputPath, final ExecutionContext exec) throws IOException,
-        CanceledExecutionException, InvalidSettingsException, UnsupportedWorkflowVersionException, LockFailedException {
+    private PortObject[] readFromPath(final FSPath inputPath, final ExecutionContext exec,
+        final MessageBuilder messageBuilder) throws IOException, CanceledExecutionException, InvalidSettingsException,
+        UnsupportedWorkflowVersionException, LockFailedException, KNIMEException {
 
         WorkflowSegment ws = null;
 
@@ -174,12 +183,12 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         @SuppressWarnings("resource")
         var wfTempFolder = toLocalWorkflowDir(inputPath);
         try {
-            final var wfm = readWorkflow(wfTempFolder.getTempFileOrFolder().toFile(), exec, this::setWarningMessage);
+            final var wfm = readWorkflow(wfTempFolder.getTempFileOrFolder().toFile(), exec, messageBuilder);
             if (wfm.canResetAll()) {
-                if (getWarningMessage() == null) {
+                if (messageBuilder.getFirstIssue().isEmpty()) {
                     // there might be already a warning message set due to workflow loading problems
                     // -> we regard those as more important and thus don't overwrite it here
-                    setWarningMessage("The read workflow contains executed nodes which have been reset");
+                    messageBuilder.addTextIssue("The read workflow contains executed nodes which have been reset.");
                 }
                 wfm.resetAndConfigureAll();
             }
@@ -234,21 +243,25 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
     }
 
     private static WorkflowManager readWorkflow(final File wfFile, final ExecutionContext exec,
-        final Consumer<String> warningConsumer) throws IOException, InvalidSettingsException, CanceledExecutionException,
-        UnsupportedWorkflowVersionException, LockFailedException {
+        final MessageBuilder messageBuilder) throws IOException, InvalidSettingsException, CanceledExecutionException,
+        UnsupportedWorkflowVersionException, LockFailedException, KNIMEException {
 
-        final var loadHelper = WorkflowSegment.createWorkflowLoadHelper(wfFile, warningConsumer);
+        final var loadHelper = WorkflowSegment.createWorkflowLoadHelper(wfFile, messageBuilder::addTextIssue);
         final WorkflowLoadResult loadResult =
             WorkflowManager.EXTRACTED_WORKFLOW_ROOT.load(wfFile, exec, loadHelper, false);
 
         final var m = loadResult.getWorkflowManager();
         if (m == null) {
-            throw new IOException(
-                "Errors reading workflow: " + loadResult.getFilteredError("", LoadResultEntryType.Ok));
+            throw KNIMEException.of( //
+                Message.builder() //
+                    .withSummary("Errors reading workflow.")
+                    .addTextIssue(loadResult.getFilteredError("", LoadResultEntryType.Warning)) //
+                    .build().orElseThrow());
         } else {
             try {
-                warningConsumer.accept(checkLoadResult(loadResult));
-            } catch (IllegalStateException e) {
+                var loadWarningOptional = checkLoadResult(loadResult);
+                loadWarningOptional.ifPresent(messageBuilder::addTextIssue);
+            } catch (KNIMEException e) {
                 WorkflowManager.EXTRACTED_WORKFLOW_ROOT.removeNode(m.getID());
                 throw e;
             }
