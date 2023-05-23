@@ -56,9 +56,6 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
 
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
-
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformation;
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformationPortObject;
 import org.knime.base.filehandling.remote.connectioninformation.port.ConnectionInformationPortObjectSpec;
@@ -77,9 +74,9 @@ import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
-import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
+import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.util.FileUtil;
 
 import com.knime.enterprise.server.rest.api.UploadApplication;
@@ -90,6 +87,9 @@ import com.knime.enterprise.server.rest.client.AbstractClient;
 import com.knime.enterprise.server.rest.client.filehandling.RepositoryClient;
 import com.knime.enterprise.utility.PermissionException;
 import com.knime.enterprise.utility.WrongTypeException;
+
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 
 /**
  * @author Marc Bux, KNIME GmbH, Berlin, Germany

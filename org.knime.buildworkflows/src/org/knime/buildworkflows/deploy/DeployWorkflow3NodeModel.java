@@ -53,8 +53,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.EnumSet;
 
-import javax.ws.rs.WebApplicationException;
-
 import org.apache.commons.lang3.StringUtils;
 import org.knime.buildworkflows.ExistsOption;
 import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
@@ -86,6 +84,8 @@ import org.knime.filehandling.core.port.FileSystemPortObjectSpec;
 
 import com.knime.enterprise.client.filehandling.rest.RestFileSystem;
 import com.knime.enterprise.server.rest.api.v4.repository.ent.Snapshot;
+
+import jakarta.ws.rs.WebApplicationException;
 
 /**
  * The "Deploy Workflow to Server" node model.
