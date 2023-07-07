@@ -56,6 +56,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Set;
 
 import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTableSpec;
@@ -84,8 +85,11 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
+import org.knime.core.util.UniqueNameGenerator;
 import org.knime.core.util.workflowsummary.WorkflowSummary;
 import org.knime.core.util.workflowsummary.WorkflowSummaryCreator;
+
+import com.knime.enterprise.utility.jackson.ObjectMapperUtil;
 
 /**
  * Node to extract WorkflowSummaries.
@@ -106,6 +110,8 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
 
     private static final String ROW_NAME = "summary";
 
+    private static final String METADATA_COL_NAME = "metadata";
+
     static SettingsModelString createOutputFormatSelectionModel() {
         return new SettingsModelString("output_format", FMT_SELECTION_JSON);
     }
@@ -114,11 +120,17 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
         return new SettingsModelString("column_name", COLUMN_NAME);
     }
 
+    static SettingsModelBoolean createOutputMetadataModel() {
+        return new SettingsModelBoolean("output_metadata", false);
+    }
+
     static SettingsModelBoolean createCheckForUpdatesModel() {
         return new SettingsModelBoolean("check_for_updates", false);
     }
 
     private final SettingsModelString m_outputFormat = createOutputFormatSelectionModel();
+
+    private final SettingsModelBoolean m_outputMetadata = createOutputMetadataModel();
 
     private final SettingsModelString m_columnName = createColumnNameModel();
 
@@ -186,23 +198,43 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
     }
 
     private DataTableSpec createSpec() {
-        return new DataTableSpec(new String[]{m_columnName.getStringValue()},
-            new DataType[]{isJsonSelected() ? JSONCell.TYPE : XMLCell.TYPE});
+        final var outputFormat = isJsonSelected() ? JSONCell.TYPE : XMLCell.TYPE;
+        final var wfSummaryCol = m_columnName.getStringValue();
+        if (m_outputMetadata.getBooleanValue()) {
+            return new DataTableSpec(new String[]{wfSummaryCol,
+                new UniqueNameGenerator(Set.of(wfSummaryCol)).newName(METADATA_COL_NAME)},
+                new DataType[]{ outputFormat, outputFormat });
+        }
+        return new DataTableSpec(new String[]{ wfSummaryCol }, new DataType[]{ outputFormat });
     }
 
     private BufferedDataTable fillTable(final ExecutionContext exec, final WorkflowManager wfm)
         throws Exception {
         final WorkflowSummary summary = WorkflowSummaryCreator.create(wfm, false, Collections.emptyList());
+        final var metadata = wfm.getMetadata();
         final BufferedDataContainer container = exec.createDataContainer(createSpec());
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            final var outputMetadata = m_outputMetadata.getBooleanValue();
+            final var utf8 = StandardCharsets.UTF_8.name();
             if (isJsonSelected()) {
                 writeJSON(out, summary, false);
-                container.addRowToTable(
-                    new DefaultRow(ROW_NAME, JSONCellFactory.create(out.toString(StandardCharsets.UTF_8.name()), false)));
+                final var wfSummaryJson = JSONCellFactory.create(out.toString(utf8), false);
+                if (outputMetadata) {
+                    final var metaJson = ObjectMapperUtil.getInstance().getObjectMapper().writeValueAsString(metadata);
+                    container.addRowToTable(new DefaultRow(ROW_NAME, wfSummaryJson,
+                        JSONCellFactory.create(metaJson, false)));
+                } else {
+                    container.addRowToTable(new DefaultRow(ROW_NAME, wfSummaryJson));
+                }
             } else {
                 writeXML(out, summary, false);
-                container.addRowToTable(
-                    new DefaultRow(ROW_NAME, XMLCellFactory.create(out.toString(StandardCharsets.UTF_8.name()))));
+                final var wfSummaryXml = XMLCellFactory.create(out.toString(utf8));
+                if (outputMetadata) {
+                    final var metaXml = metadata.toXML();
+                    container.addRowToTable(new DefaultRow(ROW_NAME, wfSummaryXml, XMLCellFactory.create(metaXml)));
+                } else {
+                    container.addRowToTable(new DefaultRow(ROW_NAME, wfSummaryXml));
+                }
             }
 
             container.close();
@@ -238,6 +270,7 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
         m_outputFormat.saveSettingsTo(settings);
         m_columnName.saveSettingsTo(settings);
         m_checkForUpdates.saveSettingsTo(settings);
+        m_outputMetadata.saveSettingsTo(settings);
     }
 
     /**
@@ -251,6 +284,10 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
         if (settings.containsKey(m_checkForUpdates.getConfigName())) {
             m_checkForUpdates.validateSettings(settings);
         }
+        // added in 5.1
+        if (settings.containsKey(m_outputMetadata.getConfigName())) {
+            m_outputMetadata.validateSettings(settings);
+        }
     }
 
     /**
@@ -263,6 +300,10 @@ final class WorkflowSummaryExtractorNodeModel extends NodeModel {
         // Added with AP-19535
         if (settings.containsKey(m_checkForUpdates.getConfigName())) {
             m_checkForUpdates.loadSettingsFrom(settings);
+        }
+        // added in 5.1
+        if (settings.containsKey(m_outputMetadata.getConfigName())) {
+            m_outputMetadata.loadSettingsFrom(settings);
         }
     }
 

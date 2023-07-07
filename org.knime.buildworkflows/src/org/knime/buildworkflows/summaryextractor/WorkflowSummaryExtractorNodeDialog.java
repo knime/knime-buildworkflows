@@ -73,6 +73,8 @@ final class WorkflowSummaryExtractorNodeDialog extends DefaultNodeSettingsPane {
         addDialogComponent(new DialogComponentString(WorkflowSummaryExtractorNodeModel.createColumnNameModel(),
             "Column name", true, 20));
         addDialogComponent(new DialogComponentBoolean(WorkflowSummaryExtractorNodeModel.createCheckForUpdatesModel(),
-            "Check for updates of linked components and metanodes"));
+                "Check for updates of linked components and metanodes"));
+        addDialogComponent(new DialogComponentBoolean(WorkflowSummaryExtractorNodeModel.createOutputMetadataModel(),
+                "Output workflow metadata"));
     }
 }

@@ -26,12 +26,15 @@
 			When checked, the node will check for updates for any linked components / 
 			metanodes before creating the summary.
 		</option>
+		<option name="Output workflow metadata">
+			When checked, the workflow metadata will be output in a second column, in the selected output format.
+		</option>
 	</fullDescription>
 
 	<ports>
 		<inPort index="0" name="Workflow">The workflow to create the summary for</inPort>
 		<outPort index="0" name="Summary">
-				The table with a single cell containing the workflow summary
+				The table with a single row containing the workflow summary and optionally workflow metadata.
 		</outPort>
 	</ports>
 </knimeNode>
