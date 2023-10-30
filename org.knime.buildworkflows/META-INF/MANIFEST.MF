@@ -4,16 +4,16 @@ Bundle-Name: KNIME Integrated Deployment
 Bundle-SymbolicName: org.knime.buildworkflows;singleton:=true
 Bundle-Version: 5.2.0.qualifier
 Bundle-Vendor: KNIME AG, Zurich, Switzerland
-Require-Bundle: org.knime.core;bundle-version="[5.1.0,6.0.0)",
- org.knime.filehandling.core;bundle-version="[5.1.0,6.0.0)",
- org.knime.base.filehandling;bundle-version="[5.1.0,6.0.0)",
- com.knime.enterprise.server.rest.api;bundle-version="[5.0.0,6.0.0)",
- com.knime.enterprise.utility;bundle-version="[5.0.0,6.0.0)",
+Require-Bundle: org.knime.core;bundle-version="[5.2.0,6.0.0)",
+ org.knime.filehandling.core;bundle-version="[5.2.0,6.0.0)",
+ org.knime.base.filehandling;bundle-version="[5.2.0,6.0.0)",
+ com.knime.enterprise.server.rest.api;bundle-version="[5.2.0,6.0.0)",
+ com.knime.enterprise.utility;bundle-version="[5.2.0,6.0.0)",
  com.knime.enterprise.client.filehandling;bundle-version="[5.2.0,6.0.0)",
- com.knime.enterprise.client.rest;bundle-version="[5.0.0,6.0.0)",
+ com.knime.enterprise.client.rest;bundle-version="[5.2.0,6.0.0)",
  org.apache.commons.lang3;bundle-version="[3.9.0,4.0.0)",
- org.knime.json;bundle-version="[5.1.0,6.0.0)",
- org.knime.workflowservices;bundle-version="[5.1.0,6.0.0)",
+ org.knime.json;bundle-version="[5.2.0,6.0.0)",
+ org.knime.workflowservices;bundle-version="[5.2.0,6.0.0)",
  jakarta.ws.rs-api;bundle-version="[3.1.0,4.0.0)",
  com.fasterxml.jackson.core.jackson-core;bundle-version="[2.13.2,3.0.0)",
  com.fasterxml.jackson.core.jackson-databind;bundle-version="[2.13.2,3.0.0)"
