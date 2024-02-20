@@ -75,6 +75,7 @@ import org.knime.core.node.workflow.VariableType;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
+import org.knime.core.node.workflow.capture.WorkflowSegmentExecutor;
 import org.knime.core.node.workflow.virtual.AbstractPortObjectRepositoryNodeModel;
 import org.knime.core.util.Pair;
 
@@ -85,7 +86,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
 
     static final String CFG_DEBUG = "debug";
 
-    private WorkflowExecutable m_executable;
+    private WorkflowSegmentExecutor m_executable;
 
     private boolean m_debug = false;
 
@@ -116,7 +117,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
             WorkflowSegmentManipulations.UPDATE_LINKED_TEMPLATES.apply(segment);
         }
 
-        WorkflowExecutable we = createWorkflowExecutable(wpo.getSpec());
+        WorkflowSegmentExecutor we = createWorkflowExecutable(wpo.getSpec());
         m_executable = we;
         boolean success = false;
         try {
@@ -155,12 +156,13 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         pushFlowVariable(fv.getName(), (VariableType<T>)fv.getVariableType(), (T)fv.getValue(fv.getVariableType()));
     }
 
-    private WorkflowExecutable createWorkflowExecutable(final WorkflowPortObjectSpec spec) throws InvalidSettingsException, KNIMEException {
+    private WorkflowSegmentExecutor createWorkflowExecutable(final WorkflowPortObjectSpec spec)
+        throws InvalidSettingsException, KNIMEException {
         disposeWorkflowExecutable();
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         CheckUtils.checkArgumentNotNull(nc, "Not a local workflow");
         checkPortCompatibility(spec, nc);
-        m_executable = new WorkflowExecutable(spec.getWorkflowSegment(), spec.getWorkflowName(), nc, m_debug,
+        m_executable = new WorkflowSegmentExecutor(spec.getWorkflowSegment(), spec.getWorkflowName(), nc, m_debug,
             this::setWarningMessage);
         return m_executable;
     }

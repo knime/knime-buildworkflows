@@ -48,7 +48,7 @@
  */
 package org.knime.buildworkflows.reader;
 
-import static org.knime.buildworkflows.util.BuildWorkflowsUtil.checkLoadResult;
+import static org.knime.core.node.workflow.capture.BuildWorkflowsUtil.checkLoadResult;
 
 import java.io.File;
 import java.io.IOException;

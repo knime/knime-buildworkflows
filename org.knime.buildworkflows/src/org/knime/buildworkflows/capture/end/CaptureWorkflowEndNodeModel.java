@@ -59,7 +59,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
-import org.knime.buildworkflows.util.BuildWorkflowsUtil;
 import org.knime.core.data.DataTable;
 import org.knime.core.data.container.CloseableRowIterator;
 import org.knime.core.data.container.filter.TableFilter;
@@ -87,6 +86,7 @@ import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.VariableType;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.capture.BuildWorkflowsUtil;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowSegment;

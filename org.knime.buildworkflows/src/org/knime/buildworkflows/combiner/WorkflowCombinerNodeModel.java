@@ -48,7 +48,7 @@
  */
 package org.knime.buildworkflows.combiner;
 
-import static org.knime.buildworkflows.util.BuildWorkflowsUtil.loadWorkflow;
+import static org.knime.core.node.workflow.capture.BuildWorkflowsUtil.loadWorkflow;
 
 import java.io.File;
 import java.io.IOException;
