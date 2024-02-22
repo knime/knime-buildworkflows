@@ -80,11 +80,11 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.port.PortType;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowCopyContent;
+import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowLock;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
@@ -220,8 +220,8 @@ final class WorkflowCombinerNodeModel extends NodeModel {
     }
 
     private static WorkflowManager createWFM() {
-        return WorkflowManager.EXTRACTED_WORKFLOW_ROOT.createAndAddSubWorkflow(new PortType[0], new PortType[0],
-            "workflow_combiner");
+        return WorkflowManager.EXTRACTED_WORKFLOW_ROOT.createAndAddProject("workflow_combiner",
+            new WorkflowCreationHelper());
     }
 
     /**

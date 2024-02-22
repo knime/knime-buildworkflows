@@ -158,7 +158,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         final WorkflowManager manager = container.getParent();
         WorkflowSegment wfs;
         try {
-            wfs = manager.createCaptureOperationFor(container.getID()).capture();
+            wfs = manager.createCaptureOperationFor(container.getID()).capture(m_customWorkflowName.getStringValue());
         } catch (Exception e) {
             throw new IllegalStateException("Capturing the workflow failed: " + e.getMessage(), e);
         }
