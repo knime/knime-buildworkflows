@@ -36,6 +36,7 @@ try {
                         "knime-productivity-oss",
                         "knime-reporting",
                         "knime-server-client",
+						"knime-cef",
                         "knime-stats",
                         "knime-virtual"
                     ]
@@ -55,7 +56,8 @@ try {
                         "knime-js-base",
                         "knime-productivity-oss",
                         "knime-reporting",
-                        "knime-server-client"
+                        "knime-server-client",
+						"knime-cef"
                     ]
                 ],
             )
