@@ -49,17 +49,25 @@
 package org.knime.buildworkflows.reader;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Optional;
+
+import javax.swing.JPanel;
 
 import org.knime.core.node.FlowVariableModel;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.defaultnodesettings.DialogComponentStringSelection;
+import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.util.FileSystemBrowser.DialogType;
+import org.knime.core.util.hub.HubItemVersion;
+import org.knime.filehandling.core.connections.ItemVersionAware.RepositoryItemVersion;
 import org.knime.filehandling.core.connections.workflowaware.WorkflowAware;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.AbstractDialogComponentFileChooser;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.StatusMessageReporter;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.reader.ReadPathAccessor;
 import org.knime.filehandling.core.defaultnodesettings.status.PriorityStatusConsumer;
 import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage;
+import org.knime.filehandling.core.util.GBCBuilder;
 
 /**
  * Lets one choose a workflow. In case of a {@link WorkflowAware} filesystem it's the workflow directory, in all other
@@ -68,6 +76,15 @@ import org.knime.filehandling.core.defaultnodesettings.status.StatusMessage;
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileChooser<SettingsModelWorkflowChooser> {
+
+    private static final String VERSION_SELECTOR_CURRENT_STATE = "Current State";
+    private static final String VERSION_SELECTOR_LATEST_VERSION = "Latest Version";
+
+    private SettingsModelString m_versionModel;
+
+    private DialogComponentStringSelection m_versionSelector;
+
+    private Optional<LinkedHashMap<String, HubItemVersion>> m_availableVersions;
 
     /**
      * @param model the model backing the dialog component
@@ -78,6 +95,83 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
         final FlowVariableModel locationFvm) {
         super(model, historyID, DialogType.OPEN_DIALOG, "Read from", locationFvm,
             DialogComponentWorkflowChooser::createStatusMessageReporter);
+        getModel().addChangeListener(e -> updateVersionSelector());
+        m_versionModel.addChangeListener(e -> {
+            if (m_availableVersions.isPresent()) {
+                getSettingsModel().setItemVersion(m_availableVersions.get().get(m_versionModel.getStringValue()));
+            }
+        });
+        m_availableVersions = Optional.empty();
+        updateVersionSelector();
+    }
+
+    @Override
+    protected void addAdditionalComponents(final JPanel panel, final GBCBuilder gbc) {
+        m_versionModel = new SettingsModelString("ignore", null);
+        m_versionSelector =
+            new DialogComponentStringSelection(m_versionModel, "Select version", VERSION_SELECTOR_CURRENT_STATE);
+
+        gbc.incX();
+        panel.add(m_versionSelector.getComponentPanel(), gbc.build());
+        m_versionSelector.getComponentPanel().setVisible(true);
+    }
+
+    private void updateVersionSelector() {
+        m_versionSelector.getComponentPanel().setVisible(false);
+        updateVersions();
+        if (m_availableVersions.isPresent()) {
+            m_versionSelector.replaceListItems(m_availableVersions.get().keySet(),
+                getTitleForVersion(getSettingsModel().getItemVersion().orElse(null)));
+            m_versionSelector.getComponentPanel().setVisible(true);
+        }
+    }
+
+    private String getTitleForVersion(final HubItemVersion v) {
+        // reverse lookup for available versions
+        if (v != null && m_availableVersions.isPresent()) {
+            for (final var entry : m_availableVersions.get().entrySet()) {
+                if (entry.getValue().equals(v)) {
+                    return entry.getKey();
+                }
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("resource")
+    private void updateVersions() {
+        m_availableVersions = Optional.empty();
+        if (!getSettingsModel().canCreateConnection()) {
+            return;
+        }
+        // do not close these resources since we only access them but not create them
+        // i.e. closing is handled somewhere else
+        final var connection = getSettingsModel().getConnection();
+        final var fs = connection.getFileSystem();
+        final var fspath = fs.getPath(getSettingsModel().getLocation().getPath());
+        final var versionAware = fs.getItemVersionAware();
+        if (versionAware.isPresent()) {
+            try {
+                // fetch named versions
+                final var hubVersions = versionAware.get().getRepositoryItemVersions(fspath);
+                if (!hubVersions.isEmpty()) {
+                    final var versions = new LinkedHashMap<String, HubItemVersion>();
+                    versions.put(VERSION_SELECTOR_CURRENT_STATE, HubItemVersion.currentState());
+                    versions.put(VERSION_SELECTOR_LATEST_VERSION, HubItemVersion.latestVersion());
+                    hubVersions.forEach(v -> versions.put(makeTitle(v), HubItemVersion.of((int)v.getVersion())));
+                    m_availableVersions = Optional.of(versions);
+                }
+                // If there are no versions, we set no available versions which means there will be no dialog dropdown
+            } catch (IOException e) {//NOSONAR
+                // This catches exceptions like NoSuchFile / AccessDenied, which are already handled by the
+                // AbstractSettingsModelFileChooser, and pretty-printed to the node dialogue there.
+                // We simply do not set / show any available versions (what would the user select there, anyways?)
+            }
+        }
+    }
+
+    private static String makeTitle(final RepositoryItemVersion v) {
+        return "Version " + v.getVersion() + ": " + v.getTitle();
     }
 
     private static StatusMessageReporter createStatusMessageReporter(final SettingsModelWorkflowChooser model) {

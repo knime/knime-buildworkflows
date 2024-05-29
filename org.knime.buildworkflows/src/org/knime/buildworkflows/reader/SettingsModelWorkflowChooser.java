@@ -48,7 +48,16 @@
  */
 package org.knime.buildworkflows.reader;
 
+import java.util.Optional;
+
+import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.NodeSettingsRO;
+import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.context.ports.PortsConfiguration;
+import org.knime.core.node.port.PortObjectSpec;
+import org.knime.core.util.hub.HubItemVersion;
+import org.knime.core.util.hub.HubItemVersionPersistor;
 import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.EnumConfig;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.AbstractSettingsModelFileChooser;
@@ -61,6 +70,8 @@ import org.knime.filehandling.core.defaultnodesettings.filtermode.SettingsModelF
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 class SettingsModelWorkflowChooser extends AbstractSettingsModelFileChooser<SettingsModelWorkflowChooser> {
+
+    private Optional<HubItemVersion> m_itemVersion = Optional.empty();
 
     protected SettingsModelWorkflowChooser(final String configName, final String fileSystemPortIdentifier,
         final PortsConfiguration portConfig) {
@@ -80,20 +91,50 @@ class SettingsModelWorkflowChooser extends AbstractSettingsModelFileChooser<Sett
         return getLocation().getFileSystemSpecifier().map("knime.workflow.data"::equals).orElse(false);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    final Optional<HubItemVersion> getItemVersion() {
+        return m_itemVersion;
+    }
+
+    final void setItemVersion(final HubItemVersion itemVersion) {
+        m_itemVersion = Optional.ofNullable(itemVersion);
+    }
+
     @Override
     public SettingsModelWorkflowChooser createClone() {
         return new SettingsModelWorkflowChooser(this);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected String getModelTypeID() {
         return "SMID_WorkflowChooser";
     }
 
+    @Override
+    protected void saveAdditionalSettingsForModel(final NodeSettingsWO settings) {
+        if (m_itemVersion.isPresent()) {
+            HubItemVersionPersistor.save(m_itemVersion.get(), settings);
+        }
+    }
+
+    @Override
+    protected void saveAdditionalSettingsForDialog(final NodeSettingsWO settings) throws InvalidSettingsException {
+        if (m_itemVersion.isPresent()) {
+            HubItemVersionPersistor.save(m_itemVersion.get(), settings);
+        }
+    }
+
+    @Override
+    protected void loadAdditionalSettingsForModel(final NodeSettingsRO settings) throws InvalidSettingsException {
+        m_itemVersion = HubItemVersionPersistor.load(settings);
+    }
+
+    @Override
+    protected void loadAdditionalSettingsForDialog(final NodeSettingsRO settings, final PortObjectSpec[] specs)
+        throws NotConfigurableException {
+        try {
+            loadAdditionalSettingsForModel(settings);
+        } catch (InvalidSettingsException e) {//NOSONAR
+            // no-op: let the user configure the node
+        }
+    }
 }

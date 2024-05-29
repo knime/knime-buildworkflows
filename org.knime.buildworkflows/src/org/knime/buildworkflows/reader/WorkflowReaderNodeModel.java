@@ -98,6 +98,7 @@ import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 import org.knime.core.node.workflow.virtual.AbstractPortObjectRepositoryNodeModel;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.LockFailedException;
+import org.knime.core.util.hub.HubItemVersion;
 import org.knime.filehandling.core.connections.FSFiles;
 import org.knime.filehandling.core.connections.FSPath;
 import org.knime.filehandling.core.connections.workflowaware.Entity;
@@ -181,7 +182,8 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         // It's because the workflow manager using the directory needs to be disposed _first_ in
         // the 'finally' clause before the temp-directory can be closed, i.e. deleted.
         @SuppressWarnings("resource")
-        var wfTempFolder = toLocalWorkflowDir(inputPath);
+        var wfTempFolder =
+            toLocalWorkflowDir(inputPath, m_config.getWorkflowChooserModel().getItemVersion().orElse(null));
         try {
             final var wfm = readWorkflow(wfTempFolder.getTempFileOrFolder().toFile(), exec, messageBuilder);
             if (wfm.canResetAll()) {
@@ -269,19 +271,30 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         return loadResult.getWorkflowManager();
     }
 
-    private static TempPathCloseable toLocalWorkflowDir(final FSPath path) throws IOException {
+    @SuppressWarnings("resource")
+    private static TempPathCloseable toLocalWorkflowDir(final FSPath path, final HubItemVersion version)
+        throws IOException {
         // the connected file system is either WorkflowAware or provides the workflow as a '.knwf'-file
 
         ensureIsWorkflow(path);
 
-        @SuppressWarnings("resource")
-        final var wfAware = path.getFileSystem().getWorkflowAware();
+        final var fs = path.getFileSystem();
+
+        // Try with version
+        final var wfvAware = fs.getItemVersionAware();
+        if (wfvAware.isPresent() && version != null) {
+            return wfvAware.get().downloadWorkflowAtVersion(path, version);
+        }
+
+        // Try to fetch workflow
+        final var wfAware = fs.getWorkflowAware();
         if (wfAware.isPresent()) {
-            return wfAware.orElseThrow().toLocalWorkflowDir(path);
-        } else {
-            try (var in = FSFiles.newInputStream(path)) {
-                return unzipToLocalDir(in);
-            }
+            return wfAware.get().toLocalWorkflowDir(path);
+        }
+
+        // Try plain input stream
+        try (var in = FSFiles.newInputStream(path)) {
+            return unzipToLocalDir(in);
         }
     }
 
