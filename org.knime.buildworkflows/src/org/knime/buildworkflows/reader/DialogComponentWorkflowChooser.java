@@ -50,6 +50,7 @@ package org.knime.buildworkflows.reader;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.swing.JPanel;
@@ -77,14 +78,14 @@ import org.knime.filehandling.core.util.GBCBuilder;
  */
 final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileChooser<SettingsModelWorkflowChooser> {
 
-    private static final String VERSION_SELECTOR_CURRENT_STATE = "Current State";
-    private static final String VERSION_SELECTOR_LATEST_VERSION = "Latest Version";
+    private static final String VERSION_SELECTOR_CURRENT_STATE = "Latest edits";
+    private static final String VERSION_SELECTOR_LATEST_VERSION = "Latest version";
 
     private SettingsModelString m_versionModel;
 
     private DialogComponentStringSelection m_versionSelector;
 
-    private Optional<LinkedHashMap<String, HubItemVersion>> m_availableVersions;
+    private LinkedHashMap<String, HubItemVersion> m_availableVersions = defaultMap();
 
     /**
      * @param model the model backing the dialog component
@@ -97,17 +98,14 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
             DialogComponentWorkflowChooser::createStatusMessageReporter);
         getModel().addChangeListener(e -> updateVersionSelector());
         m_versionModel.addChangeListener(e -> {
-            if (m_availableVersions.isPresent()) {
-                getSettingsModel().setItemVersion(m_availableVersions.get().get(m_versionModel.getStringValue()));
-            }
+            getSettingsModel().setItemVersion(m_availableVersions.get(m_versionModel.getStringValue()));
         });
-        m_availableVersions = Optional.empty();
         updateVersionSelector();
     }
 
     @Override
     protected void addAdditionalComponents(final JPanel panel, final GBCBuilder gbc) {
-        m_versionModel = new SettingsModelString("ignore", null);
+        m_versionModel = new SettingsModelString("ignore", VERSION_SELECTOR_CURRENT_STATE);
         m_versionSelector =
             new DialogComponentStringSelection(m_versionModel, "Select version", VERSION_SELECTOR_CURRENT_STATE);
 
@@ -119,17 +117,15 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
     private void updateVersionSelector() {
         m_versionSelector.getComponentPanel().setVisible(false);
         updateVersions();
-        if (m_availableVersions.isPresent()) {
-            m_versionSelector.replaceListItems(m_availableVersions.get().keySet(),
-                getTitleForVersion(getSettingsModel().getItemVersion().orElse(null)));
-            m_versionSelector.getComponentPanel().setVisible(true);
-        }
+        m_versionSelector.replaceListItems(m_availableVersions.keySet(),
+            getTitleForVersion(getSettingsModel().getItemVersion()));
+        m_versionSelector.getComponentPanel().setVisible(true);
     }
 
     private String getTitleForVersion(final HubItemVersion v) {
         // reverse lookup for available versions
-        if (v != null && m_availableVersions.isPresent()) {
-            for (final var entry : m_availableVersions.get().entrySet()) {
+        if (v != null) {
+            for (final var entry : m_availableVersions.entrySet()) {
                 if (entry.getValue().equals(v)) {
                     return entry.getKey();
                 }
@@ -140,7 +136,7 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
 
     @SuppressWarnings("resource")
     private void updateVersions() {
-        m_availableVersions = Optional.empty();
+        m_availableVersions = defaultMap();
         if (!getSettingsModel().canCreateConnection()) {
             return;
         }
@@ -159,7 +155,7 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
                     versions.put(VERSION_SELECTOR_CURRENT_STATE, HubItemVersion.currentState());
                     versions.put(VERSION_SELECTOR_LATEST_VERSION, HubItemVersion.latestVersion());
                     hubVersions.forEach(v -> versions.put(makeTitle(v), HubItemVersion.of((int)v.getVersion())));
-                    m_availableVersions = Optional.of(versions);
+                    m_availableVersions = versions;
                 }
                 // If there are no versions, we set no available versions which means there will be no dialog dropdown
             } catch (IOException e) {//NOSONAR
@@ -224,6 +220,10 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
             }
 
         };
+    }
+
+    private static LinkedHashMap<String, HubItemVersion> defaultMap() {
+        return new LinkedHashMap<>(Map.of(VERSION_SELECTOR_CURRENT_STATE, HubItemVersion.currentState()));
     }
 
 }
