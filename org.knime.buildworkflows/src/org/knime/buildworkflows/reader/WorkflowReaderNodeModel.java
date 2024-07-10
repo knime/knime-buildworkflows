@@ -151,7 +151,16 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
             messageBuilder.build().ifPresent(this::setWarning);
             return resultObjects;
         } catch (NoSuchFileException e) {
-            throw new IOException(String.format("The workflow '%s' does not exist.", e.getFile()), e);
+            // if version is not current state add a hint that the version might not be available
+            final var itemVersion = m_config.getWorkflowChooserModel().getItemVersion();
+            final var versionWarning = switch (itemVersion.linkType()) {
+                // current state is always available, cannot be a problem
+                case LATEST_STATE -> "";
+                // path might be wrong or version not available
+                case LATEST_VERSION -> " or does not have any versions";
+                case FIXED_VERSION -> " or does not have version " + itemVersion.versionNumber();
+            };
+            throw new IOException(String.format("The workflow '%s' does not exist%s.", e.getFile(), versionWarning), e);
         }
     }
 
@@ -183,7 +192,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         // the 'finally' clause before the temp-directory can be closed, i.e. deleted.
         @SuppressWarnings("resource")
         var wfTempFolder =
-            toLocalWorkflowDir(inputPath, m_config.getWorkflowChooserModel().getItemVersion().orElse(null));
+            toLocalWorkflowDir(inputPath, m_config.getWorkflowChooserModel().getItemVersion());
         try {
             final var wfm = readWorkflow(wfTempFolder.getTempFileOrFolder().toFile(), exec, messageBuilder);
             if (wfm.canResetAll()) {
