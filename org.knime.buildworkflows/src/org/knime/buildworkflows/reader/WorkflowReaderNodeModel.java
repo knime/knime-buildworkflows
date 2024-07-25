@@ -195,7 +195,8 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
             toLocalWorkflowDir(inputPath, m_config.getWorkflowChooserModel().getItemVersion());
         try {
             final var wfm = readWorkflow(wfTempFolder.getTempFileOrFolder().toFile(), exec, messageBuilder);
-            if (wfm.canResetAll()) {
+            final var partiallyExecuted = wfm.canResetAll() && !wfm.getNodeContainers().isEmpty();
+            if (partiallyExecuted) {
                 if (messageBuilder.getFirstIssue().isEmpty()) {
                     // there might be already a warning message set due to workflow loading problems
                     // -> we regard those as more important and thus don't overwrite it here
