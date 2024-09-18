@@ -66,6 +66,10 @@
           factory-class="org.knime.buildworkflows.executor.WorkflowExecutorNodeFactory">
     </node>
     <node
+          category-path="/flowabstraction/captureworkflows"
+          factory-class="org.knime.buildworkflows.converter.WorkflowConverterNodeFactory">
+    </node>
+    <node
        category-path="/flowabstraction/captureworkflows"
        deprecated="false"
        factory-class="org.knime.buildworkflows.summaryextractor.WorkflowSummaryExtractorNodeFactory"
