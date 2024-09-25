@@ -75,6 +75,11 @@
 	            It is greyed out if the file system is not connected in which case you have to (re)execute the connector node first.
 				Note: The default file systems listed above can't be selected if a file system is provided via the input port.
 			</option>
+			<option name="Select version">
+				If available, select the version of the workflow to read. A limited number of versions will be fetched and provided in a
+				dropdown menu. If the desired version is not included in the dropdown list, the option <i>hubItemVersion</i> can be set
+				with a flow variable (e.g. "333" for version 333 on the hub).
+			</option>
 			<option name="File">
 				Enter a URL when reading from <i>Custom/KNIME URL</i>, otherwise enter a path to a file. The
 				required syntax of a path depends on the chosen file system, such as &quot;C:\path\to\file&quot; (Local
