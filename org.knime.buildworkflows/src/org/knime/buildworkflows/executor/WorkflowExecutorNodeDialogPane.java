@@ -102,6 +102,9 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
     private final DialogComponentBoolean m_doUpdateTemplateLinks = new DialogComponentBoolean(
         WorkflowExecutorNodeModel.createDoUpdateTemplateLinksModel(), "Update links of components and metanodes");
 
+    private final DialogComponentBoolean m_doExecuteAllNodes = new DialogComponentBoolean(
+        WorkflowExecutorNodeModel.createExecuteAllNodesModel(), "Execute entire workflow");
+
     WorkflowExecutorNodeDialogPane() {
         JPanel options = new JPanel();
         options.setLayout(new BoxLayout(options, BoxLayout.Y_AXIS));
@@ -132,7 +135,10 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
 
         JPanel modifySegment = new JPanel();
         setBorder(modifySegment, "Modify captured workflow segment");
+        // enable stacking checkboxes vertically
+        modifySegment.setLayout(new BoxLayout(modifySegment, BoxLayout.Y_AXIS));
         modifySegment.add(m_doUpdateTemplateLinks.getComponentPanel());
+        modifySegment.add(m_doExecuteAllNodes.getComponentPanel());
         options.add(modifySegment);
     }
 
@@ -223,6 +229,7 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
         refreshPortAdjustment(m_workflowSpec);
         m_debug.setSelected(settings.getBoolean(CFG_DEBUG, false));
         m_doUpdateTemplateLinks.loadSettingsFrom(settings, specs);
+        m_doExecuteAllNodes.loadSettingsFrom(settings, specs);
     }
 
     /**
@@ -232,6 +239,7 @@ class WorkflowExecutorNodeDialogPane extends NodeDialogPane implements Configura
     protected void saveSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
         settings.addBoolean(CFG_DEBUG, m_debug.isSelected());
         m_doUpdateTemplateLinks.saveSettingsTo(settings);
+        m_doExecuteAllNodes.saveSettingsTo(settings);
     }
 
 }
