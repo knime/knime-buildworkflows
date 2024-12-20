@@ -92,8 +92,14 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
 
     private final SettingsModelBoolean m_doUpdateTemplateLinks = createDoUpdateTemplateLinksModel();
 
+    private final SettingsModelBoolean m_doExecuteAllNodes = createExecuteAllNodesModel();
+
     public static SettingsModelBoolean createDoUpdateTemplateLinksModel() {
         return new SettingsModelBoolean("do_update_template_links", false);
+    }
+
+    public static SettingsModelBoolean createExecuteAllNodesModel() {
+        return new SettingsModelBoolean("do_execute_entire_workflow", true);
     }
 
     WorkflowExecutorNodeModel(final PortsConfiguration portsConf) {
@@ -163,7 +169,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         CheckUtils.checkArgumentNotNull(nc, "Not a local workflow");
         checkPortCompatibility(spec, nc);
         m_executable = new WorkflowSegmentExecutor(spec.getWorkflowSegment(), spec.getWorkflowName(), nc, m_debug,
-            this::setWarningMessage);
+            m_doExecuteAllNodes.getBooleanValue(), this::setWarningMessage);
         return m_executable;
     }
 
@@ -235,6 +241,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
     protected void saveSettingsTo(final NodeSettingsWO settings) {
         settings.addBoolean(CFG_DEBUG, m_debug);
         m_doUpdateTemplateLinks.saveSettingsTo(settings);
+        m_doExecuteAllNodes.saveSettingsTo(settings);
     }
 
     @Override
@@ -249,6 +256,12 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
             m_doUpdateTemplateLinks.loadSettingsFrom(settings);
         } else {
             m_doUpdateTemplateLinks.setBooleanValue(false);
+        }
+        if (settings.containsKey(m_doExecuteAllNodes.getConfigName())) {
+            m_doExecuteAllNodes.loadSettingsFrom(settings);
+        } else {
+            // backwards compatibility
+            m_doExecuteAllNodes.setBooleanValue(false);
         }
     }
 
