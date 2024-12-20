@@ -31,6 +31,13 @@
 	<option name="Update links of components and metanodes">
 		If enabled, linked components and metanodes contained in the given workflow segment will be updated before execution.
 	</option>
+	<option name="Execute entire workflow">
+		If checked, the entire workflow is executed and failures in the workflow will cause this executor node to fail. 
+		If unchecked, the executor node will only execute the nodes required to generate the output. This can lead to 
+		unexpected behavior where unconnected side branches are not executed. This option is disabled for 
+		workflows older than version 5.5 due to backwards compatibility. 
+		It is enabled by default for newly created instances. If uncertain, keep this option checked.
+	</option>
 	</fullDescription>
 	<ports>
 		<inPort index="0" name="Workflow">
