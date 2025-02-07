@@ -58,6 +58,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.apache.commons.lang3.StringUtils;
 import org.knime.buildworkflows.manipulate.WorkflowSegmentManipulations;
 import org.knime.core.data.DataTable;
 import org.knime.core.data.container.CloseableRowIterator;
@@ -152,36 +153,7 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
      */
     @Override
     protected PortObjectSpec[] configure(final PortObjectSpec[] inSpecs) throws InvalidSettingsException {
-        checkForCaptureNodeStart();
-
-        final NodeContainer container = NodeContext.getContext().getNodeContainer();
-        final WorkflowManager manager = container.getParent();
-        WorkflowSegment wfs;
-        try {
-            wfs = manager.createCaptureOperationFor(container.getID()).capture(m_customWorkflowName.getStringValue());
-        } catch (Exception e) {
-            throw new IllegalStateException("Capturing the workflow failed: " + e.getMessage(), e);
-        }
-        removeSegment();
-        m_lastSegment = wfs;
-
-        if (getCustomWorkflowName() != null) {
-            Optional<String> err = BuildWorkflowsUtil.validateCustomWorkflowName(getCustomWorkflowName(), true, false);
-            if (err.isPresent()) {
-                throw new InvalidSettingsException(err.get());
-            }
-        }
-
-        if (m_doRemoveTemplateLinks.getBooleanValue()) {
-            try {
-                WorkflowSegmentManipulations.REMOVE_TEMPLATE_LINKS.apply(wfs);
-            } catch (Exception e) {  // NOSONAR: Exception is handled
-                throw new InvalidSettingsException(e.getCause());
-            }
-        }
-
-        final WorkflowPortObjectSpec spec =
-            new WorkflowPortObjectSpec(wfs, getCustomWorkflowName(), m_inputIDs, m_outputIDs);
+        final WorkflowPortObjectSpec spec = capture();
         return Stream.concat(Arrays.stream(inSpecs), Stream.of(spec)).toArray(PortObjectSpec[]::new);
     }
 
@@ -190,22 +162,62 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
      */
     @Override
     protected PortObject[] execute(final PortObject[] inObjects, final ExecutionContext exec) throws Exception {
-        checkForCaptureNodeStart();
+        final WorkflowPortObjectSpec spec = capture();
         Map<String, DataTable> inputData = null;
         if (m_addInputData.getBooleanValue()) {
             inputData = getInputData(m_lastSegment.getConnectedInputs(), m_inputIDs, m_maxNumRows.getIntValue(), exec);
         }
-        final WorkflowPortObject po = new WorkflowPortObject(
-            new WorkflowPortObjectSpec(m_lastSegment, getCustomWorkflowName(), m_inputIDs, m_outputIDs), inputData);
+        final WorkflowPortObject po = new WorkflowPortObject(spec, inputData);
         exportVariables();
         return Stream.concat(Arrays.stream(inObjects), Stream.of(po)).toArray(PortObject[]::new);
     }
 
-    private String getCustomWorkflowName() {
-        return m_customWorkflowName.getStringValue().isEmpty() ? null : m_customWorkflowName.getStringValue();
+    /** Captures the segment the current node is part of. */
+    private WorkflowPortObjectSpec capture() throws InvalidSettingsException {
+        removeSegment();
+
+        final String customWorkflowName = StringUtils.defaultIfEmpty(m_customWorkflowName.getStringValue(), null);
+        if (customWorkflowName != null) {
+            Optional<String> err = BuildWorkflowsUtil.validateCustomWorkflowName(customWorkflowName, true, false);
+            if (err.isPresent()) {
+                throw new InvalidSettingsException(err.get());
+            }
+        }
+
+        if (!getScopeStartNode(CaptureWorkflowStartNode.class).isPresent()) {
+            throw createMessageBuilder().withSummary("No corresponding 'Capture Workflow Start' node found.") //
+                .addTextIssue("This node is not closing a workflow segment defined by a 'Capture Workflow Start'.") //
+                .addResolutions("If missing, add a 'Capture Workflow Start' to define the segment start.") //
+                .addResolutions("Check no other unclosed scope, e.g. Loop, is contained in the workflow segment.") //
+                .build().orElseThrow().toInvalidSettingsException();
+        }
+
+        final NodeContainer container = NodeContext.getContext().getNodeContainer();
+        final WorkflowManager manager = container.getParent();
+        WorkflowSegment wfs;
+        try {
+            wfs = manager.createCaptureOperationFor(container.getID()).capture(m_customWorkflowName.getStringValue());
+        } catch (Exception e) { // NOSONAR
+            throw createMessageBuilder().withSummary("Capturing the workflow failed")
+                .addTextIssue("Unable to capture the corresponding workflow segment:%n%s".formatted(e.getMessage())) //
+                .addResolutions("Review the scope of the captured workflow segment.") //
+                .build().orElseThrow().toInvalidSettingsException(e);
+        }
+
+        if (m_doRemoveTemplateLinks.getBooleanValue()) {
+            try {
+                WorkflowSegmentManipulations.REMOVE_TEMPLATE_LINKS.apply(wfs);
+            } catch (Exception e) {  // NOSONAR: Exception is handled
+                wfs.disposeWorkflow();
+                throw new InvalidSettingsException(e.getCause());
+            }
+        }
+        m_lastSegment = wfs;
+        return new WorkflowPortObjectSpec(m_lastSegment, customWorkflowName, m_inputIDs, m_outputIDs);
+
     }
 
-    /*
+    /**
      * Retrieves the input tables for the given inputs (if they accept tables).
      */
     private static Map<String, DataTable> getInputData(final List<Input> inputs, final List<String> inputIDs,
@@ -238,12 +250,6 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
             i++;
         }
         return inputData;
-    }
-
-    private void checkForCaptureNodeStart() throws InvalidSettingsException {
-        if (!getScopeStartNode(CaptureWorkflowStartNode.class).isPresent()) {
-            throw new InvalidSettingsException("No corresponding 'Capture Workflow Start' node found");
-        }
     }
 
     private void removeSegment() {
