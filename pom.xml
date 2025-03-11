@@ -94,6 +94,11 @@
 			<url>${knime.server.client.p2}</url>
 		</repository>
 		<repository>
+			<id>p2-knime-hubclient-sdk</id>
+			<layout>p2</layout>
+			<url>${knime.p2.repo}/knime-hubclient-sdk/${git.branch}</url>
+		</repository>
+		<repository>
 			<id>p2-knime-js-core</id>
 			<layout>p2</layout>
 			<url>${knime.js.core.p2}</url>
