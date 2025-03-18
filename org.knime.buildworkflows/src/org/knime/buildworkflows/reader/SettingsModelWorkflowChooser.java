@@ -54,8 +54,8 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.util.hub.HubItemVersion;
-import org.knime.core.util.hub.HubItemVersionPersistor;
+import org.knime.core.util.hub.ItemVersion;
+import org.knime.core.util.hub.ItemVersionStringPersistor;
 import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.EnumConfig;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.AbstractSettingsModelFileChooser;
@@ -69,7 +69,7 @@ import org.knime.filehandling.core.defaultnodesettings.filtermode.SettingsModelF
  */
 class SettingsModelWorkflowChooser extends AbstractSettingsModelFileChooser<SettingsModelWorkflowChooser> {
 
-    private HubItemVersion m_itemVersion = HubItemVersion.currentState();
+    private ItemVersion m_itemVersion = ItemVersion.currentState();
 
     protected SettingsModelWorkflowChooser(final String configName, final String fileSystemPortIdentifier,
         final PortsConfiguration portConfig) {
@@ -89,11 +89,11 @@ class SettingsModelWorkflowChooser extends AbstractSettingsModelFileChooser<Sett
         return getLocation().getFileSystemSpecifier().map("knime.workflow.data"::equals).orElse(false);
     }
 
-    final HubItemVersion getItemVersion() {
+    final ItemVersion getItemVersion() {
         return m_itemVersion;
     }
 
-    final void setItemVersion(final HubItemVersion itemVersion) {
+    final void setItemVersion(final ItemVersion itemVersion) {
         m_itemVersion = itemVersion;
     }
 
@@ -109,17 +109,17 @@ class SettingsModelWorkflowChooser extends AbstractSettingsModelFileChooser<Sett
 
     @Override
     protected void saveAdditionalSettingsForModel(final NodeSettingsWO settings) {
-        HubItemVersionPersistor.save(m_itemVersion, settings);
+        ItemVersionStringPersistor.save(m_itemVersion, settings);
     }
 
     @Override
     protected void saveAdditionalSettingsForDialog(final NodeSettingsWO settings) throws InvalidSettingsException {
-        HubItemVersionPersistor.save(m_itemVersion, settings);
+        ItemVersionStringPersistor.save(m_itemVersion, settings);
     }
 
     @Override
     protected void loadAdditionalSettingsForModel(final NodeSettingsRO settings) throws InvalidSettingsException {
-        m_itemVersion = HubItemVersionPersistor.load(settings).orElse(HubItemVersion.currentState());
+        m_itemVersion = ItemVersionStringPersistor.load(settings).orElse(ItemVersion.currentState());
     }
 
     @Override

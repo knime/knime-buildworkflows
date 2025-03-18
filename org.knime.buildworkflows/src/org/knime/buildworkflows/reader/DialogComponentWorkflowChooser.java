@@ -60,7 +60,7 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.defaultnodesettings.DialogComponentStringSelection;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.core.node.util.FileSystemBrowser.DialogType;
-import org.knime.core.util.hub.HubItemVersion;
+import org.knime.core.util.hub.ItemVersion;
 import org.knime.filehandling.core.connections.ItemVersionAware.RepositoryItemVersion;
 import org.knime.filehandling.core.connections.workflowaware.WorkflowAware;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.AbstractDialogComponentFileChooser;
@@ -85,7 +85,7 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
 
     private DialogComponentStringSelection m_versionSelector;
 
-    private LinkedHashMap<String, HubItemVersion> m_availableVersions = defaultMap();
+    private LinkedHashMap<String, ItemVersion> m_availableVersions = defaultMap();
 
     /**
      * @param model the model backing the dialog component
@@ -122,7 +122,7 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
         m_versionSelector.getComponentPanel().setVisible(true);
     }
 
-    private String getTitleForVersion(final HubItemVersion v) {
+    private String getTitleForVersion(final ItemVersion v) {
         // reverse lookup for available versions
         if (v != null) {
             for (final var entry : m_availableVersions.entrySet()) {
@@ -151,10 +151,10 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
                 // fetch named versions
                 final var hubVersions = versionAware.get().getRepositoryItemVersions(fspath);
                 if (!hubVersions.isEmpty()) {
-                    final var versions = new LinkedHashMap<String, HubItemVersion>();
-                    versions.put(VERSION_SELECTOR_CURRENT_STATE, HubItemVersion.currentState());
-                    versions.put(VERSION_SELECTOR_LATEST_VERSION, HubItemVersion.latestVersion());
-                    hubVersions.forEach(v -> versions.put(makeTitle(v), HubItemVersion.of((int)v.getVersion())));
+                    final var versions = new LinkedHashMap<String, ItemVersion>();
+                    versions.put(VERSION_SELECTOR_CURRENT_STATE, ItemVersion.currentState());
+                    versions.put(VERSION_SELECTOR_LATEST_VERSION, ItemVersion.mostRecent());
+                    hubVersions.forEach(v -> versions.put(makeTitle(v), ItemVersion.of((int)v.getVersion())));
                     m_availableVersions = versions;
                 }
                 // If there are no versions, we set no available versions which means there will be no dialog dropdown
@@ -222,8 +222,8 @@ final class DialogComponentWorkflowChooser extends AbstractDialogComponentFileCh
         };
     }
 
-    private static LinkedHashMap<String, HubItemVersion> defaultMap() {
-        return new LinkedHashMap<>(Map.of(VERSION_SELECTOR_CURRENT_STATE, HubItemVersion.currentState()));
+    private static LinkedHashMap<String, ItemVersion> defaultMap() {
+        return new LinkedHashMap<>(Map.of(VERSION_SELECTOR_CURRENT_STATE, ItemVersion.currentState()));
     }
 
 }

@@ -48,8 +48,6 @@
  */
 package org.knime.buildworkflows.reader;
 
-import static org.knime.core.node.workflow.capture.BuildWorkflowsUtil.checkLoadResult;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -88,6 +86,7 @@ import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
+import org.knime.core.node.workflow.capture.BuildWorkflowsUtil;
 import org.knime.core.node.workflow.capture.ReferenceReaderDataUtil;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
@@ -98,7 +97,7 @@ import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 import org.knime.core.node.workflow.virtual.AbstractPortObjectRepositoryNodeModel;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.LockFailedException;
-import org.knime.core.util.hub.HubItemVersion;
+import org.knime.core.util.hub.ItemVersion;
 import org.knime.filehandling.core.connections.FSFiles;
 import org.knime.filehandling.core.connections.FSPath;
 import org.knime.filehandling.core.connections.workflowaware.Entity;
@@ -139,7 +138,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
     }
 
     @Override
-    protected final PortObject[] execute(final PortObject[] data, final ExecutionContext exec) throws Exception {
+    protected PortObject[] execute(final PortObject[] data, final ExecutionContext exec) throws Exception {
         try (final var accessor = m_config.getWorkflowChooserModel().createReadPathAccessor()) {
             final var path = accessor.getRootPath(m_statusConsumer);
             m_statusConsumer.setWarningsIfRequired(this::setWarningMessage);
@@ -153,13 +152,12 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         } catch (NoSuchFileException e) {
             // if version is not current state add a hint that the version might not be available
             final var itemVersion = m_config.getWorkflowChooserModel().getItemVersion();
-            final var versionWarning = switch (itemVersion.linkType()) {
+            final var versionWarning = itemVersion.match( //
                 // current state is always available, cannot be a problem
-                case LATEST_STATE -> "";
+                () -> "", //
                 // path might be wrong or version not available
-                case LATEST_VERSION -> " or does not have any versions";
-                case FIXED_VERSION -> " or does not have version " + itemVersion.versionNumber();
-            };
+                () -> " or does not have any versions", //
+                sv -> " or does not have version " + sv);
             throw new IOException(String.format("The workflow '%s' does not exist%s.", e.getFile(), versionWarning), e);
         }
     }
@@ -271,7 +269,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
                     .build().orElseThrow());
         } else {
             try {
-                var loadWarningOptional = checkLoadResult(loadResult);
+                var loadWarningOptional = BuildWorkflowsUtil.checkLoadResult(loadResult);
                 loadWarningOptional.ifPresent(messageBuilder::addTextIssue);
             } catch (KNIMEException e) {
                 WorkflowManager.EXTRACTED_WORKFLOW_ROOT.removeNode(m.getID());
@@ -282,7 +280,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
     }
 
     @SuppressWarnings("resource")
-    private static TempPathCloseable toLocalWorkflowDir(final FSPath path, final HubItemVersion version)
+    private static TempPathCloseable toLocalWorkflowDir(final FSPath path, final ItemVersion version)
         throws IOException {
         // the connected file system is either WorkflowAware or provides the workflow as a '.knwf'-file
 
@@ -321,11 +319,9 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         final List<Output> outputs) {
         List<NodeID> nodesToRemove = new ArrayList<>();
         for (NodeContainer nc : wfm.getNodeContainers()) {
-            if (nc instanceof NativeNodeContainer) {
-                NativeNodeContainer nnc = (NativeNodeContainer)nc;
-                if (collectInputs(wfm, inputs, nnc) || collectOutputs(wfm, outputs, nnc)) {
-                    nodesToRemove.add(nnc.getID());
-                }
+            if (nc instanceof NativeNodeContainer nnc
+                && (collectInputs(wfm, inputs, nnc) || collectOutputs(wfm, outputs, nnc))) {
+                nodesToRemove.add(nnc.getID());
             }
         }
         nodesToRemove.forEach(wfm::removeNode);
