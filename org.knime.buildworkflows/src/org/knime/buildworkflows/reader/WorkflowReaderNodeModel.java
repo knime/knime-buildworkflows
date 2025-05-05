@@ -111,7 +111,7 @@ import org.knime.filehandling.core.util.TempPathCloseable;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeModel {
+public final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeModel {
 
     private final WorkflowReaderNodeConfig m_config;
 
@@ -252,7 +252,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
 
     }
 
-    private static WorkflowManager readWorkflow(final File wfFile, final ExecutionContext exec,
+    public static WorkflowManager readWorkflow(final File wfFile, final ExecutionContext exec,
         final MessageBuilder messageBuilder) throws IOException, InvalidSettingsException, CanceledExecutionException,
         UnsupportedWorkflowVersionException, LockFailedException, KNIMEException {
 
@@ -280,7 +280,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
     }
 
     @SuppressWarnings("resource")
-    private static TempPathCloseable toLocalWorkflowDir(final FSPath path, final ItemVersion version)
+    public static TempPathCloseable toLocalWorkflowDir(final FSPath path, final ItemVersion version)
         throws IOException {
         // the connected file system is either WorkflowAware or provides the workflow as a '.knwf'-file
 
@@ -315,7 +315,7 @@ final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryNodeMode
         return new TempPathCloseable(tmpDir.toPath());
     }
 
-    private static void removeAndCollectContainerInputsAndOutputs(final WorkflowManager wfm, final List<Input> inputs,
+    public static void removeAndCollectContainerInputsAndOutputs(final WorkflowManager wfm, final List<Input> inputs,
         final List<Output> outputs) {
         List<NodeID> nodesToRemove = new ArrayList<>();
         for (NodeContainer nc : wfm.getNodeContainers()) {

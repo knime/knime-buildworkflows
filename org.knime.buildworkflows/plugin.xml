@@ -71,5 +71,10 @@
        factory-class="org.knime.buildworkflows.summaryextractor.WorkflowSummaryExtractorNodeFactory"
        hidden="false">
  </node>
+    <node
+          deprecated="false"
+          factory-class="org.knime.buildworkflows.tool.Workflows2ToolsNodeFactory"
+          hidden="false">
+    </node>
  </extension>
 </fragment>
