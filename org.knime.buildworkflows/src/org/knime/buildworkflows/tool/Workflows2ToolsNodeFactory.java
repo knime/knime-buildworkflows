@@ -146,6 +146,10 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                             var outputs = new ArrayList<WorkflowSegment.Output>();
                             WorkflowReaderNodeModel.removeAndCollectContainerInputsAndOutputs(wfm, inputs, outputs);
                             var ws = new WorkflowSegment(wfm, inputs, outputs, Set.of());
+                            // TODO extract parameterSchema from config nodes
+                            wfm.getConfigurationNodes(true);
+                            // TODO or read from .artifacts directly? See CoreConstants.ConfigurationType
+
                             try {
                                 return new DataCell[]{
                                     new WorkflowToolCell(wfm.getName(), wfm.getMetadata().getDescription().orElse(""),
