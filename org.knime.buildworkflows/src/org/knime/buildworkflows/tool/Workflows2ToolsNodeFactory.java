@@ -68,10 +68,12 @@ import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.KNIMEException;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.dialog.SubNodeDescriptionProvider;
 import org.knime.core.node.tool.ToolValue;
 import org.knime.core.node.tool.WorkflowToolCell;
 import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
+import org.knime.core.util.JsonUtil;
 import org.knime.core.util.LockFailedException;
 import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeSettings;
 import org.knime.core.webui.node.impl.WebUINodeConfiguration;
@@ -80,6 +82,8 @@ import org.knime.core.webui.node.impl.WebUINodeModel;
 import org.knime.filehandling.core.connections.location.FSPathProvider;
 import org.knime.filehandling.core.connections.location.MultiFSPathProviderFactory;
 import org.knime.filehandling.core.data.location.FSLocationValue;
+
+import jakarta.json.JsonObject;
 
 /**
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
@@ -146,14 +150,24 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                             var outputs = new ArrayList<WorkflowSegment.Output>();
                             WorkflowReaderNodeModel.removeAndCollectContainerInputsAndOutputs(wfm, inputs, outputs);
                             var ws = new WorkflowSegment(wfm, inputs, outputs, Set.of());
-                            // TODO extract parameterSchema from config nodes
-                            wfm.getConfigurationNodes(true);
-                            // TODO or read from .artifacts directly? See CoreConstants.ConfigurationType
+
+                            // extract parameter-schema from config nodes
+                            var configNodes = wfm.getConfigurationNodes(true);
+                            var paramSchema = JsonUtil.getProvider().createObjectBuilder();
+                            for(var configNodeEntry : configNodes.entrySet()) {
+                                var paramName = configNodeEntry.getKey();
+                                var dialogNode = configNodeEntry.getValue();
+                                var value = dialogNode.getDefaultValue().toJson();
+                                var valueWithDescription =
+                                    JsonUtil.getProvider().createObjectBuilder((JsonObject)value);
+                                valueWithDescription.add("description",((SubNodeDescriptionProvider) dialogNode.getDialogRepresentation()).getDescription());
+                                paramSchema.add(paramName, valueWithDescription);
+                            }
 
                             try {
-                                return new DataCell[]{
-                                    new WorkflowToolCell(wfm.getName(), wfm.getMetadata().getDescription().orElse(""),
-                                        "TODO parameterSchema", new ToolValue.Input[0], new ToolValue.Output[0], ws)};
+                                return new DataCell[]{new WorkflowToolCell(wfm.getName(),
+                                    wfm.getMetadata().getDescription().orElse(""), paramSchema.build().toString(),
+                                    new ToolValue.Input[0], new ToolValue.Output[0], ws)};
                             } finally {
                                 ws.serializeAndDisposeWorkflow();
                                 wfTempFolder.close();
