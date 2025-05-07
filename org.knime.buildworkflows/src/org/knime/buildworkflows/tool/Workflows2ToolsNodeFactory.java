@@ -152,7 +152,7 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                             var ws = new WorkflowSegment(wfm, inputs, outputs, Set.of());
 
                             // extract parameter-schema from config nodes
-                            var configNodes = wfm.getConfigurationNodes(true);
+                            var configNodes = wfm.getConfigurationNodes(false);
                             var paramSchema = JsonUtil.getProvider().createObjectBuilder();
                             for(var configNodeEntry : configNodes.entrySet()) {
                                 var paramName = configNodeEntry.getKey();
