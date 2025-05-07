@@ -50,6 +50,7 @@ package org.knime.buildworkflows.tool;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import org.knime.buildworkflows.reader.WorkflowReaderNodeModel;
@@ -76,6 +77,9 @@ import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.util.JsonUtil;
 import org.knime.core.util.LockFailedException;
 import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeSettings;
+import org.knime.core.webui.node.dialog.defaultdialog.widget.Widget;
+import org.knime.core.webui.node.dialog.defaultdialog.widget.choices.ChoicesProvider;
+import org.knime.core.webui.node.dialog.defaultdialog.widget.choices.column.ColumnChoicesProvider;
 import org.knime.core.webui.node.impl.WebUINodeConfiguration;
 import org.knime.core.webui.node.impl.WebUINodeFactory;
 import org.knime.core.webui.node.impl.WebUINodeModel;
@@ -117,7 +121,7 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
             @Override
             protected DataTableSpec[] configure(final DataTableSpec[] inSpecs,
                 final Worklfows2ToolsNodeSettings modelSettings) throws InvalidSettingsException {
-                return new DataTableSpec[]{createColumnRearranger(null, inSpecs[0]).createSpec()};
+                return new DataTableSpec[]{createColumnRearranger(null, inSpecs[0], modelSettings).createSpec()};
             }
 
             /**
@@ -127,19 +131,27 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
             protected BufferedDataTable[] execute(final BufferedDataTable[] inData, final ExecutionContext exec,
                 final Worklfows2ToolsNodeSettings modelSettings) throws Exception {
                 var spec = inData[0].getSpec();
-                var rearranger = createColumnRearranger(exec, spec);
+                var rearranger = createColumnRearranger(exec, spec, modelSettings);
                 return new BufferedDataTable[]{exec.createColumnRearrangeTable(inData[0], rearranger, exec)};
             }
 
-            private ColumnRearranger createColumnRearranger(final ExecutionContext exec, final DataTableSpec spec) {
+            private ColumnRearranger createColumnRearranger(final ExecutionContext exec, final DataTableSpec spec,
+                final Worklfows2ToolsNodeSettings settings) throws InvalidSettingsException {
+                if (settings.m_columnName == null) {
+                    throw new InvalidSettingsException("No path column selected");
+                }
                 var rearranger = new ColumnRearranger(spec);
+                var pathColumnIndex = spec.findColumnIndex(settings.m_columnName);
+                if (pathColumnIndex == -1) {
+                    throw new InvalidSettingsException("No column found for name " + settings.m_columnName);
+                }
                 rearranger.replace(new CellFactory() {
                     private final MultiFSPathProviderFactory m_multiFSPathProviderFactory =
                         new MultiFSPathProviderFactory(null);
 
                     @Override
                     public DataCell[] getCells(final DataRow row) {
-                        var fsLocation = ((FSLocationValue)row.getCell(0)).getFSLocation();
+                        var fsLocation = ((FSLocationValue)row.getCell(pathColumnIndex)).getFSLocation();
                         try (final FSPathProvider pathProvider = m_multiFSPathProviderFactory
                             .getOrCreateFSPathProviderFactory(fsLocation).create(fsLocation)) {
                             final var fsPath = pathProvider.getPath();
@@ -154,13 +166,15 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                             // extract parameter-schema from config nodes
                             var configNodes = wfm.getConfigurationNodes(false);
                             var paramSchema = JsonUtil.getProvider().createObjectBuilder();
-                            for(var configNodeEntry : configNodes.entrySet()) {
+                            for (var configNodeEntry : configNodes.entrySet()) {
                                 var paramName = configNodeEntry.getKey();
                                 var dialogNode = configNodeEntry.getValue();
                                 var value = dialogNode.getDefaultValue().toJson();
                                 var valueWithDescription =
                                     JsonUtil.getProvider().createObjectBuilder((JsonObject)value);
-                                valueWithDescription.add("description",((SubNodeDescriptionProvider) dialogNode.getDialogRepresentation()).getDescription());
+                                valueWithDescription.add("description",
+                                    ((SubNodeDescriptionProvider)dialogNode.getDialogRepresentation())
+                                        .getDescription());
                                 paramSchema.add(paramName, valueWithDescription);
                             }
 
@@ -200,7 +214,26 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
     }
 
     private static class Worklfows2ToolsNodeSettings implements DefaultNodeSettings {
-        // TODO
+
+        @Widget(title = "Workflow paths", description = "TODO")
+        @ChoicesProvider(PathColumnChoice.class)
+        String m_columnName;
+
+        static class PathColumnChoice implements ColumnChoicesProvider {
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public List<DataColumnSpec> columnChoices(final DefaultNodeSettingsContext context) {
+                return context.getDataTableSpec(0)
+                    .map(tableSpec -> tableSpec.stream()
+                        .filter(colSpec -> colSpec.getType().isCompatible(FSLocationValue.class)).toList())
+                    .orElse(List.of());
+            }
+
+        }
+
     }
 
 }
