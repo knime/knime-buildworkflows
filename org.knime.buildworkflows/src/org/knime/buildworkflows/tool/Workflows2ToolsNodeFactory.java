@@ -51,6 +51,7 @@ package org.knime.buildworkflows.tool;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -73,7 +74,8 @@ import org.knime.core.node.NodeModel;
 import org.knime.core.node.dialog.InputNode;
 import org.knime.core.node.dialog.OutputNode;
 import org.knime.core.node.dialog.SubNodeDescriptionProvider;
-import org.knime.core.node.tool.ToolValue;
+import org.knime.core.node.port.PortObjectSpec;
+import org.knime.core.node.tool.ToolValue.ToolPort;
 import org.knime.core.node.tool.WorkflowToolCell;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.NativeNodeContainer;
@@ -172,8 +174,8 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                                 exec, createMessageBuilder());
                             var wsInputs = new ArrayList<WorkflowSegment.Input>();
                             var wsOutputs = new ArrayList<WorkflowSegment.Output>();
-                            var toolInputs = new ArrayList<ToolValue.Input>();
-                            var toolOutputs = new ArrayList<ToolValue.Output>();
+                            var toolInputs = new ArrayList<ToolPort>();
+                            var toolOutputs = new ArrayList<ToolPort>();
                             removeAndCollectContainerInputsAndOutputs(wfm, wsInputs, wsOutputs,
                                 toolInputs, toolOutputs);
                             var ws = new WorkflowSegment(wfm, wsInputs, wsOutputs, Set.of());
@@ -196,8 +198,8 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                             try {
                                 return new DataCell[]{
                                     new WorkflowToolCell(wfm.getName(), wfm.getMetadata().getDescription().orElse(""),
-                                        paramSchema.build().toString(), toolInputs.toArray(ToolValue.Input[]::new),
-                                        toolOutputs.toArray(ToolValue.Output[]::new), ws)};
+                                        paramSchema.build().toString(), toolInputs.toArray(ToolPort[]::new),
+                                        toolOutputs.toArray(ToolPort[]::new), ws)};
                             } finally {
                                 ws.serializeAndDisposeWorkflow();
                                 wfTempFolder.close();
@@ -211,7 +213,7 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
 
                     private static void removeAndCollectContainerInputsAndOutputs(final WorkflowManager wfm,
                         final List<WorkflowSegment.Input> wsInputs, final List<WorkflowSegment.Output> wsOutputs,
-                        final List<ToolValue.Input> toolInputs, final List<ToolValue.Output> toolOutputs) {
+                        final List<ToolPort> toolInputs, final List<ToolPort> toolOutputs) {
                         List<NodeID> nodesToRemove = new ArrayList<>();
                         for (NodeContainer nc : wfm.getNodeContainers()) {
                             if (nc instanceof NativeNodeContainer nnc && (collectInputs(wfm, wsInputs, toolInputs, nnc)
@@ -224,7 +226,7 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                     }
 
                     private static boolean collectOutputs(final WorkflowManager wfm,
-                        final List<WorkflowSegment.Output> wsOutputs, final List<ToolValue.Output> toolOutputs,
+                        final List<WorkflowSegment.Output> wsOutputs, final List<ToolPort> toolOutputs,
                         final NativeNodeContainer nnc) {
                         if (nnc.getNodeModel() instanceof OutputNode outputNode) {
                             var outputData = outputNode.getExternalOutput();
@@ -239,8 +241,9 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                                     messageOutput = wsOutput;
                                 } else {
                                     wsOutputs.add(wsOutput);
-                                    toolOutputs.add(new ToolValue.Output(outPort.getPortType(), outputId,
-                                        outputData.getDescription().orElse(null), outPort.getPortObjectSpec()));
+                                    toolOutputs.add(new ToolPort(outPort.getPortType().getName(), outputId,
+                                        outputData.getDescription().orElse(null),
+                                        specToString(outPort.getPortObjectSpec())));
                                 }
                             }
                             if (messageOutput == null) {
@@ -255,7 +258,7 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                     }
 
                     private static boolean collectInputs(final WorkflowManager wfm,
-                        final List<WorkflowSegment.Input> wsInputs, final List<ToolValue.Input> toolInputs,
+                        final List<WorkflowSegment.Input> wsInputs, final List<ToolPort> toolInputs,
                         final NativeNodeContainer nnc) {
                         if (nnc.getNodeModel() instanceof InputNode inputNode) {
                             var inputData = inputNode.getInputData();
@@ -266,13 +269,29 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                                 if (!ports.isEmpty()) {
                                     var outPort = nnc.getOutPort(i);
                                     wsInputs.add(new Input(outPort.getPortType(), null, ports));
-                                    toolInputs.add(new ToolValue.Input(outPort.getPortType(), inputData.getID(),
-                                        inputData.getDescription().orElse(null), outPort.getPortObjectSpec()));
+                                    toolInputs.add(new ToolPort(outPort.getPortType().getName(), inputData.getID(),
+                                        inputData.getDescription().orElse(null),
+                                        specToString(outPort.getPortObjectSpec())));
                                 }
                             }
                             return true;
                         } else {
                             return false;
+                        }
+                    }
+
+                    private static final String specToString(final PortObjectSpec spec) {
+                        if (spec instanceof DataTableSpec tableSpec) {
+                            var map = Map.of( //
+                                "name", tableSpec.getName(), //
+                                "columns", tableSpec.stream().map(colSpec -> Map.of( //
+                                    "name", colSpec.getName(), //
+                                    "type", colSpec.getType().getName()) //
+                            ) //
+                            );
+                            return JsonUtil.getProvider().createObjectBuilder(map).build().toString();
+                        } else {
+                            return null;
                         }
                     }
 
