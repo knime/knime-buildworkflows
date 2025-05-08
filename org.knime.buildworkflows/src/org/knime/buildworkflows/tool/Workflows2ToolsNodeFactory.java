@@ -235,7 +235,7 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                                 var wsOutput = new Output(outPort.getPortType(), null,
                                     new PortID(NodeIDSuffix.create(wfm.getID(), cc.getSource()), cc.getSourcePort()));
                                 // TODO hack
-                                if (outputId.startsWith("message_")) {
+                                if (outputId.startsWith("message")) {
                                     messageOutput = wsOutput;
                                 } else {
                                     wsOutputs.add(wsOutput);
