@@ -286,8 +286,7 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                                 "name", tableSpec.getName(), //
                                 "columns", tableSpec.stream().map(colSpec -> Map.of( //
                                     "name", colSpec.getName(), //
-                                    "type", colSpec.getType().getName()) //
-                            ) //
+                                    "type", colSpec.getType().getName())).toList() //
                             );
                             return JsonUtil.getProvider().createObjectBuilder(map).build().toString();
                         } else {
