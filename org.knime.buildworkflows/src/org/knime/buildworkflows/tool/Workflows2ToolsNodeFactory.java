@@ -53,6 +53,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.knime.buildworkflows.reader.WorkflowReaderNodeModel;
@@ -215,22 +216,27 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                         final List<WorkflowSegment.Input> wsInputs, final List<WorkflowSegment.Output> wsOutputs,
                         final List<ToolPort> toolInputs, final List<ToolPort> toolOutputs) {
                         List<NodeID> nodesToRemove = new ArrayList<>();
+                        var messageOutput = new AtomicReference<WorkflowSegment.Output>();
                         for (NodeContainer nc : wfm.getNodeContainers()) {
                             if (nc instanceof NativeNodeContainer nnc && (collectInputs(wfm, wsInputs, toolInputs, nnc)
-                                || collectOutputs(wfm, wsOutputs, toolOutputs, nnc))) {
+                                || collectOutputs(wfm, wsOutputs, messageOutput, toolOutputs, nnc))) {
                                 nodesToRemove.add(nnc.getID());
                             }
+                        }
+                        if (messageOutput.get() == null) {
+                            throw new IllegalStateException("No tool message output!");
+                        } else {
+                            wsOutputs.add(0, messageOutput.get());
                         }
                         nodesToRemove.forEach(wfm::removeNode);
 
                     }
 
                     private static boolean collectOutputs(final WorkflowManager wfm,
-                        final List<WorkflowSegment.Output> wsOutputs, final List<ToolPort> toolOutputs,
-                        final NativeNodeContainer nnc) {
+                        final List<WorkflowSegment.Output> wsOutputs, final AtomicReference<Output> messageOutput,
+                        final List<ToolPort> toolOutputs, final NativeNodeContainer nnc) {
                         if (nnc.getNodeModel() instanceof OutputNode outputNode) {
                             var outputData = outputNode.getExternalOutput();
-                            WorkflowSegment.Output messageOutput = null;
                             for (ConnectionContainer cc : wfm.getIncomingConnectionsFor(nnc.getID())) {
                                 var outPort = wfm.getNodeContainer(cc.getSource()).getOutPort(cc.getSourcePort());
                                 var outputId = outputData.getID();
@@ -238,18 +244,13 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                                     new PortID(NodeIDSuffix.create(wfm.getID(), cc.getSource()), cc.getSourcePort()));
                                 // TODO hack
                                 if (outputId.startsWith("message")) {
-                                    messageOutput = wsOutput;
+                                    messageOutput.set(wsOutput);
                                 } else {
                                     wsOutputs.add(wsOutput);
                                     toolOutputs.add(new ToolPort(outPort.getPortType().getName(), outputId,
                                         outputData.getDescription().orElse(null),
                                         specToString(outPort.getPortObjectSpec())));
                                 }
-                            }
-                            if (messageOutput == null) {
-                                throw new IllegalStateException("No tool message output!");
-                            } else {
-                                wsOutputs.add(0, messageOutput);
                             }
                             return true;
                         } else {
