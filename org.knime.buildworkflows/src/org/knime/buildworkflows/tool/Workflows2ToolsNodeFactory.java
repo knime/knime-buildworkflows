@@ -240,13 +240,15 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                             for (ConnectionContainer cc : wfm.getIncomingConnectionsFor(nnc.getID())) {
                                 var outPort = wfm.getNodeContainer(cc.getSource()).getOutPort(cc.getSourcePort());
                                 var outputId = outputData.getID();
-                                var wsOutput = new Output(outPort.getPortType(), null,
-                                    new PortID(NodeIDSuffix.create(wfm.getID(), cc.getSource()), cc.getSourcePort()));
                                 // TODO hack
                                 if (outputId.startsWith("message")) {
-                                    messageOutput.set(wsOutput);
+                                    messageOutput
+                                        .set(new Output(outPort.getPortType(), new DataTableSpec("message output"),
+                                            new PortID(NodeIDSuffix.create(wfm.getID(), cc.getSource()),
+                                                cc.getSourcePort())));
                                 } else {
-                                    wsOutputs.add(wsOutput);
+                                    wsOutputs.add(new Output(outPort.getPortType(), null, new PortID(
+                                        NodeIDSuffix.create(wfm.getID(), cc.getSource()), cc.getSourcePort())));
                                     toolOutputs.add(new ToolPort(outPort.getPortType().getName(), outputId,
                                         outputData.getDescription().orElse(null),
                                         specToString(outPort.getPortObjectSpec())));
