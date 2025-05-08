@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.knime.buildworkflows.reader.WorkflowReaderNodeModel;
 import org.knime.core.data.DataCell;
@@ -69,11 +70,22 @@ import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.KNIMEException;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.dialog.InputNode;
+import org.knime.core.node.dialog.OutputNode;
 import org.knime.core.node.dialog.SubNodeDescriptionProvider;
 import org.knime.core.node.tool.ToolValue;
 import org.knime.core.node.tool.WorkflowToolCell;
+import org.knime.core.node.workflow.ConnectionContainer;
+import org.knime.core.node.workflow.NativeNodeContainer;
+import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.NodeID;
+import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
+import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Input;
+import org.knime.core.node.workflow.capture.WorkflowSegment.Output;
+import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
 import org.knime.core.util.JsonUtil;
 import org.knime.core.util.LockFailedException;
 import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeSettings;
@@ -158,10 +170,13 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                             var wfTempFolder = WorkflowReaderNodeModel.toLocalWorkflowDir(fsPath, null);
                             var wfm = WorkflowReaderNodeModel.readWorkflow(wfTempFolder.getTempFileOrFolder().toFile(),
                                 exec, createMessageBuilder());
-                            var inputs = new ArrayList<WorkflowSegment.Input>();
-                            var outputs = new ArrayList<WorkflowSegment.Output>();
-                            WorkflowReaderNodeModel.removeAndCollectContainerInputsAndOutputs(wfm, inputs, outputs);
-                            var ws = new WorkflowSegment(wfm, inputs, outputs, Set.of());
+                            var wsInputs = new ArrayList<WorkflowSegment.Input>();
+                            var wsOutputs = new ArrayList<WorkflowSegment.Output>();
+                            var toolInputs = new ArrayList<ToolValue.Input>();
+                            var toolOutputs = new ArrayList<ToolValue.Output>();
+                            removeAndCollectContainerInputsAndOutputs(wfm, wsInputs, wsOutputs,
+                                toolInputs, toolOutputs);
+                            var ws = new WorkflowSegment(wfm, wsInputs, wsOutputs, Set.of());
 
                             // extract parameter-schema from config nodes
                             var configNodes = wfm.getConfigurationNodes(false);
@@ -179,9 +194,10 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                             }
 
                             try {
-                                return new DataCell[]{new WorkflowToolCell(wfm.getName(),
-                                    wfm.getMetadata().getDescription().orElse(""), paramSchema.build().toString(),
-                                    new ToolValue.Input[0], new ToolValue.Output[0], ws)};
+                                return new DataCell[]{
+                                    new WorkflowToolCell(wfm.getName(), wfm.getMetadata().getDescription().orElse(""),
+                                        paramSchema.build().toString(), toolInputs.toArray(ToolValue.Input[]::new),
+                                        toolOutputs.toArray(ToolValue.Output[]::new), ws)};
                             } finally {
                                 ws.serializeAndDisposeWorkflow();
                                 wfTempFolder.close();
@@ -190,6 +206,73 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                                 | UnsupportedWorkflowVersionException | LockFailedException | KNIMEException e) {
                             // TODO Auto-generated catch block
                             throw new RuntimeException(e);
+                        }
+                    }
+
+                    private static void removeAndCollectContainerInputsAndOutputs(final WorkflowManager wfm,
+                        final List<WorkflowSegment.Input> wsInputs, final List<WorkflowSegment.Output> wsOutputs,
+                        final List<ToolValue.Input> toolInputs, final List<ToolValue.Output> toolOutputs) {
+                        List<NodeID> nodesToRemove = new ArrayList<>();
+                        for (NodeContainer nc : wfm.getNodeContainers()) {
+                            if (nc instanceof NativeNodeContainer nnc && (collectInputs(wfm, wsInputs, toolInputs, nnc)
+                                || collectOutputs(wfm, wsOutputs, toolOutputs, nnc))) {
+                                nodesToRemove.add(nnc.getID());
+                            }
+                        }
+                        nodesToRemove.forEach(wfm::removeNode);
+
+                    }
+
+                    private static boolean collectOutputs(final WorkflowManager wfm,
+                        final List<WorkflowSegment.Output> wsOutputs, final List<ToolValue.Output> toolOutputs,
+                        final NativeNodeContainer nnc) {
+                        if (nnc.getNodeModel() instanceof OutputNode outputNode) {
+                            var outputData = outputNode.getExternalOutput();
+                            WorkflowSegment.Output messageOutput = null;
+                            for (ConnectionContainer cc : wfm.getIncomingConnectionsFor(nnc.getID())) {
+                                var outPort = wfm.getNodeContainer(cc.getSource()).getOutPort(cc.getSourcePort());
+                                var outputId = outputData.getID();
+                                var wsOutput = new Output(outPort.getPortType(), null,
+                                    new PortID(NodeIDSuffix.create(wfm.getID(), cc.getSource()), cc.getSourcePort()));
+                                // TODO hack
+                                if (outputId.startsWith("message_")) {
+                                    messageOutput = wsOutput;
+                                } else {
+                                    wsOutputs.add(wsOutput);
+                                    toolOutputs.add(new ToolValue.Output(outPort.getPortType(), outputId,
+                                        outputData.getDescription().orElse(null), outPort.getPortObjectSpec()));
+                                }
+                            }
+                            if (messageOutput == null) {
+                                throw new IllegalStateException("No tool message output!");
+                            } else {
+                                wsOutputs.add(0, messageOutput);
+                            }
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
+
+                    private static boolean collectInputs(final WorkflowManager wfm,
+                        final List<WorkflowSegment.Input> wsInputs, final List<ToolValue.Input> toolInputs,
+                        final NativeNodeContainer nnc) {
+                        if (nnc.getNodeModel() instanceof InputNode inputNode) {
+                            var inputData = inputNode.getInputData();
+                            for (var i = 0; i < nnc.getNrOutPorts(); i++) {
+                                Set<PortID> ports = wfm.getOutgoingConnectionsFor(nnc.getID(), i).stream().map(
+                                    cc -> new PortID(NodeIDSuffix.create(wfm.getID(), cc.getDest()), cc.getDestPort()))
+                                    .collect(Collectors.toSet());
+                                if (!ports.isEmpty()) {
+                                    var outPort = nnc.getOutPort(i);
+                                    wsInputs.add(new Input(outPort.getPortType(), null, ports));
+                                    toolInputs.add(new ToolValue.Input(outPort.getPortType(), inputData.getID(),
+                                        inputData.getDescription().orElse(null), outPort.getPortObjectSpec()));
+                                }
+                            }
+                            return true;
+                        } else {
+                            return false;
                         }
                     }
 

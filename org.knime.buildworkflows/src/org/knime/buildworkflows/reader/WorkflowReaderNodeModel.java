@@ -315,7 +315,7 @@ public final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryN
         return new TempPathCloseable(tmpDir.toPath());
     }
 
-    public static void removeAndCollectContainerInputsAndOutputs(final WorkflowManager wfm, final List<Input> inputs,
+    private static void removeAndCollectContainerInputsAndOutputs(final WorkflowManager wfm, final List<Input> inputs,
         final List<Output> outputs) {
         List<NodeID> nodesToRemove = new ArrayList<>();
         for (NodeContainer nc : wfm.getNodeContainers()) {
