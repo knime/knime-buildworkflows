@@ -219,22 +219,17 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                         var messageOutput = new AtomicReference<WorkflowSegment.Output>();
                         for (NodeContainer nc : wfm.getNodeContainers()) {
                             if (nc instanceof NativeNodeContainer nnc && (collectInputs(wfm, wsInputs, toolInputs, nnc)
-                                || collectOutputs(wfm, wsOutputs, messageOutput, toolOutputs, nnc))) {
+                                || collectOutputs(wfm, wsOutputs, toolOutputs, nnc))) {
                                 nodesToRemove.add(nnc.getID());
                             }
-                        }
-                        if (messageOutput.get() == null) {
-                            throw new IllegalStateException("No tool message output!");
-                        } else {
-                            wsOutputs.add(0, messageOutput.get());
                         }
                         nodesToRemove.forEach(wfm::removeNode);
 
                     }
 
                     private static boolean collectOutputs(final WorkflowManager wfm,
-                        final List<WorkflowSegment.Output> wsOutputs, final AtomicReference<Output> messageOutput,
-                        final List<ToolPort> toolOutputs, final NativeNodeContainer nnc) {
+                        final List<WorkflowSegment.Output> wsOutputs, final List<ToolPort> toolOutputs,
+                        final NativeNodeContainer nnc) {
                         if (nnc.getNodeModel() instanceof OutputNode outputNode) {
                             var outputData = outputNode.getExternalOutput();
                             for (ConnectionContainer cc : wfm.getIncomingConnectionsFor(nnc.getID())) {
@@ -242,10 +237,9 @@ public class Workflows2ToolsNodeFactory extends WebUINodeFactory {
                                 var outputId = outputData.getID();
                                 // TODO hack
                                 if (outputId.startsWith("message")) {
-                                    messageOutput
-                                        .set(new Output(outPort.getPortType(), new DataTableSpec("message output"),
-                                            new PortID(NodeIDSuffix.create(wfm.getID(), cc.getSource()),
-                                                cc.getSourcePort())));
+                                    wsOutputs.add(new Output(outPort.getPortType(), new DataTableSpec("message output"),
+                                        new PortID(NodeIDSuffix.create(wfm.getID(), cc.getSource()),
+                                            cc.getSourcePort())));
                                 } else {
                                     wsOutputs.add(new Output(outPort.getPortType(), null, new PortID(
                                         NodeIDSuffix.create(wfm.getID(), cc.getSource()), cc.getSourcePort())));
