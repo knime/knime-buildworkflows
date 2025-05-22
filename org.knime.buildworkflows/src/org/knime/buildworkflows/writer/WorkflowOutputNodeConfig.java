@@ -54,7 +54,6 @@ import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.port.PortType;
-import org.knime.workflowservices.knime.callee.WorkflowBoundaryConfiguration;
 import org.knime.workflowservices.knime.callee.WorkflowOutputNodeFactory;
 
 /**
@@ -64,11 +63,8 @@ import org.knime.workflowservices.knime.callee.WorkflowOutputNodeFactory;
  */
 final class WorkflowOutputNodeConfig extends OutputNodeConfig {
 
-    static final String NODE_NAME = "Workflow Service Output";
+    static final String NODE_NAME = "Workflow Output";
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     String getNodeName() {
         return NODE_NAME;
@@ -79,23 +75,19 @@ final class WorkflowOutputNodeConfig extends OutputNodeConfig {
      * @throws InvalidSettingsException
      */
     @Override
-    protected NodeFactory<? extends NodeModel> createNodeFactory(final PortType portType) throws InvalidSettingsException {
+    protected NodeFactory<? extends NodeModel> createNodeFactory(final PortType portType)
+            throws InvalidSettingsException {
         return new WorkflowOutputNodeFactory(portType);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void saveActualNodeSettingsTo(final NodeSettingsWO settings, final boolean useV2SmartInOutNames)
         throws InvalidSettingsException {
-        String parameterName = StringUtils.isEmpty(getParameterName()) ? getDefaultParameterName() : getParameterName();
-        WorkflowBoundaryConfiguration.saveConfigAsNodeSettings(settings, parameterName);
+        final var parameterName =
+            StringUtils.isEmpty(getParameterName()) ? getDefaultParameterName() : getParameterName();
+        WorkflowOutputNodeFactory.saveToNodeSettings(settings, parameterName, /*description*/null);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected String getDefaultParameterName() {
         return "workflow-output";

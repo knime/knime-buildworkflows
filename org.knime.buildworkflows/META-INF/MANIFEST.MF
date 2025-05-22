@@ -5,6 +5,7 @@ Bundle-SymbolicName: org.knime.buildworkflows;singleton:=true
 Bundle-Version: 5.5.0.qualifier
 Bundle-Vendor: KNIME AG, Zurich, Switzerland
 Require-Bundle: org.knime.core;bundle-version="[5.5.0,6.0.0)",
+ org.knime.core.ui;bundle-version="[5.5.0,6.0.0)",
  org.knime.filehandling.core;bundle-version="[5.5.0,6.0.0)",
  org.knime.base.filehandling;bundle-version="[5.5.0,6.0.0)",
  com.knime.enterprise.server.rest.api;bundle-version="[5.5.0,6.0.0)",
