@@ -49,7 +49,9 @@
 package org.knime.buildworkflows.tool;
 
 import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeSettings;
+import org.knime.core.webui.node.dialog.defaultdialog.widget.TextInputWidget;
 import org.knime.core.webui.node.dialog.defaultdialog.widget.Widget;
+import org.knime.core.webui.node.dialog.defaultdialog.widget.validation.internal.WorkflowIOParameterNameValidation;
 
 /**
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
@@ -59,5 +61,6 @@ final class ToolMessageOutputNodeSettings implements DefaultNodeSettings {
     static final String DEFAULT_PARAMETER_NAME = "tool-message-output";
 
     @Widget(title = "Parameter name", description = "A unique identifier for the output.")
+    @TextInputWidget(patternValidation = WorkflowIOParameterNameValidation.class)
     String m_parameterName = DEFAULT_PARAMETER_NAME;
 }

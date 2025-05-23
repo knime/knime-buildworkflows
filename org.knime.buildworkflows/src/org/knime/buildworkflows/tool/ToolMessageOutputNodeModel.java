@@ -55,6 +55,7 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.dialog.ContentType;
 import org.knime.core.node.dialog.ExternalNodeData;
 import org.knime.core.node.dialog.OutputNode;
+import org.knime.core.webui.node.dialog.defaultdialog.widget.validation.internal.WorkflowIOParameterNameValidation;
 import org.knime.core.webui.node.impl.WebUINodeConfiguration;
 import org.knime.core.webui.node.impl.WebUINodeModel;
 
@@ -93,6 +94,11 @@ final class ToolMessageOutputNodeModel extends WebUINodeModel<ToolMessageOutputN
     protected BufferedDataTable[] execute(final BufferedDataTable[] inData, final ExecutionContext exec,
         final ToolMessageOutputNodeSettings modelSettings) throws Exception {
         return null;
+    }
+
+    @Override
+    protected void validateSettings(final ToolMessageOutputNodeSettings settings) throws InvalidSettingsException {
+        WorkflowIOParameterNameValidation.validateParameterName(settings.m_parameterName);
     }
 
 }
