@@ -64,6 +64,7 @@ import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.KNIMEException;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.agentic.tool.ToolWorkflowMetadata;
 import org.knime.core.node.agentic.tool.WorkflowToolCell;
 import org.knime.core.node.agentic.tool.WorkflowToolCell.ToolIncompatibleWorkflowException;
 import org.knime.core.node.message.MessageBuilder;
@@ -123,7 +124,14 @@ final class PathToWorkflowCellFactory extends SingleCellFactory implements Close
                     "Workflow was (partially) executed and has been reset.");
             }
             try {
-                return WorkflowToolCell.createFromAndModifyWorkflow(wfm);
+                var toolMessageOutputNode = wfm.findNodes(ToolMessageOutputNodeModel.class, false);
+                if (toolMessageOutputNode.size() > 1) {
+                    var message = "Multiple tool message output nodes found in workflow";
+                    m_messageBuilder.addRowIssue(m_pathColumnIndex, rowIndex, message);
+                    return new MissingCell(message);
+                }
+                return WorkflowToolCell.createFromAndModifyWorkflow(wfm, new ToolWorkflowMetadata(
+                    toolMessageOutputNode.isEmpty() ? null : toolMessageOutputNode.keySet().iterator().next()));
             } catch (ToolIncompatibleWorkflowException e) {
                 var message = "Workflow can't be turned into a tool: " + e.getMessage();
                 m_messageBuilder.addRowIssue(m_pathColumnIndex, rowIndex, message);
