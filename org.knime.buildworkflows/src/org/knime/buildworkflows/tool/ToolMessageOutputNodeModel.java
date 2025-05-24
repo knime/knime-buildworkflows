@@ -76,7 +76,7 @@ final class ToolMessageOutputNodeModel extends WebUINodeModel<ToolMessageOutputN
         var parameterName =
             config.map(c -> c.m_parameterName).orElse(ToolMessageOutputNodeSettings.DEFAULT_PARAMETER_NAME);
 
-        var contentType = ContentType.TOOL_MESSAGE_CONTENT_TYPE_PREFIX + BufferedDataTable.class.getName();
+        var contentType = ContentType.CONTENT_TYPE_DEF_PREFIX + BufferedDataTable.class.getName();
         return ExternalNodeData.builder(parameterName)//
             // TODO AP-24396 - serve table content (see WorkflowOutputNodeModel)
             .resource(UriBuilder.fromUri("file:/dev/null").build())//
