@@ -115,9 +115,10 @@ final class PathToWorkflowCellFactory extends SingleCellFactory implements Close
                 m_messageBuilder.addRowIssue(m_pathColumnIndex, rowIndex, message + ". Missing value added.");
                 return new MissingCell(message);
             }
-            var wfTempFolder = WorkflowReaderNodeModel.toLocalWorkflowDir(fsPath, null);
-            var wfm = WorkflowReaderNodeModel.readWorkflow(wfTempFolder.getTempFileOrFolder().toFile(),
-                m_exec.createSilentSubExecutionContext(0), m_messageBuilder);
+            var wfTempPath = WorkflowReaderNodeModel.toLocalWorkflowDir(fsPath, null);
+            var wfFile = wfTempPath.getTempFileOrFolder();
+            var wfm = WorkflowReaderNodeModel.readWorkflow(wfFile.toFile(), m_exec.createSilentSubExecutionContext(0),
+                m_messageBuilder);
             wfm.setName(fsPath.getFileName().toString());
             if (resetWorkflow(wfm)) {
                 m_messageBuilder.addRowIssue(m_pathColumnIndex, rowIndex,
@@ -130,14 +131,20 @@ final class PathToWorkflowCellFactory extends SingleCellFactory implements Close
                     m_messageBuilder.addRowIssue(m_pathColumnIndex, rowIndex, message);
                     return new MissingCell(message);
                 }
-                return WorkflowToolCell.createFromAndModifyWorkflow(wfm, new ToolWorkflowMetadata(
-                    toolMessageOutputNode.isEmpty() ? null : toolMessageOutputNode.keySet().iterator().next()));
+                var dataAreaPath = wfFile.resolve("data");
+                if (!FSFiles.exists(dataAreaPath)) {
+                    dataAreaPath = null;
+                }
+                return WorkflowToolCell.createFromAndModifyWorkflow(wfm,
+                    new ToolWorkflowMetadata(
+                        toolMessageOutputNode.isEmpty() ? null : toolMessageOutputNode.keySet().iterator().next()),
+                    dataAreaPath);
             } catch (ToolIncompatibleWorkflowException e) {
                 var message = "Workflow can't be turned into a tool: " + e.getMessage();
                 m_messageBuilder.addRowIssue(m_pathColumnIndex, rowIndex, message);
                 return new MissingCell(message);
             } finally {
-                wfTempFolder.close();
+                wfTempPath.close();
             }
         } catch (IOException | InvalidSettingsException | CanceledExecutionException
                 | UnsupportedWorkflowVersionException | LockFailedException | KNIMEException e) {
