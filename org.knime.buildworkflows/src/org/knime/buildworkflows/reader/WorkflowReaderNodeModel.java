@@ -252,6 +252,7 @@ public final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryN
 
     }
 
+    // TODO move (ticket number)
     public static WorkflowManager readWorkflow(final File wfFile, final ExecutionContext exec,
         final MessageBuilder messageBuilder) throws IOException, InvalidSettingsException, CanceledExecutionException,
         UnsupportedWorkflowVersionException, LockFailedException, KNIMEException {
@@ -279,6 +280,7 @@ public final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryN
         return loadResult.getWorkflowManager();
     }
 
+    // TOOD move (ticket number)
     @SuppressWarnings("resource")
     public static TempPathCloseable toLocalWorkflowDir(final FSPath path, final ItemVersion version)
         throws IOException {
