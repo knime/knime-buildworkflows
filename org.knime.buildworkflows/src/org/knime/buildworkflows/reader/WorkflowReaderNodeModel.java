@@ -252,8 +252,7 @@ public final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryN
 
     }
 
-    // TODO move and make re-usable (AP-24383)
-    public static WorkflowManager readWorkflow(final File wfFile, final ExecutionContext exec,
+    private static WorkflowManager readWorkflow(final File wfFile, final ExecutionContext exec,
         final MessageBuilder messageBuilder) throws IOException, InvalidSettingsException, CanceledExecutionException,
         UnsupportedWorkflowVersionException, LockFailedException, KNIMEException {
 
@@ -280,9 +279,8 @@ public final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryN
         return loadResult.getWorkflowManager();
     }
 
-    // TOOD move and make re-usable (AP-24383)
     @SuppressWarnings("resource")
-    public static TempPathCloseable toLocalWorkflowDir(final FSPath path, final ItemVersion version)
+    private static TempPathCloseable toLocalWorkflowDir(final FSPath path, final ItemVersion version)
         throws IOException {
         // the connected file system is either WorkflowAware or provides the workflow as a '.knwf'-file
 
