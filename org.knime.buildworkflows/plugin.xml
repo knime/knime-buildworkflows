@@ -76,10 +76,5 @@
           factory-class="org.knime.buildworkflows.tool.WorkflowToToolNodeFactory"
           hidden="true">
     </node>
-    <node
-          deprecated="false"
-          factory-class="org.knime.buildworkflows.tool.ToolMessageOutputNodeFactory"
-          hidden="true">
-    </node>
  </extension>
 </fragment>
