@@ -76,6 +76,7 @@ import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.node.workflow.capture.WorkflowSegmentExecutor;
+import org.knime.core.node.workflow.capture.WorkflowSegmentExecutor.ExecutionMode;
 import org.knime.core.node.workflow.virtual.AbstractPortObjectRepositoryNodeModel;
 import org.knime.core.util.Pair;
 
@@ -168,8 +169,10 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         NodeContainer nc = NodeContext.getContext().getNodeContainer();
         CheckUtils.checkArgumentNotNull(nc, "Not a local workflow");
         checkPortCompatibility(spec, nc);
-        m_executable = new WorkflowSegmentExecutor(spec.getWorkflowSegment(), spec.getWorkflowName(), nc, m_debug,
-            m_doExecuteAllNodes.getBooleanValue(), this::setWarningMessage);
+        var workflowName = (m_debug ? "Debug: " : "") + spec.getWorkflowName();
+        m_executable = new WorkflowSegmentExecutor(spec.getWorkflowSegment(), workflowName, nc,
+            m_debug ? ExecutionMode.DEBUG : ExecutionMode.DEFAULT, m_doExecuteAllNodes.getBooleanValue(),
+            this::setWarningMessage);
         return m_executable;
     }
 
