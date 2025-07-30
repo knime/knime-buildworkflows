@@ -83,6 +83,7 @@ import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
+import org.knime.core.node.workflow.VariableType;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
@@ -202,7 +203,9 @@ public final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryN
                 }
                 wfm.resetAndConfigureAll();
             }
-
+            if (m_config.getExportVariableWasReset().getBooleanValue()) {
+                pushFlowVariable("workflow_was_reset", VariableType.BooleanType.INSTANCE, partiallyExecuted);
+            }
             var customWorkflowName = m_config.getWorkflowName().getStringValue();
             if (!StringUtils.isBlank(customWorkflowName)) {
                 wfm.setName(customWorkflowName);
