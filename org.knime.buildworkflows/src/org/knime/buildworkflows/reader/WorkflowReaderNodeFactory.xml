@@ -109,13 +109,6 @@
 				workflow segments via the new implicit input and output ports.
 			</option>
 			<option name="Input/Output ID prefix">Prefix to be used as ids for the implicit input and output ports of the workflow segment.</option>
-			<option name="Export Reset State as Variable">
-				If selected, the node creates and exports a flow variable
-				<tt>workflow_was_reset</tt>
-				denoting whether the workflow was completely reset prior import. As soon as the original workflow had
-				at least one executed node, this property will be <tt>false</tt>. Note that the workflow in the output
-				will be reset in either case.
-			</option>
 		</tab>
 	</fullDescription>
 	<ports>

@@ -86,8 +86,6 @@ final class WorkflowReaderNodeDialog extends NodeDialogPane {
 
     private final DialogComponentString m_outputIdPrefix;
 
-    private final DialogComponentBoolean m_exportVariableWasReset;
-
     private final WorkflowReaderNodeConfig m_config;
 
     WorkflowReaderNodeDialog(final WorkflowReaderNodeConfig config) {
@@ -99,16 +97,14 @@ final class WorkflowReaderNodeDialog extends NodeDialogPane {
         m_removeIONodes = new DialogComponentBoolean(config.getRemoveIONodes(), "Remove input and output nodes");
         m_inputIdPrefix = new DialogComponentString(config.getInputIdPrefix(), "Input ID prefix");
         m_outputIdPrefix = new DialogComponentString(config.getOutputIdPrefix(), "Output ID prefix");
-        m_exportVariableWasReset =
-            new DialogComponentBoolean(config.getExportVariableWasReset(), "Export Reset State as Variable");
 
         JPanel ioPrefixes = new JPanel();
         ioPrefixes.add(m_inputIdPrefix.getComponentPanel());
         ioPrefixes.add(m_outputIdPrefix.getComponentPanel());
 
         JPanel p1 = createWorkflowChooserPanel();
-        JPanel p2 = group("Read options", m_workflowName.getComponentPanel(), m_removeIONodes.getComponentPanel(),
-            ioPrefixes, m_exportVariableWasReset.getComponentPanel());
+        JPanel p2 =
+            group("Read options", m_workflowName.getComponentPanel(), m_removeIONodes.getComponentPanel(), ioPrefixes);
 
         final JPanel panel = new JPanel(new GridBagLayout());
         final GridBagConstraints gbc = createAndInitGBC();
@@ -148,7 +144,6 @@ final class WorkflowReaderNodeDialog extends NodeDialogPane {
         m_removeIONodes.saveSettingsTo(settings);
         m_inputIdPrefix.saveSettingsTo(settings);
         m_outputIdPrefix.saveSettingsTo(settings);
-        m_exportVariableWasReset.saveSettingsTo(settings);
     }
 
     @Override
@@ -159,7 +154,6 @@ final class WorkflowReaderNodeDialog extends NodeDialogPane {
         m_removeIONodes.loadSettingsFrom(settings, specs);
         m_inputIdPrefix.loadSettingsFrom(settings, specs);
         m_outputIdPrefix.loadSettingsFrom(settings, specs);
-        m_exportVariableWasReset.loadSettingsFrom(settings, specs);
         m_config.loadConfigurationForDialog();
     }
 

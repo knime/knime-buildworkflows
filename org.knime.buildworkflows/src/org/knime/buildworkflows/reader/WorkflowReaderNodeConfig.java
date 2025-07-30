@@ -72,9 +72,6 @@ final class WorkflowReaderNodeConfig {
 
     private final SettingsModelString m_outputIdPrefix = new SettingsModelString("output-id-prefix", "output");
 
-    private final SettingsModelBoolean m_exportVariableWasReset =
-        new SettingsModelBoolean("exportVariableWasReset", false);
-
     private final SettingsModelWorkflowChooser m_workflowChooser;
 
     WorkflowReaderNodeConfig(final NodeCreationConfiguration creationConfig) {
@@ -106,20 +103,12 @@ final class WorkflowReaderNodeConfig {
         return m_outputIdPrefix;
     }
 
-    SettingsModelBoolean getExportVariableWasReset() {
-        return m_exportVariableWasReset;
-    }
-
     void validateConfigurationForModel(final NodeSettingsRO settings) throws InvalidSettingsException {
         m_workflowChooser.validateSettings(settings);
         m_workflowName.validateSettings(settings);
         m_removeIONodes.validateSettings(settings);
         m_inputIdPrefix.validateSettings(settings);
         m_outputIdPrefix.validateSettings(settings);
-        if (settings.containsKey(m_exportVariableWasReset.getConfigName())) {
-            // added in 5.6
-            m_exportVariableWasReset.validateSettings(settings);
-        }
     }
 
     void saveConfigurationForModel(final NodeSettingsWO settings) {
@@ -128,7 +117,6 @@ final class WorkflowReaderNodeConfig {
         m_removeIONodes.saveSettingsTo(settings);
         m_inputIdPrefix.saveSettingsTo(settings);
         m_outputIdPrefix.saveSettingsTo(settings);
-        m_exportVariableWasReset.saveSettingsTo(settings);
     }
 
     void loadConfigurationForModel(final NodeSettingsRO settings) throws InvalidSettingsException {
@@ -137,10 +125,6 @@ final class WorkflowReaderNodeConfig {
         m_removeIONodes.loadSettingsFrom(settings);
         m_inputIdPrefix.loadSettingsFrom(settings);
         m_outputIdPrefix.loadSettingsFrom(settings);
-        if (settings.containsKey(m_exportVariableWasReset.getConfigName())) {
-            // added in 5.6
-            m_exportVariableWasReset.loadSettingsFrom(settings);
-        }
     }
 
     void loadConfigurationForDialog() {
