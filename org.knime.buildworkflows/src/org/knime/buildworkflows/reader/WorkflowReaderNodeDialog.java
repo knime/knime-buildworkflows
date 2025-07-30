@@ -99,8 +99,8 @@ final class WorkflowReaderNodeDialog extends NodeDialogPane {
         m_removeIONodes = new DialogComponentBoolean(config.getRemoveIONodes(), "Remove input and output nodes");
         m_inputIdPrefix = new DialogComponentString(config.getInputIdPrefix(), "Input ID prefix");
         m_outputIdPrefix = new DialogComponentString(config.getOutputIdPrefix(), "Output ID prefix");
-        m_exportVariableWasReset =
-            new DialogComponentBoolean(config.getExportVariableWasReset(), "Export Reset State as Variable");
+        m_exportVariableWasReset = new DialogComponentBoolean(config.getExportVariableWorkflowGotReset(),
+            "Output flow variable indicating whether workflow got reset during loading");
 
         JPanel ioPrefixes = new JPanel();
         ioPrefixes.add(m_inputIdPrefix.getComponentPanel());

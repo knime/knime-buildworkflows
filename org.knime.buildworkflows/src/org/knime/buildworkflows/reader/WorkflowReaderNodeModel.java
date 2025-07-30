@@ -203,8 +203,8 @@ public final class WorkflowReaderNodeModel extends AbstractPortObjectRepositoryN
                 }
                 wfm.resetAndConfigureAll();
             }
-            if (m_config.getExportVariableWasReset().getBooleanValue()) {
-                pushFlowVariable("workflow_was_reset", VariableType.BooleanType.INSTANCE, partiallyExecuted);
+            if (m_config.getExportVariableWorkflowGotReset().getBooleanValue()) {
+                pushFlowVariable("workflow_got_reset", VariableType.BooleanType.INSTANCE, partiallyExecuted);
             }
             var customWorkflowName = m_config.getWorkflowName().getStringValue();
             if (!StringUtils.isBlank(customWorkflowName)) {
