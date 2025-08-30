@@ -204,7 +204,7 @@ final class DeployWorkflow3NodeModel extends NodeModel {
             (RestFileSystem)((FileSystemPortObject)inObjects[m_fsConnectionInputPortIndex]).getFileSystemConnection()
                 .orElseThrow(() -> new InvalidSettingsException("No server connection available")).getFileSystem();
         try {
-            final Snapshot snapshot = restFS.getRestClient().getRestServerContent().createSnapshot(workflowPath,
+            final Snapshot snapshot = restFS.getRestClient().getClient().createSnapshot(workflowPath,
                 m_cfg.getSnapshotNameModel().getStringValue());
             if (snapshot.getError() != null) {
                 throw new IOException(
