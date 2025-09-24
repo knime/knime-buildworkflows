@@ -48,22 +48,41 @@
  */
 package org.knime.buildworkflows.combiner;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import org.apache.xmlbeans.XmlException;
 import org.knime.core.node.ConfigurableNodeFactory;
+import org.knime.core.node.NodeDescription;
 import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeView;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
+import org.knime.core.webui.node.dialog.NodeDialog;
+import org.knime.core.webui.node.dialog.NodeDialogFactory;
+import org.knime.core.webui.node.dialog.NodeDialogManager;
+import org.knime.core.webui.node.dialog.SettingsType;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultKaiNodeInterface;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeDialog;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterface;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterfaceFactory;
+import org.knime.node.impl.description.DefaultNodeDescriptionUtil;
+import org.knime.node.impl.description.PortDescription;
+import org.xml.sax.SAXException;
 
 /**
  * Workflow combiner node.
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */
-public class WorkflowCombinerNodeFactory extends ConfigurableNodeFactory<NodeModel> {
+@SuppressWarnings("restriction")
+public class WorkflowCombinerNodeFactory extends ConfigurableNodeFactory<NodeModel>
+    implements NodeDialogFactory, KaiNodeInterfaceFactory {
 
     @Override
     protected Optional<PortsConfigurationBuilder> createPortsConfigBuilder() {
@@ -75,13 +94,18 @@ public class WorkflowCombinerNodeFactory extends ConfigurableNodeFactory<NodeMod
     }
 
     @Override
-    protected NodeModel createNodeModel(final NodeCreationConfiguration creationConfig) {
+    protected WorkflowCombinerNodeModel createNodeModel(final NodeCreationConfiguration creationConfig) {
         return new WorkflowCombinerNodeModel(creationConfig.getPortConfig().get());
     }
 
     @Override
     protected NodeDialogPane createNodeDialogPane(final NodeCreationConfiguration creationConfig) {
-        return new WorkflowCombinerNodeDialog();
+        return NodeDialogManager.createLegacyFlowVariableNodeDialog(createNodeDialog());
+    }
+
+    @Override
+    public NodeDialog createNodeDialog() {
+        return new DefaultNodeDialog(SettingsType.MODEL, WorkflowCombinerNodeParameters.class);
     }
 
     @Override
@@ -97,6 +121,65 @@ public class WorkflowCombinerNodeFactory extends ConfigurableNodeFactory<NodeMod
     @Override
     protected boolean hasDialog() {
         return true;
+    }
+
+    @Override
+    public boolean hasNodeDialog() {
+        return true;
+    }
+
+    // Descriptions and port names from factory.xml
+    private static final String NODE_NAME = "Workflow Combiner";
+
+    private static final String SHORT_DESCRIPTION = "Concatenates two workflow segments.";
+
+    private static final String NODE_ICON = "workflow_combiner.png";
+
+    private static final String FULL_DESCRIPTION =
+        "Allows to connect various workflows into one workflow. "
+            + "Free output ports from one workflow are connected to the free input ports of the consecutive workflow. "
+            + "The actual pairing of those output and input ports can be configured."
+            + "\n\nPlease note that the workflow name as well as the workflow editor settings "
+            + "(such as grid or connection settings) of the result workflow will be inherited from the workflow at the first input port."
+            + "\n\n<b>Default configuration:</b> "
+            + "By default (i.e. if not configured otherwise) the inputs of each workflow will be automatically connected with the outputs of the predecessor workflow, i.e., the workflow connected to the previous input port. "
+            + "The <tt>i-th</tt> output of workflow <tt>j</tt> will be connected to the <tt>i-th</tt> input of workflow <tt>j+1</tt>. "
+            + "If the default pairing of inputs and outputs cannot be applied (because of a non-matching number of inputs and outputs or incompatible port types), the node can not be executed and requires manual configuration."
+            + "\n\n<b>Manual configuration:</b> If the default configuration is not applicable or not desired, the output to input pairing can be chosen manually. This is done by selecting the outputs that are to be connected to an inputs of the subsequent workflow. Only compatible port types are eligible.";
+
+    private static final List<String> KEYWORDS =
+        List.of("workflow", "combine", "segment", "merge", "connect", "manual configuration", "default configuration");
+
+    @Override
+    public NodeDescription createNodeDescription() throws SAXException, IOException, XmlException {
+        // Port names and descriptions from factory.xml
+        Collection<PortDescription> inputPortDescs =
+            List.of(new PortDescription("inId", "First workflow", "First workflow to be connected.", false),
+                new PortDescription("Collector", "Second workflow", "Second workflow to be connected.", false),
+                new PortDescription("dynport", "Additional workflow", "Workflow to be connected to its predecessor.",
+                    true));
+        Collection<PortDescription> outputPortDescs = List.of(new PortDescription("outId", "Connected workflow",
+            "Workflow derived by connecting all input workflows in order of their appearance.", false));
+        return DefaultNodeDescriptionUtil.createNodeDescription(NODE_NAME,
+            NODE_ICON, // icon resource fallback
+            inputPortDescs,
+            outputPortDescs,
+            SHORT_DESCRIPTION,
+            FULL_DESCRIPTION,
+            List.of(),
+            WorkflowCombinerNodeParameters.class,
+            List.of(),
+            NodeType.Manipulator,
+            KEYWORDS,
+            null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public KaiNodeInterface createKaiNodeInterface() {
+        return new DefaultKaiNodeInterface(Map.of(SettingsType.MODEL, WorkflowCombinerNodeParameters.class));
     }
 
 }
