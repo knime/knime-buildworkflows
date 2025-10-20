@@ -69,16 +69,17 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.FlowVariable;
+import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.VariableType;
+import org.knime.core.node.workflow.capture.IsolatedExecutor;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
 import org.knime.core.node.workflow.capture.WorkflowSegment;
 import org.knime.core.node.workflow.capture.WorkflowSegmentExecutor;
 import org.knime.core.node.workflow.capture.WorkflowSegmentExecutor.ExecutionMode;
 import org.knime.core.node.workflow.virtual.AbstractPortObjectRepositoryNodeModel;
-import org.knime.core.util.Pair;
 
 /**
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
@@ -87,7 +88,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
 
     static final String CFG_DEBUG = "debug";
 
-    private WorkflowSegmentExecutor m_executable;
+    private IsolatedExecutor m_executor;
 
     private boolean m_debug = false;
 
@@ -124,14 +125,14 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
             WorkflowSegmentManipulations.UPDATE_LINKED_TEMPLATES.apply(segment);
         }
 
-        WorkflowSegmentExecutor we = createWorkflowExecutable(wpo.getSpec());
-        m_executable = we;
+        var we = createWorkflowExecutor(wpo.getSpec(), exec);
+        m_executor = we;
         boolean success = false;
         try {
             exec.setMessage("Executing workflow segment '" + wpo.getSpec().getWorkflowName() + "'");
-            Pair<PortObject[], List<FlowVariable>> output =
-                we.executeWorkflow(Arrays.copyOfRange(inObjects, 1, inObjects.length), exec);
-            if (output.getFirst() == null || Arrays.stream(output.getFirst()).anyMatch(Objects::isNull)) {
+            var result = we.execute(segment, Arrays.copyOfRange(inObjects, 1, inObjects.length), null, null);
+            if (result.outputs() == null
+                || Arrays.stream(result.outputs()).anyMatch(Objects::isNull)) {
                 NodeContainer nc = NodeContext.getContext().getNodeContainer();
                 String message = "Execution didn't finish successfully";
                 if (!checkPortsCompatibility(workflowInputTypes(wpo.getSpec()), nodeInputTypes(nc), false)) {
@@ -141,19 +142,19 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
             }
 
             // Push flow variables, preserving the ordering.
-            List<FlowVariable> vars = output.getSecond();
+            List<FlowVariable> vars = result.flowVariables();
             ListIterator<FlowVariable> reverseIter = vars.listIterator(vars.size());
             while (reverseIter.hasPrevious()) {
                 pushFlowVariableInternal(reverseIter.previous());
             }
 
             success = true;
-            return output.getFirst();
+            return result.outputs();
         } finally {
             if (!m_debug || success) {
-                disposeWorkflowExecutable();
+                disposeWorkflowExecutor();
             } else {
-                m_executable.cancel();
+                m_executor.cancel();
             }
         }
     }
@@ -163,23 +164,21 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
         pushFlowVariable(fv.getName(), (VariableType<T>)fv.getVariableType(), (T)fv.getValue(fv.getVariableType()));
     }
 
-    private WorkflowSegmentExecutor createWorkflowExecutable(final WorkflowPortObjectSpec spec)
+    private IsolatedExecutor createWorkflowExecutor(final WorkflowPortObjectSpec spec, final ExecutionContext exec)
         throws InvalidSettingsException, KNIMEException {
-        disposeWorkflowExecutable();
-        NodeContainer nc = NodeContext.getContext().getNodeContainer();
+        disposeWorkflowExecutor();
+        var nc = (NativeNodeContainer)NodeContext.getContext().getNodeContainer();
         CheckUtils.checkArgumentNotNull(nc, "Not a local workflow");
         checkPortCompatibility(spec, nc);
         var workflowName = (m_debug ? "Debug: " : "") + spec.getWorkflowName();
-        m_executable = new WorkflowSegmentExecutor(spec.getWorkflowSegment(), workflowName, nc,
-            m_debug ? ExecutionMode.DEBUG : ExecutionMode.DEFAULT, m_doExecuteAllNodes.getBooleanValue(),
-            this::setWarningMessage);
-        return m_executable;
+        return WorkflowSegmentExecutor.builder(nc, m_debug ? ExecutionMode.DEBUG : ExecutionMode.DEFAULT, workflowName,
+            this::setWarningMessage, exec, false).isolated(m_doExecuteAllNodes.getBooleanValue()).build();
     }
 
-    private void disposeWorkflowExecutable() {
-        if (m_executable != null) {
-            m_executable.dispose();
-            m_executable = null;
+    private void disposeWorkflowExecutor() {
+        if (m_executor != null) {
+            m_executor.dispose();
+            m_executor = null;
         }
     }
 
@@ -280,7 +279,7 @@ final class WorkflowExecutorNodeModel extends AbstractPortObjectRepositoryNodeMo
 
     private void disposeInternal(final boolean disposeWorkflowExecutable) {
         if (disposeWorkflowExecutable) {
-            disposeWorkflowExecutable();
+            disposeWorkflowExecutor();
         }
     }
 
