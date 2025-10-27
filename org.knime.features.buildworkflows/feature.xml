@@ -728,7 +728,7 @@ propagated with or for interoperation with KNIME.
    </license>
 
    <requires>
-      <import feature="org.eclipse.birt.engine.runtime" version="4.15.0.v202403260939" match="greaterOrEqual"/>
+      <import feature="org.eclipse.birt.engine.runtime" version="4.20.0.v202506011452" match="greaterOrEqual"/>
    </requires>
 
    <plugin
