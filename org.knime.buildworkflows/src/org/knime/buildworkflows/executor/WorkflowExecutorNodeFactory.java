@@ -48,26 +48,72 @@
  */
 package org.knime.buildworkflows.executor;
 
+import static org.knime.node.impl.description.PortDescription.dynamicPort;
+import static org.knime.node.impl.description.PortDescription.fixedPort;
+
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+import org.knime.buildworkflows.executor.WorkflowExecutorNodeParameters.UpdatePortsOnApplyModifier;
 import org.knime.core.node.ConfigurableNodeFactory;
+import org.knime.core.node.NodeDescription;
 import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeView;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
+import org.knime.core.webui.node.dialog.NodeDialog;
+import org.knime.core.webui.node.dialog.NodeDialogFactory;
+import org.knime.core.webui.node.dialog.NodeDialogManager;
+import org.knime.core.webui.node.dialog.SettingsType;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultKaiNodeInterface;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeDialog;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterface;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterfaceFactory;
+import org.knime.node.impl.description.DefaultNodeDescriptionUtil;
+import org.knime.node.impl.description.PortDescription;
 
 /**
- * The workflow executor node to execute workflow segments 'in place', i.e. within the workflow where the segment
- * have been captured.
+ * The workflow executor node to execute workflow segments 'in place', i.e. within the workflow where the segment have
+ * been captured.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
+ * @author Martin Horn, KNIME GmbH, Konstanz, Germany
+ * @author AI Migration Pipeline v1.2
  */
-public class WorkflowExecutorNodeFactory extends ConfigurableNodeFactory<WorkflowExecutorNodeModel> {
+@SuppressWarnings("restriction")
+public class WorkflowExecutorNodeFactory extends ConfigurableNodeFactory<WorkflowExecutorNodeModel>
+    implements NodeDialogFactory, KaiNodeInterfaceFactory {
 
     static final String INPUT_PORT_GROUP = "Inputs";
 
     static final String OUTPUT_PORT_GROUP = "Outputs";
+
+    private static final String NODE_NAME = "Workflow Executor";
+
+    private static final String NODE_ICON = "./workflow_executor.png";
+
+    private static final String SHORT_DESCRIPTION = """
+            Executes a workflow as part of this workflow. The workflow to be executed is provided at the workflow
+                input port.
+            """;
+
+    private static final String FULL_DESCRIPTION = """
+            Executes a workflow provided at the workflow input port as part of this workflow.
+            """;
+
+    private static final List<PortDescription> INPUT_PORTS = List.of(fixedPort("Workflow", """
+            The workflow segment to be executed.
+            """), dynamicPort("Inputs", "Workflow inputs", """
+            The inputs for the execution. Number and types of the ports must exactly match the inputs of the
+            workflow provided at the workflow port.
+            """));
+
+    private static final List<PortDescription> OUTPUT_PORTS = List.of(dynamicPort("Outputs", "Workflow outputs", """
+            The outputs of the execution. Number and types of the ports must exactly match the outputs of the
+            workflow provided at the workflow port.
+            """));
 
     @Override
     protected Optional<PortsConfigurationBuilder> createPortsConfigBuilder() {
@@ -113,12 +159,27 @@ public class WorkflowExecutorNodeFactory extends ConfigurableNodeFactory<Workflo
         return true;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    protected NodeDialogPane createNodeDialogPane(final NodeCreationConfiguration creationConfig) {
-        return new WorkflowExecutorNodeDialogPane();
+    public NodeDialogPane createNodeDialogPane(final NodeCreationConfiguration creationConfig) {
+        return NodeDialogManager.createLegacyFlowVariableNodeDialog(createNodeDialog());
+    }
+
+    @Override
+    public NodeDialog createNodeDialog() {
+        return new DefaultNodeDialog(SettingsType.MODEL, WorkflowExecutorNodeParameters.class,
+            new UpdatePortsOnApplyModifier());
+    }
+
+    @Override
+    public NodeDescription createNodeDescription() {
+        return DefaultNodeDescriptionUtil.createNodeDescription(NODE_NAME, NODE_ICON, INPUT_PORTS, OUTPUT_PORTS,
+            SHORT_DESCRIPTION, FULL_DESCRIPTION, List.of(), WorkflowExecutorNodeParameters.class, null,
+            NodeType.Manipulator, List.of(), null);
+    }
+
+    @Override
+    public KaiNodeInterface createKaiNodeInterface() {
+        return new DefaultKaiNodeInterface(Map.of(SettingsType.MODEL, WorkflowExecutorNodeParameters.class));
     }
 
 }
