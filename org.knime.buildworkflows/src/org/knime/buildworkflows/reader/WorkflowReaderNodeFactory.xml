@@ -77,7 +77,7 @@
 			</option>
 			<option name="Select version">
 				If available, select the version of the workflow to read. A limited number of versions will be fetched and provided in a
-				dropdown menu. If the desired version is not included in the dropdown list, the option <i>hubItemVersion</i> can be set
+				dropdown menu. If the desired version is not included in the dropdown list, the option <i>item version</i> can be set
 				with a flow variable (e.g. "333" for version 333 on the hub).
 			</option>
 			<option name="File">
