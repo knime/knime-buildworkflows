@@ -63,6 +63,7 @@ import org.knime.core.node.NodeView;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
+import org.knime.core.util.EclipseUtil;
 import org.knime.core.webui.node.dialog.NodeDialog;
 import org.knime.core.webui.node.dialog.NodeDialogFactory;
 import org.knime.core.webui.node.dialog.NodeDialogManager;
@@ -161,7 +162,17 @@ public class WorkflowExecutorNodeFactory extends ConfigurableNodeFactory<Workflo
 
     @Override
     public NodeDialogPane createNodeDialogPane(final NodeCreationConfiguration creationConfig) {
-        return NodeDialogManager.createLegacyFlowVariableNodeDialog(createNodeDialog());
+        if (showWebUIDialog()) {
+            return NodeDialogManager.createLegacyFlowVariableNodeDialog(createNodeDialog());
+        } else {
+            return new WorkflowExecutorNodeDialogPane();
+        }
+
+    }
+
+    @Override
+    public boolean hasNodeDialog() {
+        return showWebUIDialog();
     }
 
     @Override
@@ -180,6 +191,10 @@ public class WorkflowExecutorNodeFactory extends ConfigurableNodeFactory<Workflo
     @Override
     public KaiNodeInterface createKaiNodeInterface() {
         return new DefaultKaiNodeInterface(Map.of(SettingsType.MODEL, WorkflowExecutorNodeParameters.class));
+    }
+
+    private static boolean showWebUIDialog() {
+        return EclipseUtil.currentUIPerspective().map(p -> p.equals("modern")).orElse(true);
     }
 
 }
