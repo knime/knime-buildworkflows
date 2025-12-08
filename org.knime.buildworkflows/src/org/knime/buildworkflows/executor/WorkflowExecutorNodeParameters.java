@@ -67,6 +67,10 @@ import org.knime.node.parameters.NodeParametersInput;
 import org.knime.node.parameters.Widget;
 import org.knime.node.parameters.migration.LoadDefaultsForAbsentFields;
 import org.knime.node.parameters.persistence.Persist;
+import org.knime.node.parameters.updates.Effect;
+import org.knime.node.parameters.updates.Effect.EffectType;
+import org.knime.node.parameters.updates.EffectPredicate;
+import org.knime.node.parameters.updates.EffectPredicateProvider;
 import org.knime.node.parameters.widget.message.TextMessage;
 import org.knime.node.parameters.widget.message.TextMessage.MessageType;
 import org.knime.node.parameters.widget.message.TextMessage.SimpleTextMessageProvider;
@@ -78,6 +82,7 @@ import org.knime.node.parameters.widget.message.TextMessage.SimpleTextMessagePro
  * @author AI Migration Pipeline v1.2
  */
 @LoadDefaultsForAbsentFields
+@SuppressWarnings("restriction")
 class WorkflowExecutorNodeParameters implements NodeParameters {
 
     static class UpdatePortsOnApplyModifier implements OnApplyNodeModifier {
@@ -143,13 +148,14 @@ class WorkflowExecutorNodeParameters implements NodeParameters {
             + "mismatch error.")
     @ButtonWidget(actionHandler = UpdatePortsButtonActionHandler.class)
     @IncrementAndApplyOnClick
+    @Effect(predicate = PortsRequireUpdatePredicate.class, type = EffectType.SHOW)
     Integer m_updatePorts = -1;
 
     @Widget(title = "Update links of components and metanodes",
         description = "If enabled, linked components and metanodes contained in the given workflow segment "
             + "will be updated before execution.")
     @Persist(configKey = "do_update_template_links")
-    boolean m_doUpdateTemplateLinks = false;
+    boolean m_doUpdateTemplateLinks;
 
     @Widget(title = "Execute entire workflow",
         description = "If checked, the entire workflow is executed and failures in the workflow will cause "
@@ -169,13 +175,13 @@ class WorkflowExecutorNodeParameters implements NodeParameters {
             + "If disabled, the actual executing workflow will not be visible.",
         advanced = true)
     @Persist(configKey = WorkflowExecutorNodeModel.CFG_DEBUG)
-    boolean m_debug = false;
+    boolean m_debug;
 
     static class NoWorkflowMessage implements SimpleTextMessageProvider {
 
         @Override
         public boolean showMessage(final NodeParametersInput context) {
-            return context.getInPortSpec(0).map(WorkflowPortObjectSpec.class::cast).isEmpty();
+            return context.getInPortSpec(0).isEmpty();
         }
 
         @Override
@@ -199,16 +205,7 @@ class WorkflowExecutorNodeParameters implements NodeParameters {
 
         @Override
         public boolean showMessage(final NodeParametersInput context) {
-            var spec = context.getInPortSpec(0).map(WorkflowPortObjectSpec.class::cast).orElse(null);
-            if (spec == null) {
-                return false;
-            }
-            try {
-                WorkflowExecutorNodeModel.checkPortCompatibility(spec, NodeContext.getContext().getNodeContainer());
-                return false;
-            } catch (InvalidSettingsException e) {
-                return true;
-            }
+            return portsAreNotCompatible(context);
         }
 
         @Override
@@ -229,12 +226,31 @@ class WorkflowExecutorNodeParameters implements NodeParameters {
 
     }
 
-    enum UpdatePortsButtonState {
-            @ButtonState(text = "Update Ports", disabled = true)
-            DISABLED,
+    static final class PortsRequireUpdatePredicate implements EffectPredicateProvider {
 
+        @Override
+        public EffectPredicate init(final PredicateInitializer initializer) {
+            return initializer.getConstant(WorkflowExecutorNodeParameters::portsAreNotCompatible);
+        }
+
+    }
+
+    private static boolean portsAreNotCompatible(final NodeParametersInput context) {
+        var spec = context.getInPortSpec(0).map(WorkflowPortObjectSpec.class::cast).orElse(null);
+        if (spec == null) {
+            return false;
+        }
+        try {
+            WorkflowExecutorNodeModel.checkPortCompatibility(spec, NodeContext.getContext().getNodeContainer());
+            return false;
+        } catch (InvalidSettingsException e) {
+            return true;
+        }
+    }
+
+    enum UpdatePortsButtonState {
             @ButtonState(text = "Update Ports", disabled = false)
-            ENABLED
+            STATE,
     }
 
     static class UpdatePortsButtonActionHandler
@@ -243,19 +259,7 @@ class WorkflowExecutorNodeParameters implements NodeParameters {
         @Override
         public ButtonChange<Integer, UpdatePortsButtonState> initialize(final Integer currentValue,
             final NodeParametersInput context) {
-            var spec = context.getInPortSpec(0).map(WorkflowPortObjectSpec.class::cast).orElse(null);
-            UpdatePortsButtonState state;
-            if (spec == null) {
-                state = UpdatePortsButtonState.DISABLED;
-            } else {
-                try {
-                    WorkflowExecutorNodeModel.checkPortCompatibility(spec, NodeContext.getContext().getNodeContainer());
-                    state = UpdatePortsButtonState.DISABLED;
-                } catch (InvalidSettingsException e) {
-                    state = UpdatePortsButtonState.ENABLED;
-                }
-            }
-            return new ButtonChange<>(currentValue, state);
+            return new ButtonChange<>(currentValue, UpdatePortsButtonState.STATE);
         }
 
         @Override
