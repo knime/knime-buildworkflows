@@ -101,24 +101,34 @@ import org.knime.core.node.workflow.capture.WorkflowSegment.PortID;
  */
 final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWorkflowEndNode {
 
+    static final String CFG_CUSTOM_WORKFLOW_NAME = "custom_workflow_name";
+    static final String CFG_ADD_INPUT_DATA = "add_input_data";
+    static final String CFG_EXPORT_VARIABLES = "export_variables";
+    static final String CFG_MAX_NUM_ROWS = "max_num_rows";
+    static final String CFG_DO_REMOVE_TEMPLATE_LINKS = "do_remove_template_links";
+    static final String CFG_INPUT_IDS = "input_ids";
+    static final String CFG_OUTPUT_IDS = "output_ids";
+    static final String CFG_NUM_IDS = "num_ids";
+    static final String CFG_ID_PREFIX = "id_";
+
     static SettingsModelString createCustomWorkflowNameModel() {
-        return new SettingsModelString("custom_workflow_name", "");
+        return new SettingsModelString(CFG_CUSTOM_WORKFLOW_NAME, "");
     }
 
     static SettingsModelBoolean createAddInputDataModel() {
-        return new SettingsModelBoolean("add_input_data", false);
+        return new SettingsModelBoolean(CFG_ADD_INPUT_DATA, false);
     }
 
     static SettingsModelBoolean createExportVariablesModel() {
-        return new SettingsModelBoolean("export_variables", true);
+        return new SettingsModelBoolean(CFG_EXPORT_VARIABLES, true);
     }
 
     static SettingsModelIntegerBounded createMaxNumOfRowsModel() {
-        return new SettingsModelIntegerBounded("max_num_rows", 10, 1, Integer.MAX_VALUE);
+        return new SettingsModelIntegerBounded(CFG_MAX_NUM_ROWS, 10, 1, Integer.MAX_VALUE);
     }
 
     public static SettingsModelBoolean createDoRemoveTemplateLinksModel() {
-        return new SettingsModelBoolean("do_remove_template_links", false);
+        return new SettingsModelBoolean(CFG_DO_REMOVE_TEMPLATE_LINKS, false);
     }
 
     private final SettingsModelString m_customWorkflowName = createCustomWorkflowNameModel();
@@ -311,16 +321,16 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
         if (inputIDs.isEmpty() && outputIDs.isEmpty()) {
             return;
         }
-        NodeSettingsWO subSettings = settings.addNodeSettings("input_ids");
-        subSettings.addInt("num_ids", inputIDs.size());
+        NodeSettingsWO subSettings = settings.addNodeSettings(CFG_INPUT_IDS);
+        subSettings.addInt(CFG_NUM_IDS, inputIDs.size());
         for (int i = 0; i < inputIDs.size(); i++) {
-            subSettings.addString("id_" + i, inputIDs.get(i));
+            subSettings.addString(CFG_ID_PREFIX + i, inputIDs.get(i));
         }
 
-        subSettings = settings.addNodeSettings("output_ids");
-        subSettings.addInt("num_ids", outputIDs.size());
+        subSettings = settings.addNodeSettings(CFG_OUTPUT_IDS);
+        subSettings.addInt(CFG_NUM_IDS, outputIDs.size());
         for (int i = 0; i < outputIDs.size(); i++) {
-            subSettings.addString("id_" + i, outputIDs.get(i));
+            subSettings.addString(CFG_ID_PREFIX + i, outputIDs.get(i));
         }
     }
 
@@ -378,19 +388,19 @@ final class CaptureWorkflowEndNodeModel extends NodeModel implements CaptureWork
     static void loadAndFillInputOutputIDs(final NodeSettingsRO settings, final List<String> inputIDs,
         final List<String> outputIDs) throws InvalidSettingsException {
 
-        if (settings.containsKey("input_ids")) {
-            NodeSettingsRO subSettings = settings.getNodeSettings("input_ids");
-            int num = subSettings.getInt("num_ids");
+        if (settings.containsKey(CFG_INPUT_IDS)) {
+            NodeSettingsRO subSettings = settings.getNodeSettings(CFG_INPUT_IDS);
+            int num = subSettings.getInt(CFG_NUM_IDS);
             for (int i = 0; i < num; i++) {
-                inputIDs.add(subSettings.getString("id_" + i));
+                inputIDs.add(subSettings.getString(CFG_ID_PREFIX + i));
             }
         }
 
-        if (settings.containsKey("output_ids")) {
-            NodeSettingsRO subSettings = settings.getNodeSettings("output_ids");
-            int num = subSettings.getInt("num_ids");
+        if (settings.containsKey(CFG_OUTPUT_IDS)) {
+            NodeSettingsRO subSettings = settings.getNodeSettings(CFG_OUTPUT_IDS);
+            int num = subSettings.getInt(CFG_NUM_IDS);
             for (int i = 0; i < num; i++) {
-                outputIDs.add(subSettings.getString("id_" + i));
+                outputIDs.add(subSettings.getString(CFG_ID_PREFIX + i));
             }
         }
 

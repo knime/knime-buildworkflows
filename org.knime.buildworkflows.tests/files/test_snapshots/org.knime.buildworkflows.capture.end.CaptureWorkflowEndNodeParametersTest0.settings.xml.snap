@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="http://www.knime.org/2008/09/XMLConfig" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.knime.org/2008/09/XMLConfig http://www.knime.org/XMLConfig_2008_09.xsd" key="test">
+    <entry key="add_input_data" type="xboolean" value="false"/>
+    <entry key="max_num_rows" type="xint" value="10"/>
+    <entry key="export_variables" type="xboolean" value="true"/>
+    <entry key="do_remove_template_links" type="xboolean" value="false"/>
+    <entry key="custom_workflow_name" type="xstring" value=""/>
+    <config key="input_ids">
+        <entry key="id_0" type="xstring" value="Input"/>
+        <entry key="num_ids" type="xint" value="1"/>
+    </config>
+    <config key="output_ids">
+        <entry key="id_0" type="xstring" value="Output"/>
+        <entry key="num_ids" type="xint" value="1"/>
+    </config>
+</config>

@@ -1,0 +1,253 @@
+{
+  "data" : {
+    "model" : {
+      "storeInputTables" : false,
+      "maxNumRows" : 10,
+      "propagateVariables" : true,
+      "disconnectTemplateLinks" : false,
+      "customWorkflowName" : "",
+      "inputIDs" : [ ],
+      "outputIDs" : [ ]
+    }
+  },
+  "schema" : {
+    "type" : "object",
+    "properties" : {
+      "model" : {
+        "type" : "object",
+        "properties" : {
+          "customWorkflowName" : {
+            "type" : "string",
+            "title" : "Custom workflow name",
+            "description" : "A custom name for the captured workflow. If left empty, the original name will be taken.",
+            "default" : ""
+          },
+          "disconnectTemplateLinks" : {
+            "type" : "boolean",
+            "title" : "Disconnect links of components and metanodes",
+            "description" : "If enabled, the links on linked components and metanodes contained in the captured workflow segment will be\nremoved upon capture.\n",
+            "default" : false
+          },
+          "inputIDs" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "inputID" : {
+                  "type" : "string",
+                  "title" : "Input port",
+                  "default" : "Input"
+                }
+              }
+            },
+            "title" : "Input IDs",
+            "description" : "Customization of the unique identifiers for each input port.\n",
+            "default" : [ ]
+          },
+          "maxNumRows" : {
+            "type" : "integer",
+            "format" : "int32",
+            "title" : "Maximum number of rows to store",
+            "description" : "The maximum number of rows to be stored as example input data table at each workflow table input port.\n",
+            "default" : 10
+          },
+          "outputIDs" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "outputID" : {
+                  "type" : "string",
+                  "title" : "Output port",
+                  "default" : "Output"
+                }
+              }
+            },
+            "title" : "Output IDs",
+            "description" : "Customization of the unique identifiers for each output port.\n",
+            "default" : [ ]
+          },
+          "propagateVariables" : {
+            "type" : "boolean",
+            "title" : "Propagate variables",
+            "description" : "If selected, variables defined (or modified) within the <i>Capture</i> block are propagated downstream of\nthe <i>Capture Workflow End</i> node. In most cases users will want to check this box (which is also the\ndefault). Previous versions of KNIME did not have this option and variables were always limited in scope and\nnot visible downstream.\n",
+            "default" : true
+          },
+          "storeInputTables" : {
+            "type" : "boolean",
+            "title" : "Store input tables",
+            "description" : "If checked the input tables at the extracted workflow's input ports (table ports only!) will be stored, too.\n",
+            "default" : false
+          }
+        }
+      }
+    }
+  },
+  "ui_schema" : {
+    "elements" : [ {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/storeInputTables",
+      "options" : {
+        "format" : "checkbox"
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/maxNumRows",
+      "options" : {
+        "validation" : {
+          "max" : {
+            "errorMessage" : "The value must not exceed 2147483647.",
+            "parameters" : {
+              "isExclusive" : false,
+              "max" : 2.147483647E9
+            }
+          },
+          "min" : {
+            "errorMessage" : "The value must be at least 1.",
+            "parameters" : {
+              "isExclusive" : false,
+              "min" : 1.0
+            }
+          }
+        }
+      },
+      "rule" : {
+        "effect" : "SHOW",
+        "condition" : {
+          "scope" : "#/properties/model/properties/storeInputTables",
+          "schema" : {
+            "const" : true
+          }
+        }
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/propagateVariables",
+      "options" : {
+        "format" : "checkbox"
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/disconnectTemplateLinks",
+      "options" : {
+        "format" : "checkbox"
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/customWorkflowName"
+    }, {
+      "label" : "Input Port IDs",
+      "type" : "Section",
+      "description" : "Customization of the unique identifiers for each input port.",
+      "options" : {
+        "isAdvanced" : true
+      },
+      "elements" : [ {
+        "type" : "Control",
+        "scope" : "#/properties/model/properties/inputIDs",
+        "options" : {
+          "detail" : [ {
+            "type" : "Control",
+            "scope" : "#/properties/inputID",
+            "options" : {
+              "validation" : {
+                "pattern" : {
+                  "errorMessage" : "The string must start and end with a non-whitespace character.",
+                  "parameters" : {
+                    "pattern" : "\\S(.*\\S)?"
+                  }
+                }
+              }
+            }
+          } ],
+          "arrayElementTitle" : "Input ID",
+          "hasFixedSize" : true
+        }
+      } ]
+    }, {
+      "label" : "Output Port IDs",
+      "type" : "Section",
+      "description" : "Customization of the unique identifiers for each output port.",
+      "options" : {
+        "isAdvanced" : true
+      },
+      "elements" : [ {
+        "type" : "Control",
+        "scope" : "#/properties/model/properties/outputIDs",
+        "options" : {
+          "detail" : [ {
+            "type" : "Control",
+            "scope" : "#/properties/outputID",
+            "options" : {
+              "validation" : {
+                "pattern" : {
+                  "errorMessage" : "The string must start and end with a non-whitespace character.",
+                  "parameters" : {
+                    "pattern" : "\\S(.*\\S)?"
+                  }
+                }
+              }
+            }
+          } ],
+          "arrayElementTitle" : "Output ID",
+          "hasFixedSize" : true
+        }
+      } ]
+    } ]
+  },
+  "persist" : {
+    "type" : "object",
+    "properties" : {
+      "model" : {
+        "type" : "object",
+        "properties" : {
+          "storeInputTables" : {
+            "configKey" : "add_input_data"
+          },
+          "maxNumRows" : {
+            "configKey" : "max_num_rows"
+          },
+          "propagateVariables" : {
+            "configKey" : "export_variables",
+            "deprecatedConfigKeys" : [ {
+              "deprecated" : [ ]
+            } ]
+          },
+          "disconnectTemplateLinks" : {
+            "configKey" : "do_remove_template_links"
+          },
+          "customWorkflowName" : {
+            "configKey" : "custom_workflow_name"
+          },
+          "inputIDs" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "inputID" : {
+                  "route" : [ "..", ".." ],
+                  "configPaths" : [ [ "id_${array_index}" ] ]
+                }
+              }
+            },
+            "route" : [ "input_ids" ]
+          },
+          "outputIDs" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "outputID" : {
+                  "route" : [ "..", ".." ],
+                  "configPaths" : [ [ "id_${array_index}" ] ]
+                }
+              }
+            },
+            "route" : [ "output_ids" ]
+          }
+        }
+      }
+    }
+  },
+  "initialUpdates" : [ ]
+}

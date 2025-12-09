@@ -48,25 +48,42 @@
  */
 package org.knime.buildworkflows.capture.end;
 
+import static org.knime.node.impl.description.PortDescription.dynamicPort;
+import static org.knime.node.impl.description.PortDescription.fixedPort;
+
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.knime.core.node.ConfigurableNodeFactory;
+import org.knime.core.node.NodeDescription;
 import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeView;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.context.ports.PortsConfiguration;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
+import org.knime.core.webui.node.dialog.NodeDialog;
+import org.knime.core.webui.node.dialog.NodeDialogFactory;
+import org.knime.core.webui.node.dialog.NodeDialogManager;
+import org.knime.core.webui.node.dialog.SettingsType;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultKaiNodeInterface;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeDialog;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterface;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterfaceFactory;
+import org.knime.node.impl.description.DefaultNodeDescriptionUtil;
+import org.knime.node.impl.description.PortDescription;
 
 /**
  * The node factory for the Capture Workflow End node.
  *
  * @author Adrian Nembach, KNIME GmbH, Konstanz, Germany
+ * @author Magnus Gohm, KNIME GmbH, Konstanz, Germany
+ * @author AI Migration Pipeline v1.2
  */
-public final class CaptureWorkflowEndNodeFactory extends ConfigurableNodeFactory<CaptureWorkflowEndNodeModel> {
+@SuppressWarnings("restriction")
+public final class CaptureWorkflowEndNodeFactory extends ConfigurableNodeFactory<CaptureWorkflowEndNodeModel>
+    implements NodeDialogFactory, KaiNodeInterfaceFactory {
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Optional<PortsConfigurationBuilder> createPortsConfigBuilder() {
         final PortsConfigurationBuilder b = new PortsConfigurationBuilder();
@@ -75,9 +92,6 @@ public final class CaptureWorkflowEndNodeFactory extends ConfigurableNodeFactory
         return Optional.of(b);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected CaptureWorkflowEndNodeModel createNodeModel(final NodeCreationConfiguration creationConfig) {
         return new CaptureWorkflowEndNodeModel(getPortConfig(creationConfig));
@@ -89,37 +103,90 @@ public final class CaptureWorkflowEndNodeFactory extends ConfigurableNodeFactory
         return portConfig.get();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected NodeDialogPane createNodeDialogPane(final NodeCreationConfiguration creationConfig) {
-        return new CaptureWorkflowEndNodeDialog();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected int getNrNodeViews() {
         return 0;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public NodeView<CaptureWorkflowEndNodeModel> createNodeView(final int viewIndex,
         final CaptureWorkflowEndNodeModel nodeModel) {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected boolean hasDialog() {
         return true;
+    }
+    private static final String NODE_NAME = "Capture Workflow End";
+
+    private static final String NODE_ICON = "./capture_end.png";
+
+    private static final String SHORT_DESCRIPTION = """
+            Marks the end of a to be captured workflow segment.
+            """;
+
+    private static final String FULL_DESCRIPTION = """
+            Marks the end of a to be captured workflow segment. The entire workflow within the scope of a 'Capture
+                Workfow Start'- and 'Capture Workflow End'-node is captured and available at the workflow output port of
+                this node. Nodes that have out-going connections to a node that is part of the scope but aren't part of
+                the scope themselves are represented as static inputs (but not captured).
+            """;
+
+    private static final List<PortDescription> INPUT_PORTS = List.of(
+            dynamicPort("Captured workflow outputs", "Captured workflow segment outputs", """
+                Outputs of the captured workflow segment.
+                """)
+    );
+
+    private static final List<PortDescription> OUTPUT_PORTS = List.of(
+            fixedPort("Captured Workflow Port Object", """
+                A workflow port object that represents the captured workflow.
+                """),
+            dynamicPort("Captured workflow outputs", "Outputs of captured workflow", """
+                The outputs of the captured workflow group.
+                """)
+    );
+
+    /**
+     * {@inheritDoc}
+     * @since 5.10
+     */
+    @Override
+    public NodeDialogPane createNodeDialogPane(final NodeCreationConfiguration creationConfig) {
+        return NodeDialogManager.createLegacyFlowVariableNodeDialog(createNodeDialog());
+    }
+
+    @Override
+    public NodeDialog createNodeDialog() {
+        return new DefaultNodeDialog(SettingsType.MODEL, CaptureWorkflowEndNodeParameters.class);
+    }
+
+    @Override
+    public NodeDescription createNodeDescription() {
+        return DefaultNodeDescriptionUtil.createNodeDescription(
+            NODE_NAME,
+            NODE_ICON,
+            INPUT_PORTS,
+            OUTPUT_PORTS,
+            SHORT_DESCRIPTION,
+            FULL_DESCRIPTION,
+            List.of(),
+            CaptureWorkflowEndNodeParameters.class,
+            null,
+            NodeType.ScopeEnd,
+            List.of(),
+            null
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     * @since 5.10
+     */
+    @Override
+    public KaiNodeInterface createKaiNodeInterface() {
+        return new DefaultKaiNodeInterface(Map.of(SettingsType.MODEL, CaptureWorkflowEndNodeParameters.class));
     }
 
 }

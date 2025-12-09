@@ -14,7 +14,7 @@
 	<packaging>pom</packaging>
 
 	<properties>
-		<revision>5.9.0</revision>
+		<revision>5.10.0</revision>
 		<changelist>-SNAPSHOT</changelist>
 		<feature-branch-extension.branchListProperty>git.branch</feature-branch-extension.branchListProperty>
 		<feature-branch-extension.appendArtifactoryProperties>false</feature-branch-extension.appendArtifactoryProperties>
@@ -23,6 +23,7 @@
 
 	<modules>
 		<module>org.knime.buildworkflows</module>
+		<module>org.knime.buildworkflows.tests</module>
 		<module>org.knime.features.buildworkflows</module>
 		<module>org.knime.update.buildworkflows</module>
 	</modules>
@@ -32,6 +33,11 @@
 			<id>p2-knime-core</id>
 			<layout>p2</layout>
 			<url>${knime.core.p2}</url>
+		</repository>
+	    <repository>
+			<id>p2-knime-core-ui</id>
+			<layout>p2</layout>
+			<url>${knime.core.ui.p2}</url>
 		</repository>
 		<repository>
 			<id>p2-knime-base</id>
