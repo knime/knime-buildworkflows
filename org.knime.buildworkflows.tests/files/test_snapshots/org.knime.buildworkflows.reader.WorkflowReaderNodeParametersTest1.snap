@@ -1,0 +1,231 @@
+{
+  "data" : {
+    "model" : {
+      "workflowSelection" : {
+        "workflowPath" : {
+          "path" : {
+            "fsCategory" : "relative-to-current-hubspace",
+            "path" : "KNIME_project",
+            "timeout" : 10000,
+            "context" : {
+              "fsToString" : "(RELATIVE, knime.space, KNIME_project)"
+            }
+          }
+        },
+        "workflowVersion" : "LATEST_STATE"
+      },
+      "workflowName" : "test",
+      "removeIONodes" : true,
+      "inputIdPrefix" : "inputPrefix",
+      "outputIdPrefix" : "outputPrefix",
+      "exportVariableWorkflowGotReset" : true
+    }
+  },
+  "schema" : {
+    "type" : "object",
+    "properties" : {
+      "model" : {
+        "type" : "object",
+        "properties" : {
+          "exportVariableWorkflowGotReset" : {
+            "type" : "boolean",
+            "title" : "Output flow variable indicating whether workflow got reset during loading",
+            "description" : "If selected, the node creates and exports a flow variable <tt>workflow_got_reset</tt> denoting whether the workflow was (partially) executed prior import. As soon as the original workflow had at least one executed node, this property will be <tt>true</tt>. Note that the workflow in the output will be reset in either case.\n",
+            "default" : false
+          },
+          "inputIdPrefix" : {
+            "type" : "string",
+            "title" : "Input ID prefix",
+            "description" : "Prefix to be used as ids for the implicit input ports of the workflow segment.",
+            "default" : "input"
+          },
+          "outputIdPrefix" : {
+            "type" : "string",
+            "title" : "Output ID prefix",
+            "description" : "Prefix to be used as ids for the implicit output ports of the workflow segment.",
+            "default" : "output"
+          },
+          "removeIONodes" : {
+            "type" : "boolean",
+            "title" : "Remove input and output nodes",
+            "description" : "If checked, all <i>Container Input *</i> and <i>Container Output *</i> nodes are removed and implicitly represented. This allows one to, e.g., combine the resulting workflow segment with other workflow segments via the new implicit input and output ports.\n",
+            "default" : false
+          },
+          "workflowName" : {
+            "type" : [ "string", "null" ],
+            "title" : "Custom workflow name",
+            "description" : "An optional custom name for the workflow. If not specified, the original name will be kept.",
+            "default" : null
+          },
+          "workflowSelection" : {
+            "type" : "object",
+            "properties" : {
+              "workflowPath" : {
+                "type" : "object",
+                "properties" : {
+                  "path" : {
+                    "type" : "object",
+                    "default" : {
+                      "fsCategory" : "LOCAL",
+                      "path" : "",
+                      "timeout" : 10000,
+                      "context" : {
+                        "fsToString" : "(LOCAL, )"
+                      }
+                    }
+                  }
+                },
+                "title" : "Workflow",
+                "description" : "Select the workflow to read.",
+                "default" : {
+                  "path" : {
+                    "fsCategory" : "LOCAL",
+                    "path" : "",
+                    "timeout" : 10000,
+                    "context" : {
+                      "fsToString" : "(LOCAL, )"
+                    }
+                  }
+                }
+              },
+              "workflowVersion" : {
+                "type" : "string",
+                "title" : "Workflow version",
+                "description" : "If available, select the version of the workflow to read. A limited number of versions will be fetched and provided in a dropdown menu. If the desired version is not included in the dropdown list, the option <i>hubItemVersion</i> can be set with a flow variable (e.g. \"333\" for version 333 on the hub).\n",
+                "default" : "LATEST_STATE"
+              }
+            },
+            "default" : {
+              "workflowPath" : {
+                "path" : {
+                  "fsCategory" : "LOCAL",
+                  "path" : "",
+                  "timeout" : 10000,
+                  "context" : {
+                    "fsToString" : "(LOCAL, )"
+                  }
+                }
+              },
+              "workflowVersion" : "LATEST_STATE"
+            }
+          }
+        }
+      }
+    }
+  },
+  "ui_schema" : {
+    "elements" : [ {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/workflowSelection/properties/workflowPath",
+      "options" : {
+        "fileSystems" : [ "CONNECTED", "LOCAL", "SPACE", "CUSTOM_URL" ],
+        "isLocal" : true,
+        "selectionMode" : "WORKFLOW",
+        "spaceFSOptions" : {
+          "mountId" : "Local space"
+        },
+        "format" : "fileChooser"
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/workflowSelection/properties/workflowVersion",
+      "options" : {
+        "format" : "dropDown"
+      },
+      "providedOptions" : [ "possibleValues" ]
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/workflowName",
+      "options" : {
+        "hideOnNull" : true,
+        "default" : ""
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/removeIONodes",
+      "options" : {
+        "format" : "checkbox"
+      }
+    }, {
+      "type" : "HorizontalLayout",
+      "elements" : [ {
+        "type" : "Control",
+        "scope" : "#/properties/model/properties/inputIdPrefix",
+        "rule" : {
+          "effect" : "ENABLE",
+          "condition" : {
+            "scope" : "#/properties/model/properties/removeIONodes",
+            "schema" : {
+              "const" : true
+            }
+          }
+        }
+      }, {
+        "type" : "Control",
+        "scope" : "#/properties/model/properties/outputIdPrefix",
+        "rule" : {
+          "effect" : "ENABLE",
+          "condition" : {
+            "scope" : "#/properties/model/properties/removeIONodes",
+            "schema" : {
+              "const" : true
+            }
+          }
+        }
+      } ]
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/exportVariableWorkflowGotReset",
+      "options" : {
+        "format" : "checkbox"
+      }
+    } ]
+  },
+  "persist" : {
+    "type" : "object",
+    "properties" : {
+      "model" : {
+        "type" : "object",
+        "properties" : {
+          "workflowSelection" : {
+            "type" : "object",
+            "properties" : {
+              "workflowPath" : {
+                "configPaths" : [ [ "path" ] ]
+              },
+              "workflowVersion" : {
+                "configPaths" : [ [ "hubItemVersion" ] ]
+              }
+            },
+            "configKey" : "workflow-chooser"
+          },
+          "workflowName" : {
+            "configPaths" : [ [ "custom-name" ] ]
+          },
+          "removeIONodes" : {
+            "configKey" : "remove-io-nodes"
+          },
+          "inputIdPrefix" : {
+            "configKey" : "input-id-prefix"
+          },
+          "outputIdPrefix" : {
+            "configKey" : "output-id-prefix"
+          },
+          "exportVariableWorkflowGotReset" : { }
+        }
+      }
+    }
+  },
+  "globalUpdates" : [ {
+    "trigger" : {
+      "id" : "after-open-dialog"
+    },
+    "triggerInitially" : true,
+    "dependencies" : [ "#/properties/model/properties/workflowSelection/properties/workflowPath" ]
+  }, {
+    "trigger" : {
+      "scope" : "#/properties/model/properties/workflowSelection/properties/workflowPath"
+    },
+    "dependencies" : [ "#/properties/model/properties/workflowSelection/properties/workflowPath" ]
+  } ]
+}
