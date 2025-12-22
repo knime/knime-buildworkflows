@@ -48,15 +48,28 @@
  */
 package org.knime.buildworkflows.elementadder;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+import org.knime.core.data.DataTableSpec;
+import org.knime.core.data.DataType;
 import org.knime.core.data.IntValue;
+import org.knime.core.data.MissingCell;
+import org.knime.core.data.RowKey;
 import org.knime.core.data.StringValue;
+import org.knime.core.data.def.DefaultRow;
+import org.knime.core.data.def.IntCell;
+import org.knime.core.data.def.StringCell;
+import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeModel;
 import org.knime.core.node.extension.InvalidNodeFactoryExtensionException;
 import org.knime.core.node.extension.NodeFactoryProvider;
 import org.knime.core.node.extension.NodeSpecCollectionProvider;
 import org.knime.core.node.workflow.AnnotationData;
+import org.knime.core.node.workflow.NativeNodeContainer;
+import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
 import org.knime.core.node.workflow.capture.WorkflowPortObjectSpec;
@@ -86,17 +99,18 @@ public class WorkflowElementAdderNodeFactory extends DefaultNodeFactory {
         .sinceVersion(5, 10, 0) //
         .ports(ports -> {
             ports.addInputPort("Workflow", "TODO", WorkflowPortObject.TYPE);
-            ports.addInputTable("Nodes", "TODO");
+            ports.addInputTable("Nodes to add/update", "TODO");
             ports.addOutputPort("Modified Workflow", "TODO", WorkflowPortObject.TYPE);
+            ports.addOutputTable("Nodes", "TODO");
         }).model(model -> model.parametersClass(WorkflowElementAdderNodeFactory.Parameters.class) //
             .configure(WorkflowElementAdderNodeFactory::configure) //
             .execute(WorkflowElementAdderNodeFactory::execute));
 
     static class Parameters implements NodeParameters {
 
-        @Widget(title = "Factory ID Column", description = "TODO")
+        @Widget(title = "Factory- or Node-ID Column", description = "TODO")
         @ChoicesProvider(StringColumnsProvider.class)
-        String m_factoryIdColumn;
+        String m_factoryOrNodeIdColumn;
 
         @Widget(title = "X Position Column", description = "TODO")
         @ChoicesProvider(IntColumnsProvider.class)
@@ -113,7 +127,12 @@ public class WorkflowElementAdderNodeFactory extends DefaultNodeFactory {
     }
 
     static void configure(final ConfigureInput in, final ConfigureOutput out) {
-        out.setOutSpec(0, null);
+        out.setOutSpecs(null, nodesTableSpec());
+    }
+
+    static DataTableSpec nodesTableSpec() {
+        return new DataTableSpec(new String[]{"factory id", "x position", "y position", "comment"},
+            new DataType[]{StringCell.TYPE, IntCell.TYPE, IntCell.TYPE, StringCell.TYPE});
     }
 
     static void execute(final ExecuteInput in, final ExecuteOutput out) {
@@ -121,41 +140,71 @@ public class WorkflowElementAdderNodeFactory extends DefaultNodeFactory {
 
         var params = in.<Parameters> getParameters();
 
-        var factoryIdColumnIndex = nodes.getSpec().findColumnIndex(params.m_factoryIdColumn);
+        var factoryOrNodeIdColumnIndex = nodes.getSpec().findColumnIndex(params.m_factoryOrNodeIdColumn);
         var xPositionColumnIndex = nodes.getSpec().findColumnIndex(params.m_xPositionColumn);
         var yPositionColumnIndex = nodes.getSpec().findColumnIndex(params.m_yPositionColumn);
         var commentColumnIndex = nodes.getSpec().findColumnIndex(params.m_commentColumn);
 
         var wfm = ((WorkflowPortObject)in.getInPortObject(0)).getSpec().getWorkflowSegment().loadWorkflow();
         for (var row : nodes) {
-            var factoryId = ((StringValue)row.getCell(factoryIdColumnIndex)).getStringValue();
+            var factoryOrNodeId = ((StringValue)row.getCell(factoryOrNodeIdColumnIndex)).getStringValue();
             var xPosition = ((IntValue)row.getCell(xPositionColumnIndex)).getIntValue();
             var yPosition = ((IntValue)row.getCell(yPositionColumnIndex)).getIntValue();
-            var factoryClassName =
-                NodeSpecCollectionProvider.getInstance().getNodes().get(factoryId).factory().className();
-            // TODO factory settings?
-            try {
-                var factory = NodeFactoryProvider.getInstance().getNodeFactory(factoryClassName).orElseThrow();
-                var nodeId = wfm.createAndAddNode(factory);
-                var nc = wfm.getNodeContainer(nodeId);
-                nc.setUIInformation(NodeUIInformation.builder().setNodeLocation(xPosition, yPosition, 0, 0).build());
-                if (commentColumnIndex >= 0) {
-                    var comment = ((StringValue)row.getCell(commentColumnIndex)).getStringValue();
-                    var data = new AnnotationData();
-                    data.setText(comment);
-                    nc.getNodeAnnotation().copyFrom(data, false);
-                }
 
-            } catch (InstantiationException | IllegalAccessException | InvalidNodeFactoryExtensionException e) {
-                // TODO
-                throw new RuntimeException(e);
+            NodeContainer nc = null;
+            try {
+                var nodeId = NodeIDSuffix.fromString(factoryOrNodeId);
+                nc = wfm.getNodeContainer(nodeId.prependParent(wfm.getID()));
+            } catch (IllegalArgumentException e) {
+                // not a node id, continue
             }
 
+            if (nc == null) {
+                var factoryClassName =
+                    NodeSpecCollectionProvider.getInstance().getNodes().get(factoryOrNodeId).factory().className();
+                NodeFactory<NodeModel> factory;
+                try {
+                    factory = NodeFactoryProvider.getInstance().getNodeFactory(factoryClassName).orElseThrow();
+                    // TODO factory settings?
+                } catch (InstantiationException | IllegalAccessException | InvalidNodeFactoryExtensionException e) {
+                    // TODO
+                    throw new RuntimeException(e);
+                }
+                var nodeId = wfm.createAndAddNode(factory);
+                nc = wfm.getNodeContainer(nodeId);
+            }
+
+            nc.setUIInformation(NodeUIInformation.builder().setNodeLocation(xPosition, yPosition, 0, 0).build());
+            if (commentColumnIndex >= 0) {
+                var comment = ((StringValue)row.getCell(commentColumnIndex)).getStringValue();
+                var data = new AnnotationData();
+                data.setText(comment);
+                nc.getNodeAnnotation().copyFrom(data, false);
+            }
         }
+
+        var container = in.getExecutionContext().createDataContainer(nodesTableSpec());
+        for (var nc : wfm.getNodeContainers()) {
+            var factory = nc instanceof NativeNodeContainer nnc
+                ? new StringCell(nnc.getNode().getFactory().getClass().getName())
+                : new MissingCell("not a native node");
+            var bounds = nc.getUIInformation().getBounds();
+            var row = new DefaultRow(new RowKey(NodeIDSuffix.create(wfm.getID(), nc.getID()).toString()), factory,
+                new IntCell(bounds[0]), new IntCell(bounds[1]), new StringCell(nc.getNodeAnnotation().getText()));
+            container.addRowToTable(row);
+        }
+        container.close();
 
         var segment = new WorkflowSegment(wfm, List.of(), List.of(), Set.of());
         out.setOutData(
-            new WorkflowPortObject(new WorkflowPortObjectSpec(segment, "workflow name TODO", List.of(), List.of())));
+            new WorkflowPortObject(new WorkflowPortObjectSpec(segment, "workflow name TODO", List.of(), List.of())),
+            container.getTable());
+        try {
+            segment.serializeAndDisposeWorkflow();
+        } catch (IOException e) {
+            // TODO
+            throw new RuntimeException(e);
+        }
     }
 
     static class IntColumnsProvider extends CompatibleColumnsProvider {
