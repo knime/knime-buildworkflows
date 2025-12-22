@@ -82,6 +82,9 @@ import org.knime.node.DefaultNode;
 import org.knime.node.DefaultNodeFactory;
 import org.knime.node.parameters.NodeParameters;
 import org.knime.node.parameters.Widget;
+import org.knime.node.parameters.layout.After;
+import org.knime.node.parameters.layout.Layout;
+import org.knime.node.parameters.layout.Section;
 import org.knime.node.parameters.widget.choices.ChoicesProvider;
 import org.knime.node.parameters.widget.choices.util.CompatibleColumnsProvider;
 
@@ -100,6 +103,7 @@ public class WorkflowElementAdderNodeFactory extends DefaultNodeFactory {
         .ports(ports -> {
             ports.addInputPort("Workflow", "TODO", WorkflowPortObject.TYPE);
             ports.addInputTable("Nodes to add/update", "TODO");
+            ports.addInputTable("Connections to add", "TODO");
             ports.addOutputPort("Modified Workflow", "TODO", WorkflowPortObject.TYPE);
             ports.addOutputTable("Nodes", "TODO");
         }).model(model -> model.parametersClass(WorkflowElementAdderNodeFactory.Parameters.class) //
@@ -108,21 +112,56 @@ public class WorkflowElementAdderNodeFactory extends DefaultNodeFactory {
 
     static class Parameters implements NodeParameters {
 
-        @Widget(title = "Factory- or Node-ID Column", description = "TODO")
-        @ChoicesProvider(StringColumnsProvider.class)
+        @Section(title = "Nodes", description = "TODO")
+        interface Nodes {
+
+        }
+
+        @Widget(title = "Factory- or node-ID column", description = "TODO")
+        @ChoicesProvider(StringColumnsProvider1.class)
+        @Layout(Nodes.class)
         String m_factoryOrNodeIdColumn;
 
-        @Widget(title = "X Position Column", description = "TODO")
-        @ChoicesProvider(IntColumnsProvider.class)
+        @Widget(title = "X position column", description = "TODO")
+        @ChoicesProvider(IntColumnsProvider1.class)
+        @Layout(Nodes.class)
         String m_xPositionColumn;
 
-        @Widget(title = "Y Position Column", description = "TODO")
-        @ChoicesProvider(IntColumnsProvider.class)
+        @Widget(title = "Y position column", description = "TODO")
+        @ChoicesProvider(IntColumnsProvider1.class)
+        @Layout(Nodes.class)
         String m_yPositionColumn;
 
         @Widget(title = "Comment", description = "TODO")
-        @ChoicesProvider(StringColumnsProvider.class)
+        @ChoicesProvider(StringColumnsProvider1.class)
+        @Layout(Nodes.class)
         String m_commentColumn;
+
+        @Section(title = "Connections", description = "TODO")
+        @After(Nodes.class)
+        interface Connections {
+
+        }
+
+        @Widget(title = "Source node ID column", description = "TODO")
+        @ChoicesProvider(StringColumnsProvider2.class)
+        @Layout(Connections.class)
+        String m_sourceNodeIdColumn;
+
+        @Widget(title = "Source port index column", description = "TODO")
+        @ChoicesProvider(IntColumnsProvider2.class)
+        @Layout(Connections.class)
+        String m_sourcePortIndexColumn;
+
+        @Widget(title = "Destination node ID column", description = "TODO")
+        @ChoicesProvider(StringColumnsProvider2.class)
+        @Layout(Connections.class)
+        String m_destinationNodeIdColumn;
+
+        @Widget(title = "Destination port index column", description = "TODO")
+        @ChoicesProvider(IntColumnsProvider2.class)
+        @Layout(Connections.class)
+        String m_destinationPortIndexColumn;
 
     }
 
@@ -136,58 +175,88 @@ public class WorkflowElementAdderNodeFactory extends DefaultNodeFactory {
     }
 
     static void execute(final ExecuteInput in, final ExecuteOutput out) {
-        var nodes = in.getInTable(1);
-
         var params = in.<Parameters> getParameters();
 
+        var nodes = in.getInTable(1);
         var factoryOrNodeIdColumnIndex = nodes.getSpec().findColumnIndex(params.m_factoryOrNodeIdColumn);
         var xPositionColumnIndex = nodes.getSpec().findColumnIndex(params.m_xPositionColumn);
         var yPositionColumnIndex = nodes.getSpec().findColumnIndex(params.m_yPositionColumn);
         var commentColumnIndex = nodes.getSpec().findColumnIndex(params.m_commentColumn);
 
         var wfm = ((WorkflowPortObject)in.getInPortObject(0)).getSpec().getWorkflowSegment().loadWorkflow();
-        for (var row : nodes) {
-            var factoryOrNodeId = ((StringValue)row.getCell(factoryOrNodeIdColumnIndex)).getStringValue();
-            var xPosition = ((IntValue)row.getCell(xPositionColumnIndex)).getIntValue();
-            var yPosition = ((IntValue)row.getCell(yPositionColumnIndex)).getIntValue();
-
-            NodeContainer nc = null;
-            try {
-                var nodeId = NodeIDSuffix.fromString(factoryOrNodeId);
-                nc = wfm.getNodeContainer(nodeId.prependParent(wfm.getID()));
-            } catch (IllegalArgumentException e) {
-                // not a node id, continue
-            }
-
-            if (nc == null) {
-                var factoryClassName =
-                    NodeSpecCollectionProvider.getInstance().getNodes().get(factoryOrNodeId).factory().className();
-                NodeFactory<NodeModel> factory;
+        if (factoryOrNodeIdColumnIndex >= 0) {
+            for (var nodeRow : nodes) {
+                var factoryOrNodeId = ((StringValue)nodeRow.getCell(factoryOrNodeIdColumnIndex)).getStringValue();
+                NodeContainer nc = null;
                 try {
-                    factory = NodeFactoryProvider.getInstance().getNodeFactory(factoryClassName).orElseThrow();
-                    // TODO factory settings?
-                } catch (InstantiationException | IllegalAccessException | InvalidNodeFactoryExtensionException e) {
-                    // TODO
-                    throw new RuntimeException(e);
+                    var nodeId = NodeIDSuffix.fromString(factoryOrNodeId);
+                    nc = wfm.getNodeContainer(nodeId.prependParent(wfm.getID()));
+                } catch (IllegalArgumentException e) {
+                    // not a node id, continue
                 }
-                var nodeId = wfm.createAndAddNode(factory);
-                nc = wfm.getNodeContainer(nodeId);
-            }
 
-            nc.setUIInformation(NodeUIInformation.builder().setNodeLocation(xPosition, yPosition, 0, 0).build());
-            if (commentColumnIndex >= 0) {
-                var comment = ((StringValue)row.getCell(commentColumnIndex)).getStringValue();
-                var data = new AnnotationData();
-                data.setText(comment);
-                nc.getNodeAnnotation().copyFrom(data, false);
+                if (nc == null) {
+                    var factoryClassName =
+                        NodeSpecCollectionProvider.getInstance().getNodes().get(factoryOrNodeId).factory().className();
+                    NodeFactory<NodeModel> factory;
+                    try {
+                        factory = NodeFactoryProvider.getInstance().getNodeFactory(factoryClassName).orElseThrow();
+                        // TODO factory settings?
+                    } catch (InstantiationException | IllegalAccessException | InvalidNodeFactoryExtensionException e) {
+                        // TODO
+                        throw new RuntimeException(e);
+                    }
+                    var nodeId = wfm.createAndAddNode(factory);
+                    nc = wfm.getNodeContainer(nodeId);
+                }
+
+                if (xPositionColumnIndex >= 0 || yPositionColumnIndex >= 0) {
+                    var xPosition = ((IntValue)nodeRow.getCell(xPositionColumnIndex)).getIntValue();
+                    var yPosition = ((IntValue)nodeRow.getCell(yPositionColumnIndex)).getIntValue();
+                    nc.setUIInformation(
+                        NodeUIInformation.builder().setNodeLocation(xPosition, yPosition, 0, 0).build());
+                }
+                if (commentColumnIndex >= 0) {
+                    var comment = ((StringValue)nodeRow.getCell(commentColumnIndex)).getStringValue();
+                    var data = new AnnotationData();
+                    data.setText(comment);
+                    nc.getNodeAnnotation().copyFrom(data, false);
+                }
+            }
+        }
+
+        var connections = in.getInTable(2);
+        var sourceNodeIdColumnIndex = connections.getSpec().findColumnIndex(params.m_sourceNodeIdColumn);
+        var sourcePortIndexColumnIndex = connections.getSpec().findColumnIndex(params.m_sourcePortIndexColumn);
+        var destinationNodeIdColumnIndex = connections.getSpec().findColumnIndex(params.m_destinationNodeIdColumn);
+        var destinationPortIndexColumnIndex =
+            connections.getSpec().findColumnIndex(params.m_destinationPortIndexColumn);
+        if (sourceNodeIdColumnIndex >= 0 && sourcePortIndexColumnIndex >= 0 && destinationNodeIdColumnIndex >= 0
+            && destinationPortIndexColumnIndex >= 0) {
+            for (var connectionRow : connections) {
+                try {
+                    var sourceNodeId = NodeIDSuffix
+                        .fromString(((StringValue)connectionRow.getCell(sourceNodeIdColumnIndex)).getStringValue())
+                        .prependParent(wfm.getID());
+                    var sourcePortIndex = ((IntValue)connectionRow.getCell(sourcePortIndexColumnIndex)).getIntValue();
+                    var destinationNodeId = NodeIDSuffix
+                        .fromString(((StringValue)connectionRow.getCell(destinationNodeIdColumnIndex)).getStringValue())
+                        .prependParent(wfm.getID());
+                    var destinationPortIndex =
+                        ((IntValue)connectionRow.getCell(destinationPortIndexColumnIndex)).getIntValue();
+                    wfm.addConnection(sourceNodeId, sourcePortIndex, destinationNodeId, destinationPortIndex);
+                } catch (Exception e) {
+                    // TODO
+                    out.setWarningMessage("Some connections could not be added");
+                }
             }
         }
 
         var container = in.getExecutionContext().createDataContainer(nodesTableSpec());
         for (var nc : wfm.getNodeContainers()) {
-            var factory = nc instanceof NativeNodeContainer nnc
-                ? new StringCell(nnc.getNode().getFactory().getClass().getName())
-                : new MissingCell("not a native node");
+            var factory =
+                nc instanceof NativeNodeContainer nnc ? new StringCell(nnc.getNode().getFactory().getClass().getName())
+                    : new MissingCell("not a native node");
             var bounds = nc.getUIInformation().getBounds();
             var row = new DefaultRow(new RowKey(NodeIDSuffix.create(wfm.getID(), nc.getID()).toString()), factory,
                 new IntCell(bounds[0]), new IntCell(bounds[1]), new StringCell(nc.getNodeAnnotation().getText()));
@@ -207,9 +276,9 @@ public class WorkflowElementAdderNodeFactory extends DefaultNodeFactory {
         }
     }
 
-    static class IntColumnsProvider extends CompatibleColumnsProvider {
+    static class IntColumnsProvider1 extends CompatibleColumnsProvider {
 
-        protected IntColumnsProvider() {
+        protected IntColumnsProvider1() {
             super(IntValue.class);
         }
 
@@ -219,15 +288,39 @@ public class WorkflowElementAdderNodeFactory extends DefaultNodeFactory {
         }
     }
 
-    static class StringColumnsProvider extends CompatibleColumnsProvider {
+    static class StringColumnsProvider1 extends CompatibleColumnsProvider {
 
-        protected StringColumnsProvider() {
+        protected StringColumnsProvider1() {
             super(StringValue.class);
         }
 
         @Override
         public int getInputTableIndex() {
             return 1;
+        }
+    }
+
+    static class IntColumnsProvider2 extends CompatibleColumnsProvider {
+
+        protected IntColumnsProvider2() {
+            super(IntValue.class);
+        }
+
+        @Override
+        public int getInputTableIndex() {
+            return 2;
+        }
+    }
+
+    static class StringColumnsProvider2 extends CompatibleColumnsProvider {
+
+        protected StringColumnsProvider2() {
+            super(StringValue.class);
+        }
+
+        @Override
+        public int getInputTableIndex() {
+            return 2;
         }
     }
 
