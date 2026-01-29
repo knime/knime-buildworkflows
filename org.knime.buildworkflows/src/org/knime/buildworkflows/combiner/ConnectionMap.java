@@ -97,6 +97,13 @@ class ConnectionMap {
     }
 
     /**
+     * @return the connections
+     */
+    List<Pair<String, String>> getConnections() {
+        return m_connections;
+    }
+
+    /**
      * Gets all configured connections for the given outputs and inputs, based on their respective id.
      *
      * @param out the available outputs to get the connections for (deterministic iteration in the order ot the ports
@@ -128,6 +135,23 @@ class ConnectionMap {
         return res;
     }
 
+    static Optional<String> getDefaultPairWiseConnection(final String in, final Map<String, Output> outs,
+        final Map<String, Input> ins) {
+        Iterator<Entry<String, Output>> outIt = outs.entrySet().iterator();
+        Iterator<Entry<String, Input>> inIt = ins.entrySet().iterator();
+        while (inIt.hasNext() && outIt.hasNext()) {
+            Entry<String, Output> output = outIt.next();
+            Entry<String, Input> input = inIt.next();
+            if (input.getKey().equals(in)) {
+                //check port type compatibility
+                if (output.getValue().getType().equals(input.getValue().getType())) {
+                    return Optional.of(output.getKey());
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
     /**
      * Gets the output for a given input as configured by this connection map if<br/>
      * 1. there is connection to the given input id<br/>
@@ -146,19 +170,7 @@ class ConnectionMap {
         assert ins.keySet().contains(in);
         if (m_connections == null) {
             //default pair-wise connection
-            Iterator<Entry<String, Output>> outIt = outs.entrySet().iterator();
-            Iterator<Entry<String, Input>> inIt = ins.entrySet().iterator();
-            while (inIt.hasNext() && outIt.hasNext()) {
-                Entry<String, Output> output = outIt.next();
-                Entry<String, Input> input = inIt.next();
-                if (input.getKey().equals(in)) {
-                    //check port type compatibility
-                    if (output.getValue().getType().equals(input.getValue().getType())) {
-                        return Optional.of(output.getKey());
-                    }
-                }
-            }
-            return Optional.empty();
+            return getDefaultPairWiseConnection(in, outs, ins);
         } else {
             return m_connections.stream().filter(c -> c.getSecond().equals(in)).filter(p -> {
                 //make sure that

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="http://www.knime.org/2008/09/XMLConfig" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.knime.org/2008/09/XMLConfig http://www.knime.org/XMLConfig_2008_09.xsd" key="settings.xml">
+    <entry key="node_file" type="xstring" value="settings.xml"/>
+    <config key="flow_stack"/>
+    <config key="internal_node_subsettings">
+        <entry key="memory_policy" type="xstring" value="CacheSmallInMemory"/>
+    </config>
+    <config key="model">
+        <config key="connection_maps">
+            <entry key="num_connection_maps" type="xint" value="4"/>
+            <config key="connection_map_0">
+                <entry key="num_connections" type="xint" value="1"/>
+                <entry key="input_id_0" type="xstring" value="Input"/>
+                <entry key="output_id_0" type="xstring" value="Output"/>
+            </config>
+            <config key="connection_map_1">
+                <entry key="num_connections" type="xint" value="0"/>
+            </config>
+            <config key="connection_map_2">
+                <entry key="num_connections" type="xint" value="3"/>
+                <entry key="input_id_0" type="xstring" value="Custom Input"/>
+                <entry key="output_id_0" type="xstring" value="Output 2"/>
+                <entry key="input_id_1" type="xstring" value="Custom Input 3"/>
+                <entry key="output_id_1" type="xstring" value="Output 2"/>
+                <entry key="input_id_2" type="xstring" value="Custom Input 5"/>
+                <entry key="output_id_2" type="xstring" value="Output 2"/>
+            </config>
+            <config key="connection_map_3">
+                <entry key="num_connections" type="xint" value="4"/>
+                <entry key="input_id_0" type="xstring" value="Custom Input"/>
+                <entry key="output_id_0" type="xstring" value="Custom Output 5"/>
+                <entry key="input_id_1" type="xstring" value="Custom Input 2222222"/>
+                <entry key="output_id_1" type="xstring" value="Custom Output 3"/>
+                <entry key="input_id_2" type="xstring" value="Custom Input 4"/>
+                <entry key="output_id_2" type="xstring" value="Custom Output"/>
+                <entry key="input_id_3" type="xstring" value="Custom Input 5"/>
+                <entry key="output_id_3" type="xstring" value="Custom Output 2"/>
+            </config>
+        </config>
+    </config>
+    <entry key="customDescription" type="xstring" isnull="true" value=""/>
+    <entry key="state" type="xstring" value="CONFIGURED"/>
+    <entry key="factory" type="xstring" value="org.knime.buildworkflows.combiner.WorkflowCombinerNodeFactory"/>
+    <entry key="node-name" type="xstring" value="Workflow Combiner"/>
+    <entry key="node-bundle-name" type="xstring" value="KNIME Integrated Deployment"/>
+    <entry key="node-bundle-symbolic-name" type="xstring" value="org.knime.buildworkflows"/>
+    <entry key="node-bundle-vendor" type="xstring" value="KNIME AG, Zurich, Switzerland"/>
+    <entry key="node-bundle-version" type="xstring" value="5.10.0.v202601271422"/>
+    <entry key="node-feature-name" type="xstring" value="KNIME Integrated Deployment"/>
+    <entry key="node-feature-symbolic-name" type="xstring" value="org.knime.features.buildworkflows.feature.group"/>
+    <entry key="node-feature-vendor" type="xstring" value="KNIME AG, Zurich, Switzerland"/>
+    <entry key="node-feature-version" type="xstring" value="5.10.0.v202601271422"/>
+    <config key="factory_settings"/>
+    <config key="node_creation_config">
+        <config key="workflow model">
+            <config key="port_0">
+                <entry key="object_class" type="xstring" value="org.knime.core.node.workflow.capture.WorkflowPortObject"/>
+            </config>
+            <config key="port_1">
+                <entry key="object_class" type="xstring" value="org.knime.core.node.workflow.capture.WorkflowPortObject"/>
+            </config>
+            <config key="port_2">
+                <entry key="object_class" type="xstring" value="org.knime.core.node.workflow.capture.WorkflowPortObject"/>
+            </config>
+        </config>
+        <config key="output"/>
+    </config>
+    <entry key="name" type="xstring" value="Workflow Combiner"/>
+    <entry key="hasContent" type="xboolean" value="false"/>
+    <entry key="isInactive" type="xboolean" value="false"/>
+    <config key="ports">
+        <config key="port_1">
+            <entry key="index" type="xint" value="1"/>
+            <entry key="port_dir_location" type="xstring" isnull="true" value=""/>
+        </config>
+    </config>
+    <config key="filestores">
+        <entry key="file_store_location" type="xstring" isnull="true" value=""/>
+        <entry key="file_store_id" type="xstring" isnull="true" value=""/>
+    </config>
+</config>
