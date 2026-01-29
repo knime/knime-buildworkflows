@@ -106,6 +106,14 @@ class ConnectionMaps {
     }
 
     /**
+     *
+     * @return the number of connection maps
+     */
+    int getNumberOfConnectionMaps() {
+        return m_maps != null ? m_maps.length : 0;
+    }
+
+    /**
      * Saves the list of connection maps to a settings object.
      *
      * @param settings

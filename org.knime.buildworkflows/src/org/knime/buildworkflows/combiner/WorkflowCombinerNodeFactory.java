@@ -48,22 +48,42 @@
  */
 package org.knime.buildworkflows.combiner;
 
+import static org.knime.node.impl.description.PortDescription.dynamicPort;
+import static org.knime.node.impl.description.PortDescription.fixedPort;
+
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.knime.core.node.ConfigurableNodeFactory;
+import org.knime.core.node.NodeDescription;
 import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeView;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
+import org.knime.core.webui.node.dialog.NodeDialog;
+import org.knime.core.webui.node.dialog.NodeDialogFactory;
+import org.knime.core.webui.node.dialog.NodeDialogManager;
+import org.knime.core.webui.node.dialog.SettingsType;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultKaiNodeInterface;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeDialog;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterface;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterfaceFactory;
+import org.knime.node.impl.description.DefaultNodeDescriptionUtil;
+import org.knime.node.impl.description.PortDescription;
 
 /**
  * Workflow combiner node.
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
+ * @author Robin Gerling, KNIME GmbH, Konstanz, Germany
+ * @author AI Migration Pipeline v1.2
  */
-public class WorkflowCombinerNodeFactory extends ConfigurableNodeFactory<NodeModel> {
+@SuppressWarnings("restriction")
+public class WorkflowCombinerNodeFactory extends ConfigurableNodeFactory<NodeModel>
+    implements NodeDialogFactory, KaiNodeInterfaceFactory {
 
     @Override
     protected Optional<PortsConfigurationBuilder> createPortsConfigBuilder() {
@@ -80,11 +100,6 @@ public class WorkflowCombinerNodeFactory extends ConfigurableNodeFactory<NodeMod
     }
 
     @Override
-    protected NodeDialogPane createNodeDialogPane(final NodeCreationConfiguration creationConfig) {
-        return new WorkflowCombinerNodeDialog();
-    }
-
-    @Override
     protected int getNrNodeViews() {
         return 0;
     }
@@ -97,6 +112,67 @@ public class WorkflowCombinerNodeFactory extends ConfigurableNodeFactory<NodeMod
     @Override
     protected boolean hasDialog() {
         return true;
+    }
+
+    private static final String NODE_NAME = "Workflow Combiner";
+
+    private static final String NODE_ICON = "./workflow_combiner.png";
+
+    private static final String SHORT_DESCRIPTION = """
+            Concatenates two workflow segments.
+            """;
+
+    private static final String FULL_DESCRIPTION = """
+            Allows to connect various workflows into one workflow. Free output ports from one workflow are connected
+                to the free input ports of the consecutive workflow. The actual pairing of those output and input ports
+                can be configured. <br /> Please note that the workflow name as well as the workflow editor settings
+                (such as grid or connection settings) of the result workflow will be inherited from the workflow at the
+                first input port.
+            """;
+
+    private static final List<PortDescription> INPUT_PORTS = List.of(fixedPort("First workflow", """
+            First workflow to be connected.
+            """), fixedPort("Second workflow", """
+            Second workflow to be connected.
+            """), dynamicPort("workflow model", "Additional workflow", """
+            Workflow to be connected to its predecessor.
+            """));
+
+    private static final List<PortDescription> OUTPUT_PORTS = List.of(fixedPort("Connected workflow", """
+            Workflow derived by connecting all input workflows in order of their appearance.
+            """));
+
+    @Override
+    public NodeDialogPane createNodeDialogPane(final NodeCreationConfiguration creationConfig) {
+        return NodeDialogManager.createLegacyFlowVariableNodeDialog(createNodeDialog());
+    }
+
+    @Override
+    public NodeDialog createNodeDialog() {
+        return new DefaultNodeDialog(SettingsType.MODEL, WorkflowCombinerNodeParameters.class);
+    }
+
+    @Override
+    public NodeDescription createNodeDescription() {
+        return DefaultNodeDescriptionUtil.createNodeDescription( //
+            NODE_NAME, //
+            NODE_ICON, //
+            INPUT_PORTS, //
+            OUTPUT_PORTS, //
+            SHORT_DESCRIPTION, //
+            FULL_DESCRIPTION, //
+            List.of(), //
+            WorkflowCombinerNodeParameters.class, //
+            null, //
+            NodeType.Manipulator, //
+            List.of(), //
+            null //
+        );
+    }
+
+    @Override
+    public KaiNodeInterface createKaiNodeInterface() {
+        return new DefaultKaiNodeInterface(Map.of(SettingsType.MODEL, WorkflowCombinerNodeParameters.class));
     }
 
 }

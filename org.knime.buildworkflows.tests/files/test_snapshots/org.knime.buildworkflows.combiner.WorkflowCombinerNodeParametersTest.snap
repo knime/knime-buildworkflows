@@ -1,0 +1,176 @@
+{
+  "data" : {
+    "model" : {
+      "workflowConnections" : [ ]
+    }
+  },
+  "schema" : {
+    "type" : "object",
+    "properties" : {
+      "model" : {
+        "type" : "object",
+        "properties" : {
+          "missingWorkflowAtIndexMessage" : {
+            "type" : "object"
+          },
+          "workflowConnections" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "hasNoInputs" : {
+                  "type" : "boolean",
+                  "default" : false
+                },
+                "hasNoInputsMessage" : {
+                  "type" : "object"
+                },
+                "index" : {
+                  "type" : "integer",
+                  "format" : "int32",
+                  "default" : 0
+                },
+                "portConnections" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "inputPortName" : {
+                        "type" : "string"
+                      },
+                      "outputPortName" : {
+                        "type" : "object",
+                        "properties" : {
+                          "regularChoice" : {
+                            "type" : "string"
+                          },
+                          "specialChoice" : {
+                            "oneOf" : [ {
+                              "const" : "NONE",
+                              "title" : "None"
+                            } ]
+                          }
+                        },
+                        "title" : "Output port name",
+                        "description" : "The output port of the first workflow.",
+                        "default" : {
+                          "specialChoice" : "NONE"
+                        }
+                      }
+                    }
+                  },
+                  "title" : "Port connections",
+                  "description" : "<ul><li>\n<b>Default configuration:</b> By default (i.e., if no manual configuration is applied), the inputs of each workflow are automatically connected to the outputs of the predecessor workflow, i.e., the workflow connected to the previous input port. The <tt>i</tt>-th output of workflow <tt>j</tt> is connected to the <tt>i</tt>-th input of workflow <tt>j+1</tt>. If this default pairing of inputs and outputs cannot be applied (for example, due to a mismatching number of inputs and outputs or incompatible port types), the node cannot be executed and requires manual configuration.\n</li><li>\n<b>Manual configuration:</b> If the default configuration is not applicable or not desired, the output-to-input pairing can be chosen manually. This is done by selecting the outputs that are to be connected to inputs of the subsequent workflow. Only compatible port types are eligible.\n</li></ul>\n",
+                  "default" : [ ]
+                }
+              }
+            },
+            "title" : "Workflow connections",
+            "description" : "For each pair of consecutive workflows (in the order of the workflow ports), select if and how to connect the outputs of the first workflow to the inputs of the second workflow.",
+            "default" : [ ]
+          }
+        }
+      }
+    }
+  },
+  "ui_schema" : {
+    "elements" : [ {
+      "type" : "Control",
+      "id" : "#/properties/model/properties/missingWorkflowAtIndexMessage",
+      "options" : {
+        "format" : "textMessage"
+      },
+      "providedOptions" : [ "message" ]
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/workflowConnections",
+      "options" : {
+        "detail" : [ {
+          "type" : "Control",
+          "id" : "#/properties/hasNoInputsMessage",
+          "options" : {
+            "format" : "textMessage"
+          },
+          "providedOptions" : [ "message" ]
+        }, {
+          "type" : "Control",
+          "scope" : "#/properties/portConnections",
+          "options" : {
+            "detail" : [ {
+              "type" : "Control",
+              "scope" : "#/properties/outputPortName",
+              "options" : {
+                "format" : "singleSelection",
+                "specialChoices" : [ {
+                  "id" : "NONE",
+                  "text" : "None"
+                } ]
+              },
+              "providedOptions" : [ "possibleValues" ]
+            } ],
+            "arrayElementTitle" : "Port Connection",
+            "hasFixedSize" : true
+          },
+          "providedOptions" : [ "arrayElementTitle" ],
+          "rule" : {
+            "effect" : "HIDE",
+            "condition" : {
+              "scope" : "#/properties/hasNoInputs",
+              "schema" : {
+                "const" : true
+              }
+            }
+          }
+        } ],
+        "arrayElementTitle" : "Workflow Connection",
+        "hasFixedSize" : true,
+        "useSectionLayout" : true
+      },
+      "providedOptions" : [ "arrayElementTitle" ],
+      "rule" : {
+        "effect" : "HIDE",
+        "condition" : {
+          "schema" : {
+            "not" : { }
+          }
+        }
+      }
+    } ]
+  },
+  "persist" : {
+    "type" : "object",
+    "properties" : {
+      "model" : {
+        "type" : "object",
+        "properties" : {
+          "missingWorkflowAtIndexMessage" : { },
+          "workflowConnections" : {
+            "configPaths" : [ ],
+            "route" : [ "connection_maps" ]
+          }
+        }
+      }
+    }
+  },
+  "initialUpdates" : [ {
+    "scope" : "#/properties/model/properties/workflowConnections",
+    "values" : [ {
+      "indices" : [ ],
+      "value" : [ ]
+    } ]
+  }, {
+    "id" : "#/properties/model/properties/missingWorkflowAtIndexMessage",
+    "providedOptionName" : "message",
+    "values" : [ {
+      "indices" : [ ],
+      "value" : null
+    } ]
+  } ],
+  "globalUpdates" : [ {
+    "trigger" : {
+      "id" : "after-open-dialog"
+    },
+    "triggerInitially" : true,
+    "dependencies" : [ "#/properties/model/properties/workflowConnections/items/properties/index", "#/properties/model/properties/workflowConnections/items/properties/portConnections/items/properties/inputPortName" ]
+  } ]
+}

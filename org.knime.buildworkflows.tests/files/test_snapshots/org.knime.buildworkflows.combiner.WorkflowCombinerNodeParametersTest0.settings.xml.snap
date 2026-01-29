@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="http://www.knime.org/2008/09/XMLConfig" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.knime.org/2008/09/XMLConfig http://www.knime.org/XMLConfig_2008_09.xsd" key="test">
+    <config key="connection_maps">
+        <entry key="num_connection_maps" type="xint" value="4"/>
+        <config key="connection_map_0">
+            <entry key="num_connections" type="xint" value="1"/>
+            <entry key="input_id_0" type="xstring" value="Input"/>
+            <entry key="output_id_0" type="xstring" value="Output"/>
+        </config>
+        <config key="connection_map_1">
+            <entry key="num_connections" type="xint" value="0"/>
+        </config>
+        <config key="connection_map_2">
+            <entry key="num_connections" type="xint" value="3"/>
+            <entry key="input_id_0" type="xstring" value="Custom Input"/>
+            <entry key="output_id_0" type="xstring" value="Output 2"/>
+            <entry key="input_id_1" type="xstring" value="Custom Input 3"/>
+            <entry key="output_id_1" type="xstring" value="Output 2"/>
+            <entry key="input_id_2" type="xstring" value="Custom Input 5"/>
+            <entry key="output_id_2" type="xstring" value="Output 2"/>
+        </config>
+        <config key="connection_map_3">
+            <entry key="num_connections" type="xint" value="4"/>
+            <entry key="input_id_0" type="xstring" value="Custom Input"/>
+            <entry key="output_id_0" type="xstring" value="Custom Output 5"/>
+            <entry key="input_id_1" type="xstring" value="Custom Input 2222222"/>
+            <entry key="output_id_1" type="xstring" value="Custom Output 3"/>
+            <entry key="input_id_2" type="xstring" value="Custom Input 4"/>
+            <entry key="output_id_2" type="xstring" value="Custom Output"/>
+            <entry key="input_id_3" type="xstring" value="Custom Input 5"/>
+            <entry key="output_id_3" type="xstring" value="Custom Output 2"/>
+        </config>
+    </config>
+</config>
