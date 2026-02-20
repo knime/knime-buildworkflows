@@ -1,0 +1,588 @@
+{
+  "data" : {
+    "model" : {
+      "folder" : {
+        "file" : {
+          "path" : {
+            "fsCategory" : "LOCAL",
+            "path" : "",
+            "timeout" : 10000,
+            "context" : {
+              "fsToString" : "(LOCAL, )"
+            }
+          }
+        },
+        "createMissingFolders" : false
+      },
+      "existsOption" : "FAIL",
+      "useCustomName" : false,
+      "customName" : "workflow",
+      "outputMode" : "WRITE",
+      "doUpdateTemplateLinks" : false,
+      "doRemoveTemplateLinks" : false,
+      "inputNodes" : [ ],
+      "outputNodes" : [ ]
+    }
+  },
+  "schema" : {
+    "type" : "object",
+    "properties" : {
+      "model" : {
+        "type" : "object",
+        "properties" : {
+          "customName" : {
+            "type" : "string",
+            "title" : "Custom workflow name",
+            "description" : "A customizable name for the to-be-written workflow.\n",
+            "default" : "workflow"
+          },
+          "doRemoveTemplateLinks" : {
+            "type" : "boolean",
+            "title" : "Disconnect links of components and metanodes",
+            "description" : "Whether to disconnect (remove) links of linked metanodes and components before writing the workflow\nsegment.\n",
+            "default" : false
+          },
+          "doUpdateTemplateLinks" : {
+            "type" : "boolean",
+            "title" : "Update links of components and metanodes",
+            "description" : "Whether to update linked metanodes and components before writing the workflow segment.\nIf this is enabled and links are also set to be disconnected, the metanodes/components will first be\nupdated and then disconnected.\n",
+            "default" : false
+          },
+          "existsOption" : {
+            "oneOf" : [ {
+              "const" : "FAIL",
+              "title" : "Fail"
+            }, {
+              "const" : "OVERWRITE",
+              "title" : "Overwrite"
+            } ],
+            "title" : "If exists",
+            "description" : "Specify the behavior of the node in case the output file already exists.\n\n<ul>\n<li><b>Fail</b>: Will issue an error during the node's execution to prevent unintentional overwrite.\n</li>\n<li><b>Overwrite</b>: Will replace any existing workflow.\n</li>\n</ul>",
+            "default" : "FAIL"
+          },
+          "folder" : {
+            "type" : "object",
+            "properties" : {
+              "createMissingFolders" : {
+                "type" : "boolean",
+                "title" : "Create missing folders",
+                "description" : "If enabled, missing folders in the specified path will be created automatically.",
+                "default" : false
+              },
+              "file" : {
+                "type" : "object",
+                "properties" : {
+                  "path" : {
+                    "type" : "object",
+                    "default" : {
+                      "fsCategory" : "LOCAL",
+                      "path" : "",
+                      "timeout" : 10000,
+                      "context" : {
+                        "fsToString" : "(LOCAL, )"
+                      }
+                    }
+                  }
+                },
+                "title" : "Folder",
+                "description" : "Enter a path to a folder where the workflow should be written to.",
+                "default" : {
+                  "path" : {
+                    "fsCategory" : "LOCAL",
+                    "path" : "",
+                    "timeout" : 10000,
+                    "context" : {
+                      "fsToString" : "(LOCAL, )"
+                    }
+                  }
+                }
+              }
+            },
+            "default" : {
+              "file" : {
+                "path" : {
+                  "fsCategory" : "LOCAL",
+                  "path" : "",
+                  "timeout" : 10000,
+                  "context" : {
+                    "fsToString" : "(LOCAL, )"
+                  }
+                }
+              },
+              "createMissingFolders" : false
+            }
+          },
+          "inputNodes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "inputId" : {
+                  "type" : "string",
+                  "title" : "Input ID",
+                  "description" : "The identifier for this input port."
+                },
+                "nodeConfigClass" : {
+                  "oneOf" : [ {
+                    "const" : "NONE",
+                    "title" : "None"
+                  }, {
+                    "const" : "WORKFLOW_INPUT",
+                    "title" : "Workflow Input"
+                  }, {
+                    "const" : "TABLE_INPUT",
+                    "title" : "Container Input (Table)"
+                  }, {
+                    "const" : "ROW_INPUT",
+                    "title" : "Container Input (Row)"
+                  } ],
+                  "title" : "Node type",
+                  "description" : "The type of node to add for this input.",
+                  "default" : "NONE"
+                },
+                "parameterName" : {
+                  "type" : "string",
+                  "title" : "Parameter name",
+                  "description" : "The name of the input node parameter."
+                }
+              }
+            },
+            "title" : "Add input nodes",
+            "description" : "Allows one to add input nodes connected to the workflow inputs prior to writing. Depending on the selected\nnode, there is a limited set of options available to pre-configure the node to be added. Furthermore, if\ntabular input data is stored with the input, it is used as example input data for added input nodes.\n",
+            "default" : [ ]
+          },
+          "missingInputPortsMessage" : {
+            "type" : "object"
+          },
+          "missingOutputPortsMessage" : {
+            "type" : "object"
+          },
+          "missingWorkflowInputMessage" : {
+            "type" : "object"
+          },
+          "outputMode" : {
+            "oneOf" : [ {
+              "const" : "WRITE",
+              "title" : "Write workflow"
+            }, {
+              "const" : "OPEN",
+              "title" : "Write workflow and open in explorer"
+            }, {
+              "const" : "EXPORT",
+              "title" : "Export workflow as knwf archive"
+            } ],
+            "title" : "Output",
+            "description" : "Select how the workflow should be written.\n\n<ul>\n<li><b>Write workflow</b>: If selected, the workflow will be written into a folder and the KNIME Explorer view will be\nrefreshed.\n</li>\n<li><b>Write workflow and open in explorer</b>: If selected, the workflow will be written into a folder, the KNIME Explorer view will be\nrefreshed and the written workflow will be opened in KNIME Analytics Platform.\n</li>\n<li><b>Export workflow as knwf archive</b>: If selected, the workflow will be written as a .knwf archive, just as if it were exported from\nKNIME Analytics Platform. This archive can be imported into other installations of KNIME\nAnalytics Platform.\n</li>\n</ul>",
+            "default" : "WRITE"
+          },
+          "outputNodes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "nodeConfigClass" : {
+                  "oneOf" : [ {
+                    "const" : "NONE",
+                    "title" : "None"
+                  }, {
+                    "const" : "WORKFLOW_OUTPUT",
+                    "title" : "Workflow Output"
+                  }, {
+                    "const" : "TABLE_OUTPUT",
+                    "title" : "Container Output (Table)"
+                  }, {
+                    "const" : "ROW_OUTPUT",
+                    "title" : "Container Output (Row)"
+                  } ],
+                  "title" : "Node type",
+                  "description" : "The type of node to add for this output.",
+                  "default" : "NONE"
+                },
+                "outputId" : {
+                  "type" : "string",
+                  "title" : "Output ID",
+                  "description" : "The identifier for this output port."
+                },
+                "parameterName" : {
+                  "type" : "string",
+                  "title" : "Parameter name",
+                  "description" : "The name of the output node parameter."
+                }
+              }
+            },
+            "title" : "Add output nodes",
+            "description" : "Allows one to add output nodes connected to the workflow outputs prior to writing. Depending on the\nselected node, there is a limited set of options available to pre-configure the node to be added.\n",
+            "default" : [ ]
+          },
+          "useCustomName" : {
+            "type" : "boolean",
+            "title" : "Use custom workflow name",
+            "description" : "If checked, a custom workflow name is used as specified below.\n",
+            "default" : false
+          }
+        }
+      }
+    }
+  },
+  "ui_schema" : {
+    "elements" : [ {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/folder/properties/file",
+      "options" : {
+        "fileSystems" : [ "LOCAL", "SPACE", "EMBEDDED", "CONNECTED" ],
+        "isLocal" : true,
+        "isWriter" : true,
+        "selectionMode" : "FOLDER",
+        "spaceFSOptions" : {
+          "mountId" : "Local space"
+        },
+        "format" : "fileChooser"
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/folder/properties/createMissingFolders",
+      "options" : {
+        "format" : "checkbox"
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/existsOption",
+      "options" : {
+        "format" : "valueSwitch"
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/useCustomName",
+      "options" : {
+        "format" : "checkbox"
+      }
+    }, {
+      "type" : "Control",
+      "scope" : "#/properties/model/properties/customName",
+      "rule" : {
+        "effect" : "SHOW",
+        "condition" : {
+          "scope" : "#/properties/model/properties/useCustomName",
+          "schema" : {
+            "const" : true
+          }
+        }
+      }
+    }, {
+      "label" : "Deployment Options",
+      "type" : "Section",
+      "elements" : [ {
+        "type" : "Control",
+        "scope" : "#/properties/model/properties/outputMode",
+        "options" : {
+          "format" : "radio",
+          "radioLayout" : "vertical"
+        },
+        "providedOptions" : [ "possibleValues" ]
+      }, {
+        "type" : "Control",
+        "scope" : "#/properties/model/properties/doUpdateTemplateLinks",
+        "options" : {
+          "format" : "checkbox"
+        }
+      }, {
+        "type" : "Control",
+        "scope" : "#/properties/model/properties/doRemoveTemplateLinks",
+        "options" : {
+          "format" : "checkbox"
+        }
+      } ]
+    }, {
+      "label" : "Workflow Inputs and Outputs",
+      "type" : "Section",
+      "rule" : {
+        "effect" : "SHOW",
+        "condition" : {
+          "schema" : {
+            "not" : { }
+          }
+        }
+      },
+      "elements" : [ {
+        "type" : "Control",
+        "id" : "#/properties/model/properties/missingWorkflowInputMessage",
+        "options" : {
+          "format" : "textMessage"
+        },
+        "providedOptions" : [ "message" ]
+      } ]
+    }, {
+      "label" : "Workflow Inputs",
+      "type" : "Section",
+      "rule" : {
+        "effect" : "HIDE",
+        "condition" : {
+          "schema" : {
+            "not" : { }
+          }
+        }
+      },
+      "elements" : [ {
+        "type" : "Control",
+        "id" : "#/properties/model/properties/missingInputPortsMessage",
+        "options" : {
+          "format" : "textMessage"
+        },
+        "providedOptions" : [ "message" ]
+      }, {
+        "type" : "Control",
+        "scope" : "#/properties/model/properties/inputNodes",
+        "options" : {
+          "detail" : [ {
+            "type" : "HorizontalLayout",
+            "elements" : [ {
+              "type" : "Control",
+              "scope" : "#/properties/inputId",
+              "rule" : {
+                "effect" : "DISABLE",
+                "condition" : {
+                  "schema" : { }
+                }
+              }
+            }, {
+              "type" : "Control",
+              "scope" : "#/properties/nodeConfigClass"
+            } ]
+          }, {
+            "type" : "Control",
+            "scope" : "#/properties/parameterName",
+            "rule" : {
+              "effect" : "HIDE",
+              "condition" : {
+                "scope" : "#/properties/nodeConfigClass",
+                "schema" : {
+                  "oneOf" : [ {
+                    "const" : "NONE"
+                  } ]
+                }
+              }
+            }
+          } ],
+          "arrayElementTitle" : "Input Node",
+          "hasFixedSize" : true
+        }
+      } ]
+    }, {
+      "label" : "Workflow Outputs",
+      "type" : "Section",
+      "rule" : {
+        "effect" : "HIDE",
+        "condition" : {
+          "schema" : {
+            "not" : { }
+          }
+        }
+      },
+      "elements" : [ {
+        "type" : "Control",
+        "id" : "#/properties/model/properties/missingOutputPortsMessage",
+        "options" : {
+          "format" : "textMessage"
+        },
+        "providedOptions" : [ "message" ]
+      }, {
+        "type" : "Control",
+        "scope" : "#/properties/model/properties/outputNodes",
+        "options" : {
+          "detail" : [ {
+            "type" : "HorizontalLayout",
+            "elements" : [ {
+              "type" : "Control",
+              "scope" : "#/properties/outputId",
+              "rule" : {
+                "effect" : "DISABLE",
+                "condition" : {
+                  "schema" : { }
+                }
+              }
+            }, {
+              "type" : "Control",
+              "scope" : "#/properties/nodeConfigClass"
+            } ]
+          }, {
+            "type" : "Control",
+            "scope" : "#/properties/parameterName",
+            "rule" : {
+              "effect" : "HIDE",
+              "condition" : {
+                "scope" : "#/properties/nodeConfigClass",
+                "schema" : {
+                  "oneOf" : [ {
+                    "const" : "NONE"
+                  } ]
+                }
+              }
+            }
+          } ],
+          "arrayElementTitle" : "Output Node",
+          "hasFixedSize" : true
+        }
+      } ]
+    } ]
+  },
+  "persist" : {
+    "type" : "object",
+    "properties" : {
+      "model" : {
+        "type" : "object",
+        "properties" : {
+          "folder" : {
+            "type" : "object",
+            "properties" : {
+              "file" : {
+                "configPaths" : [ [ "path" ] ]
+              },
+              "createMissingFolders" : {
+                "configKey" : "create_missing_folders"
+              }
+            },
+            "configKey" : "filechooser"
+          },
+          "existsOption" : {
+            "configKey" : "exists"
+          },
+          "useCustomName" : {
+            "configKey" : "use-custom-name"
+          },
+          "customName" : {
+            "configKey" : "custom-name"
+          },
+          "outputMode" : {
+            "configPaths" : [ [ "archive" ], [ "open" ] ]
+          },
+          "doUpdateTemplateLinks" : {
+            "configKey" : "do_update_template_links"
+          },
+          "doRemoveTemplateLinks" : {
+            "configKey" : "do_remove_template_links"
+          },
+          "missingWorkflowInputMessage" : { },
+          "missingInputPortsMessage" : { },
+          "inputNodes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "inputId" : {
+                  "route" : [ "..", ".." ],
+                  "configPaths" : [ [ "input_node_${array_index}", "input_id" ] ]
+                },
+                "nodeConfigClass" : {
+                  "route" : [ "..", ".." ],
+                  "configPaths" : [ [ "input_node_${array_index}", "node_config_class" ] ]
+                },
+                "parameterName" : {
+                  "route" : [ "..", ".." ],
+                  "configPaths" : [ [ "input_node_${array_index}", "node_config", "param_name" ] ]
+                }
+              }
+            },
+            "route" : [ "io-nodes" ]
+          },
+          "missingOutputPortsMessage" : { },
+          "outputNodes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "outputId" : {
+                  "route" : [ "..", ".." ],
+                  "configPaths" : [ [ "output_node_${array_index}", "output_id" ] ]
+                },
+                "nodeConfigClass" : {
+                  "route" : [ "..", ".." ],
+                  "configPaths" : [ [ "output_node_${array_index}", "node_config_class" ] ]
+                },
+                "parameterName" : {
+                  "route" : [ "..", ".." ],
+                  "configPaths" : [ [ "output_node_${array_index}", "node_config", "param_name" ] ]
+                }
+              }
+            },
+            "route" : [ "io-nodes" ]
+          }
+        }
+      }
+    }
+  },
+  "initialUpdates" : [ {
+    "scope" : "#/properties/model/properties/inputNodes",
+    "values" : [ {
+      "indices" : [ ],
+      "value" : [ ]
+    } ]
+  }, {
+    "scope" : "#/properties/model/properties/outputMode",
+    "providedOptionName" : "possibleValues",
+    "values" : [ {
+      "indices" : [ ],
+      "value" : [ {
+        "id" : "WRITE",
+        "text" : "Write workflow"
+      }, {
+        "id" : "OPEN",
+        "text" : "Write workflow and open in explorer",
+        "disabled" : true
+      }, {
+        "id" : "EXPORT",
+        "text" : "Export workflow as knwf archive"
+      } ]
+    } ]
+  }, {
+    "scope" : "#/properties/model/properties/outputNodes",
+    "values" : [ {
+      "indices" : [ ],
+      "value" : [ ]
+    } ]
+  }, {
+    "id" : "#/properties/model/properties/missingInputPortsMessage",
+    "providedOptionName" : "message",
+    "values" : [ {
+      "indices" : [ ],
+      "value" : {
+        "title" : "No workflow input ports available",
+        "description" : "The connected workflow does not have any input ports",
+        "type" : "INFO"
+      }
+    } ]
+  }, {
+    "id" : "#/properties/model/properties/missingOutputPortsMessage",
+    "providedOptionName" : "message",
+    "values" : [ {
+      "indices" : [ ],
+      "value" : {
+        "title" : "No workflow output ports available",
+        "description" : "The connected workflow does not have any output ports",
+        "type" : "INFO"
+      }
+    } ]
+  }, {
+    "id" : "#/properties/model/properties/missingWorkflowInputMessage",
+    "providedOptionName" : "message",
+    "values" : [ {
+      "indices" : [ ],
+      "value" : null
+    } ]
+  } ],
+  "globalUpdates" : [ {
+    "trigger" : {
+      "scope" : "#/properties/model/properties/folder"
+    },
+    "dependencies" : [ "#/properties/model/properties/folder", "#/properties/model/properties/outputMode" ]
+  }, {
+    "trigger" : {
+      "scope" : "#/properties/model/properties/inputNodes/items/properties/nodeConfigClass"
+    },
+    "dependencies" : [ "#/properties/model/properties/inputNodes/items/properties/nodeConfigClass", "#/properties/model/properties/inputNodes/items/properties/parameterName" ]
+  }, {
+    "trigger" : {
+      "scope" : "#/properties/model/properties/outputNodes/items/properties/nodeConfigClass"
+    },
+    "dependencies" : [ "#/properties/model/properties/outputNodes/items/properties/nodeConfigClass", "#/properties/model/properties/outputNodes/items/properties/parameterName" ]
+  } ]
+}

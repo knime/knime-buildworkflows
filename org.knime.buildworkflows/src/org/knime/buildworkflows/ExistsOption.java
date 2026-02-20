@@ -49,6 +49,7 @@
 package org.knime.buildworkflows;
 
 import org.knime.core.node.util.ButtonGroupEnumInterface;
+import org.knime.node.parameters.widget.choices.Label;
 
 /**
  * Enum encoding whether or not overwriting workflows is allowed by the "Deploy Workflow to Server" node.
@@ -58,9 +59,15 @@ import org.knime.core.node.util.ButtonGroupEnumInterface;
 public enum ExistsOption implements ButtonGroupEnumInterface {
 
         /** Fail if workflow already exists. */
+        @Label(value = "Fail", description = """
+                Will issue an error during the node's execution to prevent unintentional overwrite.
+                """)
         FAIL("Fail"),
 
         /** Overwrite the workflow. */
+        @Label(value = "Overwrite", description = """
+                Will replace any existing workflow.
+                """)
         OVERWRITE("Overwrite");
 
     private final String m_name;

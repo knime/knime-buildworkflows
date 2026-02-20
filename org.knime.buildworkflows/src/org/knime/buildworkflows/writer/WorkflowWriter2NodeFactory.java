@@ -48,20 +48,42 @@
  */
 package org.knime.buildworkflows.writer;
 
+import static org.knime.node.impl.description.PortDescription.dynamicPort;
+import static org.knime.node.impl.description.PortDescription.fixedPort;
+
+import java.util.List;
+import java.util.Map;
+
+import org.knime.core.node.NodeDescription;
+import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.context.NodeCreationConfiguration;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.workflow.capture.WorkflowPortObject;
+import org.knime.core.webui.node.dialog.NodeDialog;
+import org.knime.core.webui.node.dialog.NodeDialogFactory;
+import org.knime.core.webui.node.dialog.NodeDialogManager;
+import org.knime.core.webui.node.dialog.SettingsType;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultKaiNodeInterface;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeDialog;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterface;
+import org.knime.core.webui.node.dialog.kai.KaiNodeInterfaceFactory;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeFactory;
+import org.knime.node.impl.description.DefaultNodeDescriptionUtil;
+import org.knime.node.impl.description.PortDescription;
 
 /**
  * Workflow writer node.
  *
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
+ * @author Magnus Gohm, KNIME GmbH, Konstanz, Germany
+ * @author AI Migration Pipeline v1.2
  * @since 4.3
  */
 // was really added in 4.2.1 (AP-14686)
+@SuppressWarnings("restriction")
 public final class WorkflowWriter2NodeFactory
-    extends PortObjectWriterNodeFactory<WorkflowWriterNodeModel, WorkflowWriterNodeDialog> {
+    extends PortObjectWriterNodeFactory<WorkflowWriterNodeModel, WorkflowWriterNodeDialog>
+    implements NodeDialogFactory, KaiNodeInterfaceFactory {
 
     @Override
     protected WorkflowWriterNodeModel createNodeModel(final NodeCreationConfiguration creationConfig) {
@@ -76,6 +98,67 @@ public final class WorkflowWriter2NodeFactory
     @Override
     protected WorkflowWriterNodeDialog createDialog(final NodeCreationConfiguration creationConfig) {
         return new WorkflowWriterNodeDialog(creationConfig, "workflow_writer");
+    }
+
+    private static final String NODE_NAME = "Workflow Writer";
+
+    private static final String NODE_ICON = "./workflow_writer.png";
+
+    private static final String SHORT_DESCRIPTION = """
+            Writes a workflow into a folder or an exported KNIME workflow (.knwf) archive.
+            """;
+
+    private static final String FULL_DESCRIPTION = """
+            This node writes a workflow from a port object into a folder or an exported KNIME workflow (.knwf) archive.
+            <p> <i>This node can access a variety of different</i> <a href="https://docs.knime.com/2021-06/
+            analytics_platform_file_handling_guide/index.html#analytics-platform-file-systems"><i>file systems.</i>
+            </a> <i>More information about file handling in KNIME can be found in the official</i>
+            <a href="https://docs.knime.com/latest/analytics_platform_file_handling_guide/index.html"><i>File Handling
+            Guide.</i></a> </p>
+            """;
+
+    private static final List<PortDescription> INPUT_PORTS = List.of(
+            dynamicPort("File System Connection", "File system connection", """
+                The file system connection.
+                """),
+            fixedPort("Workflow", """
+                The workflow to be written.
+                """)
+    );
+
+    private static final List<PortDescription> OUTPUT_PORTS = List.of();
+
+    @Override
+    public NodeDialogPane createNodeDialogPane() {
+        return NodeDialogManager.createLegacyFlowVariableNodeDialog(createNodeDialog());
+    }
+
+    @Override
+    public NodeDialog createNodeDialog() {
+        return new DefaultNodeDialog(SettingsType.MODEL, WorkflowWriter2NodeParameters.class);
+    }
+
+    @Override
+    public NodeDescription createNodeDescription() {
+        return DefaultNodeDescriptionUtil.createNodeDescription( //
+            NODE_NAME, //
+            NODE_ICON, //
+            INPUT_PORTS, //
+            OUTPUT_PORTS, //
+            SHORT_DESCRIPTION, //
+            FULL_DESCRIPTION, //
+            List.of(), //
+            WorkflowWriter2NodeParameters.class, //
+            null, //
+            NodeType.Sink, //
+            List.of(), //
+            null //
+        );
+    }
+
+    @Override
+    public KaiNodeInterface createKaiNodeInterface() {
+        return new DefaultKaiNodeInterface(Map.of(SettingsType.MODEL, WorkflowWriter2NodeParameters.class));
     }
 
 }
