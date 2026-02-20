@@ -56,6 +56,7 @@ import org.knime.core.node.defaultnodesettings.SettingsModelBoolean;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.filehandling.core.defaultnodesettings.filechooser.writer.FileOverwritePolicy;
+import org.knime.filehandling.core.node.portobject.PortObjectIONodeConfig;
 import org.knime.filehandling.core.node.portobject.SelectionMode;
 import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeConfig;
 
@@ -65,36 +66,38 @@ import org.knime.filehandling.core.node.portobject.writer.PortObjectWriterNodeCo
  */
 final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
 
+    static final String CFG_FOLDER_CHOOSER = PortObjectIONodeConfig.CFG_FILE_CHOOSER;
+
     private static final SelectionMode SELECTION_MODE = SelectionMode.FOLDER;
 
-    private static final String CFG_EXISTS_OPTION = "exists";
+    static final String CFG_EXISTS_OPTION = "exists";
 
     private final SettingsModelString m_existsOption =
         new SettingsModelString(CFG_EXISTS_OPTION, WorkflowWriterNodeDialog.EXISTS_OPTION_DEF.getActionCommand());
 
-    private static final String CFG_ARCHIVE = "archive";
+    static final String CFG_ARCHIVE = "archive";
 
     private final SettingsModelBoolean m_archive = new SettingsModelBoolean(CFG_ARCHIVE, false);
 
-    private static final String CFG_OPEN_AFTER_WRITE = "open";
+    static final String CFG_OPEN_AFTER_WRITE = "open";
 
     private final SettingsModelBoolean m_openAfterWrite = new SettingsModelBoolean(CFG_OPEN_AFTER_WRITE, false);
 
-    private static final String CFG_USE_CUSTOM_NAME = "use-custom-name";
+    static final String CFG_USE_CUSTOM_NAME = "use-custom-name";
 
     private final SettingsModelBoolean m_useCustomName = new SettingsModelBoolean(CFG_USE_CUSTOM_NAME, false);
 
-    private static final String CUSTOM_NAME = "custom-name";
+    static final String CUSTOM_NAME = "custom-name";
 
     private final SettingsModelString m_customName = new SettingsModelString(CUSTOM_NAME, "workflow");
 
-    private static final String CFG_IO_NODES = "io-nodes";
+    static final String CFG_IO_NODES = "io-nodes";
 
     private final SettingsModelIONodes m_ioNodes = new SettingsModelIONodes(CFG_IO_NODES);
 
-    private static final String CFG_DO_REMOVE_LINKS = "do_remove_template_links";
+    static final String CFG_DO_REMOVE_LINKS = "do_remove_template_links";
 
-    private static final boolean DO_REMOVE_LINKS_DEFAULT = false;
+    static final boolean DO_REMOVE_LINKS_DEFAULT = false;
 
     /**
      * Whether to remove links of linked metanodes and components before writing the workflow segment.
@@ -104,9 +107,9 @@ final class WorkflowWriterNodeConfig extends PortObjectWriterNodeConfig {
             DO_REMOVE_LINKS_DEFAULT);
 
 
-    private static final String CFG_DO_UPDATE_LINKS = "do_update_template_links";
+    static final String CFG_DO_UPDATE_LINKS = "do_update_template_links";
 
-    private static final boolean DO_UPDATE_LINKS_DEFAULT = false;
+    static final boolean DO_UPDATE_LINKS_DEFAULT = false;
 
     /**
      * Whether to update linked metanodes and components before writing the workflow segment.

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="http://www.knime.org/2008/09/XMLConfig" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.knime.org/2008/09/XMLConfig http://www.knime.org/XMLConfig_2008_09.xsd" key="test">
+    <config key="filechooser">
+        <config key="path">
+            <entry key="location_present" type="xboolean" value="true"/>
+            <entry key="file_system_type" type="xstring" value="LOCAL"/>
+            <entry key="path" type="xstring" value="/tmp"/>
+        </config>
+        <config key="file_system_chooser__Internals">
+            <entry key="has_fs_port" type="xboolean" value="false"/>
+            <entry key="overwritten_by_variable" type="xboolean" value="false"/>
+            <entry key="convenience_fs_category" type="xstring" value="LOCAL"/>
+            <entry key="relative_to" type="xstring" value="knime.workflow"/>
+            <entry key="mountpoint" type="xstring" value="LOCAL"/>
+            <entry key="spaceId" type="xstring" value=""/>
+            <entry key="spaceName" type="xstring" value=""/>
+            <entry key="custom_url_timeout" type="xint" value="1000"/>
+            <entry key="connected_fs" type="xboolean" value="true"/>
+        </config>
+        <entry key="create_missing_folders" type="xboolean" value="false"/>
+    </config>
+    <entry key="exists" type="xstring" value="OVERWRITE"/>
+    <entry key="use-custom-name" type="xboolean" value="true"/>
+    <entry key="custom-name" type="xstring" value="workflow"/>
+    <entry key="archive" type="xboolean" value="true"/>
+    <entry key="open" type="xboolean" value="false"/>
+    <entry key="do_update_template_links" type="xboolean" value="true"/>
+    <entry key="do_remove_template_links" type="xboolean" value="false"/>
+    <config key="io-nodes">
+        <entry key="num_inputs" type="xint" value="1"/>
+        <config key="input_node_0">
+            <entry key="node_config_class" type="xstring" value="org.knime.buildworkflows.writer.WorkflowInputNodeConfig"/>
+            <entry key="input_id" type="xstring" value="input2"/>
+            <config key="node_config">
+                <entry key="param_name" type="xstring" value="workflow-input"/>
+            </config>
+        </config>
+        <entry key="num_outputs" type="xint" value="2"/>
+        <config key="output_node_0">
+            <entry key="node_config_class" type="xstring" value="org.knime.buildworkflows.writer.WorkflowOutputNodeConfig"/>
+            <entry key="output_id" type="xstring" value="output1"/>
+            <config key="node_config">
+                <entry key="param_name" type="xstring" value="workflow-output"/>
+            </config>
+        </config>
+        <config key="output_node_1">
+            <entry key="node_config_class" type="xstring" value="org.knime.buildworkflows.writer.RowOutputNodeConfig"/>
+            <entry key="output_id" type="xstring" value="output2"/>
+            <config key="node_config">
+                <entry key="param_name" type="xstring" value="row-output"/>
+            </config>
+        </config>
+    </config>
+</config>
