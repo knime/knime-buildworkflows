@@ -52,7 +52,6 @@ import java.util.Arrays;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.knime.buildworkflows.writer.WorkflowWriter2NodeParameterUtil.AlwaysTrue;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.webui.node.dialog.defaultdialog.internal.persistence.ElementFieldPersistor;
@@ -94,11 +93,13 @@ final class WorkflowInputNodeParameters implements NodeParameters {
     interface NodeConfigLayout {
     }
 
-    @Layout(IdAndConfigClassLayout.class)
-    @Widget(title = "Input ID", description = "The identifier for this input port.")
+    // It does not really make sense to set the input ID via flow variables in the dialog.
     @PersistArrayElement(InputNodeElementPersistor.class)
-    @Effect(predicate = AlwaysTrue.class, type = EffectType.DISABLE)
+    @ValueReference(InputIDRef.class)
     String m_inputId;
+
+    static final class InputIDRef implements ParameterReference<String> {
+    }
 
     @Layout(IdAndConfigClassLayout.class)
     @Widget(title = "Node type", description = "The type of node to add for this input.")

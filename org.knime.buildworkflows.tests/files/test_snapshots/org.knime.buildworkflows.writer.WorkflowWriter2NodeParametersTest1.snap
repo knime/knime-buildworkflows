@@ -130,9 +130,7 @@
               "type" : "object",
               "properties" : {
                 "inputId" : {
-                  "type" : "string",
-                  "title" : "Input ID",
-                  "description" : "The identifier for this input port."
+                  "type" : "string"
                 },
                 "nodeConfigClass" : {
                   "oneOf" : [ {
@@ -211,9 +209,7 @@
                   "default" : "NONE"
                 },
                 "outputId" : {
-                  "type" : "string",
-                  "title" : "Output ID",
-                  "description" : "The identifier for this output port."
+                  "type" : "string"
                 },
                 "parameterName" : {
                   "type" : "string",
@@ -349,15 +345,6 @@
             "type" : "HorizontalLayout",
             "elements" : [ {
               "type" : "Control",
-              "scope" : "#/properties/inputId",
-              "rule" : {
-                "effect" : "DISABLE",
-                "condition" : {
-                  "schema" : { }
-                }
-              }
-            }, {
-              "type" : "Control",
               "scope" : "#/properties/nodeConfigClass"
             } ]
           }, {
@@ -377,7 +364,8 @@
           } ],
           "arrayElementTitle" : "Input Node",
           "hasFixedSize" : true
-        }
+        },
+        "providedOptions" : [ "arrayElementTitle" ]
       } ]
     }, {
       "label" : "Workflow Outputs",
@@ -405,15 +393,6 @@
             "type" : "HorizontalLayout",
             "elements" : [ {
               "type" : "Control",
-              "scope" : "#/properties/outputId",
-              "rule" : {
-                "effect" : "DISABLE",
-                "condition" : {
-                  "schema" : { }
-                }
-              }
-            }, {
-              "type" : "Control",
               "scope" : "#/properties/nodeConfigClass"
             } ]
           }, {
@@ -433,7 +412,8 @@
           } ],
           "arrayElementTitle" : "Output Node",
           "hasFixedSize" : true
-        }
+        },
+        "providedOptions" : [ "arrayElementTitle" ]
       } ]
     } ]
   },
@@ -537,10 +517,6 @@
         "id" : "WRITE",
         "text" : "Write workflow"
       }, {
-        "id" : "OPEN",
-        "text" : "Write workflow and open in explorer",
-        "disabled" : true
-      }, {
         "id" : "EXPORT",
         "text" : "Export workflow as knwf archive"
       } ]
@@ -583,9 +559,10 @@
   } ],
   "globalUpdates" : [ {
     "trigger" : {
-      "scope" : "#/properties/model/properties/folder"
+      "id" : "after-open-dialog"
     },
-    "dependencies" : [ "#/properties/model/properties/folder", "#/properties/model/properties/outputMode" ]
+    "triggerInitially" : true,
+    "dependencies" : [ "#/properties/model/properties/inputNodes/items/properties/inputId", "#/properties/model/properties/outputNodes/items/properties/outputId" ]
   }, {
     "trigger" : {
       "scope" : "#/properties/model/properties/inputNodes/items/properties/nodeConfigClass"
