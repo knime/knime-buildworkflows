@@ -168,6 +168,32 @@ final class WorkflowWriter2NodeParameterUtil {
 
     }
 
+    abstract static class IONodeTitleProvider implements StateProvider<String> {
+
+        private Class<? extends ParameterReference<String>> m_ioIdRefClass;
+        private String m_titlePrefix;
+
+        protected IONodeTitleProvider(final Class<? extends ParameterReference<String>> ioIdRefClass,
+            final String titlePrefix) {
+            m_ioIdRefClass = ioIdRefClass;
+            m_titlePrefix = titlePrefix;
+        }
+
+        Supplier<String> m_ioIdSupplier;
+
+        @Override
+        public void init(final StateProviderInitializer initializer) {
+            initializer.computeAfterOpenDialog();
+            m_ioIdSupplier = initializer.getValueSupplier(m_ioIdRefClass);
+        }
+
+        @Override
+        public String computeState(final NodeParametersInput parametersInput) throws StateComputationFailureException {
+            return "%s \"%s\"".formatted(m_titlePrefix, m_ioIdSupplier.get());
+        }
+
+    }
+
     static final class WorkflowPortObjectSpecProvider implements StateProvider<WorkflowPortObjectSpec> {
 
         @Override

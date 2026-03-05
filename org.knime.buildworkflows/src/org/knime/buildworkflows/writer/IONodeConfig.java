@@ -261,9 +261,9 @@ abstract class IONodeConfig implements NodeSettingsConfigurator{
         String param = getParameterName();
         CheckUtils.checkSetting(StringUtils.isNotEmpty(param), "Parameter name must not be empty");
         CheckUtils.checkSetting(DialogNode.PARAMETER_NAME_PATTERN.matcher(param).matches(),
-            "Parameter doesn't match pattern - must start with character, followed by other characters, digits, "
-                + "or single dashes or underscores:\n  Input: %s\n  Pattern: %s",
-            param, DialogNode.PARAMETER_NAME_PATTERN.pattern());
+            "Parameter doesn't match pattern - it must start with a character, followed by other characters, digits, "
+                + "single dashes or underscores, and must not end with a digit:\n  Input: %s",
+            param);
     }
 
     /**
