@@ -51,12 +51,14 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.knime.buildworkflows.ExistsOption;
+import org.knime.buildworkflows.writer.WorkflowInputNodeParameters.InputIDRef;
 import org.knime.buildworkflows.writer.WorkflowInputNodeParameters.InputNodeConfigType;
+import org.knime.buildworkflows.writer.WorkflowOutputNodeParameters.OutputIDRef;
 import org.knime.buildworkflows.writer.WorkflowOutputNodeParameters.OutputNodeConfigType;
 import org.knime.buildworkflows.writer.WorkflowWriter2NodeParameterUtil.IOIDsProvider;
+import org.knime.buildworkflows.writer.WorkflowWriter2NodeParameterUtil.IONodeTitleProvider;
 import org.knime.buildworkflows.writer.WorkflowWriter2NodeParameterUtil.IONodesArrayPersistor;
 import org.knime.buildworkflows.writer.WorkflowWriter2NodeParameterUtil.IONodesProvider;
 import org.knime.buildworkflows.writer.WorkflowWriter2NodeParameterUtil.MissingPortsMessage;
@@ -70,11 +72,11 @@ import org.knime.core.webui.node.dialog.defaultdialog.internal.file.FileSystemOp
 import org.knime.core.webui.node.dialog.defaultdialog.internal.file.SingleFileSelectionMode;
 import org.knime.core.webui.node.dialog.defaultdialog.internal.file.WithFileSystem;
 import org.knime.core.webui.node.dialog.defaultdialog.internal.persistence.PersistArray;
+import org.knime.core.webui.node.dialog.defaultdialog.internal.widget.ArrayWidgetInternal;
 import org.knime.core.webui.node.dialog.defaultdialog.internal.widget.PersistWithin;
 import org.knime.core.webui.node.dialog.defaultdialog.util.updates.StateComputationFailureException;
 import org.knime.core.webui.node.dialog.defaultdialog.widget.Modification;
 import org.knime.core.webui.node.dialog.defaultdialog.widget.Modification.WidgetGroupModifier;
-import org.knime.filehandling.core.connections.FSCategory;
 import org.knime.node.parameters.NodeParameters;
 import org.knime.node.parameters.NodeParametersInput;
 import org.knime.node.parameters.Widget;
@@ -201,7 +203,6 @@ final class WorkflowWriter2NodeParameters implements NodeParameters {
     @RadioButtonsWidget
     @Persistor(OutputModePersistor.class)
     @ChoicesProvider(OutputModeChoicesProvider.class)
-    @ValueProvider(OutputModeProvider.class)
     @ValueReference(OutputModeRef.class)
     OutputMode m_outputMode = OutputMode.WRITE;
 
@@ -242,6 +243,7 @@ final class WorkflowWriter2NodeParameters implements NodeParameters {
     @PersistWithin(WorkflowWriterNodeConfig.CFG_IO_NODES)
     @PersistArray(InputNodesArrayPersistor.class)
     @ArrayWidget(elementLayout = ElementLayout.VERTICAL_CARD, hasFixedSize = true)
+    @ArrayWidgetInternal(titleProvider = InputNodeTitleProvider.class)
     @ValueProvider(InputNodesProvider.class)
     @ValueReference(InputNodesRef.class)
     WorkflowInputNodeParameters[] m_inputNodes = new WorkflowInputNodeParameters[0];
@@ -261,6 +263,7 @@ final class WorkflowWriter2NodeParameters implements NodeParameters {
     @PersistWithin(WorkflowWriterNodeConfig.CFG_IO_NODES)
     @PersistArray(OutputNodesArrayPersistor.class)
     @ArrayWidget(elementLayout = ElementLayout.VERTICAL_CARD, hasFixedSize = true)
+    @ArrayWidgetInternal(titleProvider = OutputNodeTitleProvider.class)
     @ValueProvider(OutputNodesProvider.class)
     @ValueReference(OutputNodesRef.class)
     WorkflowOutputNodeParameters[] m_outputNodes = new WorkflowOutputNodeParameters[0];
@@ -283,70 +286,13 @@ final class WorkflowWriter2NodeParameters implements NodeParameters {
 
     }
 
-    static final class OutputModeProvider implements StateProvider<OutputMode> {
-
-        Supplier<OutputMode> m_outputModeSupplier;
-
-        Supplier<Boolean> m_isOpenOutputModeEnabledSupplier;
-
-        @Override
-        public void init(final StateProviderInitializer initializer) {
-            m_outputModeSupplier = initializer.getValueSupplier(OutputModeRef.class);
-            m_isOpenOutputModeEnabledSupplier =
-                initializer.computeFromProvidedState(IsOpenOutputModeEnabledProvider.class);
-        }
-
-        @Override
-        public OutputMode computeState(final NodeParametersInput parametersInput)
-            throws StateComputationFailureException {
-            final var isOpenOutputModeEnabled = m_isOpenOutputModeEnabledSupplier.get();
-            if (!isOpenOutputModeEnabled && m_outputModeSupplier.get() == OutputMode.OPEN) {
-                return OutputMode.WRITE;
-            }
-            throw new StateComputationFailureException();
-        }
-
-    }
-
     private static final class OutputModeChoicesProvider implements EnumChoicesProvider<OutputMode> {
-
-        Supplier<Boolean> m_isOpenOutputModeEnabledSupplier;
-
-        @Override
-        public void init(final StateProviderInitializer initializer) {
-            EnumChoicesProvider.super.init(initializer);
-            m_isOpenOutputModeEnabledSupplier =
-                initializer.computeFromProvidedState(IsOpenOutputModeEnabledProvider.class);
-        }
 
         @Override
         public List<EnumChoice<OutputMode>> computeState(final NodeParametersInput context) {
             return List.of( //
                 EnumChoice.fromEnumConst(OutputMode.WRITE), //
-                EnumChoice.fromEnumConst(OutputMode.OPEN, !m_isOpenOutputModeEnabledSupplier.get()), //
                 EnumChoice.fromEnumConst(OutputMode.EXPORT));
-        }
-
-    }
-
-    static final class IsOpenOutputModeEnabledProvider implements StateProvider<Boolean> {
-
-        private Supplier<LegacyFileWriterWithCreateMissingFolders> m_destinationFolderSupplier;
-
-        @Override
-        public void init(final StateProviderInitializer initializer) {
-            initializer.computeBeforeOpenDialog();
-            m_destinationFolderSupplier = initializer.computeFromValueSupplier(DestinationFolderRef.class);
-        }
-
-        @Override
-        public Boolean computeState(final NodeParametersInput parametersInput) throws StateComputationFailureException {
-            final var destinationFolder = m_destinationFolderSupplier.get();
-            if (destinationFolder == null) {
-                return false;
-            }
-            return Stream.of(FSCategory.RELATIVE, FSCategory.MOUNTPOINT)
-                .anyMatch(c -> c == destinationFolder.getFileSelection().getFSLocation().getFSCategory());
         }
 
     }
@@ -373,6 +319,22 @@ final class WorkflowWriter2NodeParameters implements NodeParameters {
                 id -> new WorkflowOutputNodeParameters(id, OutputNodeConfigType.NONE, null),
                 n -> n.m_outputId,
                 WorkflowOutputNodeParameters[]::new);
+        }
+
+    }
+
+    static final class InputNodeTitleProvider extends IONodeTitleProvider {
+
+        protected InputNodeTitleProvider() {
+            super(InputIDRef.class, "Input Node");
+        }
+
+    }
+
+    static final class OutputNodeTitleProvider extends IONodeTitleProvider {
+
+        protected OutputNodeTitleProvider() {
+            super(OutputIDRef.class, "Output Node");
         }
 
     }
@@ -444,7 +406,7 @@ final class WorkflowWriter2NodeParameters implements NodeParameters {
             if (isArchive) {
                 return OutputMode.EXPORT;
             } else if (isOpenAfterWrite) {
-                return OutputMode.OPEN;
+                return OutputMode.WRITE;
             } else {
                 return OutputMode.WRITE;
             }
