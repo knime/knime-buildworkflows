@@ -83,6 +83,7 @@ import org.knime.node.parameters.updates.ParameterReference;
 import org.knime.node.parameters.updates.StateProvider;
 import org.knime.node.parameters.updates.ValueProvider;
 import org.knime.node.parameters.updates.ValueReference;
+import org.knime.node.parameters.updates.internal.StateProviderInitializerInternal;
 import org.knime.node.parameters.updates.util.BooleanReference;
 import org.knime.node.parameters.widget.choices.ChoicesProvider;
 import org.knime.node.parameters.widget.choices.StringChoicesProvider;
@@ -159,7 +160,7 @@ final class WorkflowCombinerNodeParameters implements NodeParameters {
 
         @Override
         public void init(final StateProviderInitializer initializer) {
-            initializer.computeBeforeOpenDialog();
+            ((StateProviderInitializerInternal)initializer).computeOnParametersLoaded();
             m_workflowConnections = initializer.getValueSupplier(WorkflowConnectionsReference.class);
         }
 
@@ -175,6 +176,9 @@ final class WorkflowCombinerNodeParameters implements NodeParameters {
                 .mapToObj(i -> {
                     final var w1 = (WorkflowPortObjectSpec)inSpecs[i];
                     final var w2 = (WorkflowPortObjectSpec)inSpecs[i + 1];
+                    if (w2.getInputs().isEmpty()) {
+                        return new WorkflowConnection(i, true);
+                    }
                     return new WorkflowConnection(i,
                         i < workflowConnections.length
                             ? getPortConnections(w1, w2, workflowConnections[i].m_portConnections)
@@ -229,13 +233,17 @@ final class WorkflowCombinerNodeParameters implements NodeParameters {
             m_portConnections = portConnections;
         }
 
+        WorkflowConnection(final int index, final boolean hasNoInputs) {
+            m_index = index;
+            m_hasNoInputs = hasNoInputs;
+        }
+
         @Persistor(DoNotPersistInt.class)
         @ValueReference(WorkflowConnection.IndexReference.class)
         int m_index;
 
         @Persistor(DoNotPersistBoolean.class)
         @ValueReference(HasNoInputs.class)
-        @ValueProvider(HasNoInputsProvider.class)
         boolean m_hasNoInputs;
 
         @TextMessage(WorkflowHasNoInputsMessage.class)
@@ -311,14 +319,6 @@ final class WorkflowCombinerNodeParameters implements NodeParameters {
                 m_workflowSpecs = initializer.computeFromProvidedState(WorkflowProvider.class);
             }
 
-        }
-
-        private static final class HasNoInputsProvider extends AbstractWorkflowProvider<Boolean> {
-            @Override
-            public Boolean computeState(final NodeParametersInput parametersInput)
-                throws StateComputationFailureException {
-                return m_workflowSpecs.get()[1].getInputs().isEmpty();
-            }
         }
 
         private static final class WFConnTitleProvider extends AbstractWorkflowProvider<String> {
