@@ -2,6 +2,6 @@ autoEnabled=true
 bindingSuggestionsDisabled=false
 eclipse.preferences.version=1
 idePrefixKey=
-projectKey=KNIME_knime-buildworkflows
+projectKey=knime_knime-buildworkflows
 serverId=SonarCloud
 sqPrefixKey=org.knime.buildworkflows.tests
