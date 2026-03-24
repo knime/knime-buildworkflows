@@ -153,12 +153,6 @@
     }
   },
   "initialUpdates" : [ {
-    "scope" : "#/properties/model/properties/workflowConnections",
-    "values" : [ {
-      "indices" : [ ],
-      "value" : [ ]
-    } ]
-  }, {
     "id" : "#/properties/model/properties/missingWorkflowAtIndexMessage",
     "providedOptionName" : "message",
     "values" : [ {

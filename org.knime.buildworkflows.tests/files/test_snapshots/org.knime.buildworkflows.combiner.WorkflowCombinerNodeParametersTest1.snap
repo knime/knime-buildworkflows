@@ -209,40 +209,6 @@
     }
   },
   "initialUpdates" : [ {
-    "scope" : "#/properties/model/properties/workflowConnections",
-    "values" : [ {
-      "indices" : [ ],
-      "value" : [ ]
-    } ]
-  }, {
-    "scope" : "#/properties/model/properties/workflowConnections/items/properties/portConnections",
-    "providedOptionName" : "arrayElementTitle",
-    "values" : [ {
-      "indices" : [ 0, 0 ],
-      "value" : "Input \"Input\""
-    }, {
-      "indices" : [ 2, 0 ],
-      "value" : "Input \"Custom Input\""
-    }, {
-      "indices" : [ 2, 1 ],
-      "value" : "Input \"Custom Input 3\""
-    }, {
-      "indices" : [ 2, 2 ],
-      "value" : "Input \"Custom Input 5\""
-    }, {
-      "indices" : [ 3, 0 ],
-      "value" : "Input \"Custom Input\""
-    }, {
-      "indices" : [ 3, 1 ],
-      "value" : "Input \"Custom Input 2222222\""
-    }, {
-      "indices" : [ 3, 2 ],
-      "value" : "Input \"Custom Input 4\""
-    }, {
-      "indices" : [ 3, 3 ],
-      "value" : "Input \"Custom Input 5\""
-    } ]
-  }, {
     "id" : "#/properties/model/properties/missingWorkflowAtIndexMessage",
     "providedOptionName" : "message",
     "values" : [ {
